@@ -212,15 +212,15 @@
         async function initLiff() {
             try {
                 // Initialize LIFF (Replace with your LIFF ID)
-                // await liff.init({ liffId: "YOUR_LIFF_ID" });
-                // if (liff.isLoggedIn()) {
-                //     const profile = await liff.getProfile();
-                //     state.user = profile;
-                //     els.display.userAvatar.src = profile.pictureUrl;
-                //     els.display.userName.textContent = profile.displayName;
-                // } else {
-                //     liff.login();
-                // }
+                await liff.init({ liffId: "2008803474-hRJaVbm7" });
+                if (liff.isLoggedIn()) {
+                    const profile = await liff.getProfile();
+                    state.user = profile;
+                    els.display.userAvatar.src = profile.pictureUrl;
+                    els.display.userName.textContent = profile.displayName;
+                } else {
+                    liff.login();
+                }
                 console.log("LIFF mocked or initialized");
             } catch (err) {
                 console.error("LIFF Init Error:", err);
