@@ -210,7 +210,7 @@
         const API_URL = "https://script.google.com/macros/s/AKfycbwQjaz5oaVekrtSlw_kGqt9gLOg0uQeXphG4H2Q5cqrv4ZSEiJnzO63lctvaaYTRr9HNQ/exec"; 
         const LIFF_ID = "2008803474-hRJaVbm7";
         
-        let masterData = { rooms: [], foods: [], promotions: [] };
+        let masterData = { rooms: [], foods: [], promotions: [], specialDates: [] };
         let selectedRooms = []; 
         let selectedFoods = []; // { foodID, qty }
         let bookedRoomIDs = [];
@@ -427,10 +427,20 @@
             const cin = document.getElementById('checkin').value;
             const cout = document.getElementById('checkout').value;
             
+            // ตรวจสอบวันพิเศษ (SpecialDates)
+            const checkinDate = new Date(cin);
+            checkinDate.setHours(0,0,0,0);
+            const specialDay = masterData.specialDates?.find(s => {
+                const sDate = new Date(s.date);
+                sDate.setHours(0,0,0,0);
+                return sDate.getTime() === checkinDate.getTime();
+            });
+
             let summaryHtml = `
                 <div class="text-center border-b pb-2 mb-3">
                     <p class="font-bold text-lg text-kanam">รายละเอียดการจอง</p>
                     <p class="text-[10px] text-gray-500">เช็คอิน: ${formatDate(cin)} | เช็คเอาท์: ${formatDate(cout)}</p>
+                    ${specialDay ? `<p class="text-[10px] text-red-600 font-bold mt-1">✨ วันพิเศษ: ${specialDay.event} (มัดจำ 100%)</p>` : ''}
                 </div>
             `;
             
@@ -456,7 +466,7 @@
                 summaryHtml += `<div class="flex justify-between mb-1 text-green-600 font-bold italic"><span>ส่วนลดที่พัก (${appliedPromo.code})</span><span>-฿${discount.toLocaleString()}</span></div>`;
             }
 
-            // Foods Calculation (Not discounted)
+            // Foods Calculation
             summaryHtml += `<div class="border-t border-dashed my-2"></div>`;
             selectedFoods.forEach(item => {
                 const food = masterData.foods.find(f => f.id === item.foodID);
@@ -467,8 +477,16 @@
             if (selectedFoods.length === 0) summaryHtml += `<div class="text-[10px] text-gray-400 italic">ไม่มีรายการอาหารล่วงหน้า</div>`;
 
             let finalTotal = (roomTotal - discount) + foodTotal;
-            // Deposit Logic: ((RoomTotal - Discount) * 50%) + Full Food Price
-            let finalDeposit = ((roomTotal - discount) * 0.5) + foodTotal;
+            
+            // เงื่อนไขมัดจำใหม่: 
+            // ถ้าเป็นวันพิเศษ (SpecialDay) -> มัดจำ 100%
+            // ถ้าเป็นวันปกติ -> มัดจำ 50% ของที่พัก + อาหารเต็มจำนวน
+            let finalDeposit = 0;
+            if (specialDay) {
+                finalDeposit = finalTotal; // จ่ายเต็ม 100%
+            } else {
+                finalDeposit = ((roomTotal - discount) * 0.5) + foodTotal;
+            }
 
             finalCalculation = { total: finalTotal, deposit: finalDeposit, discount: discount };
             
@@ -476,7 +494,9 @@
                 <div class="mt-4 pt-2 border-t-2 border-kanam">
                     <div class="flex justify-between text-sm"><span>ยอดรวมทั้งสิ้น</span><span>฿${finalTotal.toLocaleString()}</span></div>
                     <div class="flex justify-between text-lg font-bold text-red-600 mt-1"><span>ยอดมัดจำที่ต้องชำระ</span><span>฿${finalDeposit.toLocaleString()}</span></div>
-                    <p class="text-[9px] text-gray-400 text-right font-normal mt-1">* มัดจำ 50% ของค่าที่พัก + ค่าอาหารเต็มจำนวน</p>
+                    <p class="text-[9px] text-gray-400 text-right font-normal mt-1">
+                        ${specialDay ? '* วันเทศกาล/วันหยุดพิเศษ มัดจำ 100%' : '* มัดจำ 50% ของค่าที่พัก + ค่าอาหารเต็มจำนวน'}
+                    </p>
                 </div>`;
             
             document.getElementById('booking-summary').innerHTML = summaryHtml;
@@ -495,7 +515,8 @@
             if (id === 'NP') return pax >= 6 ? 2200 : 1600;
             if (id.startsWith('RN')) return pax === 3 ? 1750 : 1400;
             if (id.startsWith('G')) return pax >= 3 ? 1550 : 1200;
-            return masterData.rooms.find(r => r.id === id).basePrice || 0;
+            const rData = masterData.rooms.find(r => r.id === id);
+            return rData ? rData.basePrice : 0;
         }
 
         function validateForm() {
