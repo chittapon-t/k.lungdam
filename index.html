@@ -382,10 +382,10 @@
         }
 
         function getFoodEmoji(name) {
-            if (name.includes('หมูกระทะ')) return '🔥';
+            if (name.includes('กระทะ')) return ' 🥘';
             if (name.includes('กาแฟ') || name.includes('ดริป')) return '☕';
-            if (name.includes('ไข่')) return '🍳';
-            return '🍲';
+            if (name.includes('ชาบู')) return '🍲';
+            return '🍱';
         }
 
         // --- LOGIC ---
@@ -425,7 +425,7 @@
                             </div>
                         </div>
                         <div class="flex flex-col items-center bg-gray-50 p-1.5 rounded-lg border">
-                            <span class="text-[8px] text-gray-400 font-bold uppercase mb-0.5">ระบุคน</span>
+                            <span class="text-[8px] text-gray-400 font-bold uppercase mb-0.5">จำนวนคน</span>
                             <div class="flex items-center gap-3">
                                 <button onclick="updateRoomPax('${item.id}', -1)" class="w-7 h-7 bg-white border border-gray-200 rounded-full flex items-center justify-center font-bold text-kanam shadow-sm">-</button>
                                 <span class="w-4 text-center font-bold text-sm">${item.pax}</span>
