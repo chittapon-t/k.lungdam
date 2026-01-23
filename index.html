@@ -126,10 +126,13 @@
                                 <p class="text-[10px] text-green-600">฿150/คน</p>
                             </div>
                         </div>
-                        <div class="flex items-center gap-2">
-                            <button onclick="updateCampPax(-1)" class="w-8 h-8 bg-white border rounded-full shadow flex items-center justify-center">-</button>
-                            <input type="number" id="camp-pax" min="0" max="20" value="0" readonly class="w-8 bg-transparent text-center font-bold">
-                            <button onclick="updateCampPax(1)" class="w-8 h-8 bg-white border rounded-full shadow flex items-center justify-center">+</button>
+                        <div class="flex flex-col items-center">
+                            <span class="text-[10px] text-gray-400 mb-1">จำนวนคน</span>
+                            <div class="flex items-center gap-2">
+                                <button onclick="updateCampPax(-1)" class="w-8 h-8 bg-white border rounded-full shadow flex items-center justify-center">-</button>
+                                <input type="number" id="camp-pax" min="0" max="20" value="0" readonly class="w-8 bg-transparent text-center font-bold">
+                                <button onclick="updateCampPax(1)" class="w-8 h-8 bg-white border rounded-full shadow flex items-center justify-center">+</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -344,10 +347,13 @@
                             <div class="w-10 h-10 rounded border overflow-hidden"><img src="${room.imageUrl}" class="w-full h-full object-cover"></div>
                             <div><span class="font-bold text-kanam text-sm">${room.name}</span></div>
                         </div>
-                        <div class="flex items-center gap-3">
-                            <button onclick="updateRoomPax('${item.id}', -1)" class="w-7 h-7 bg-gray-100 rounded-full flex items-center justify-center font-bold">-</button>
-                            <span class="w-4 text-center font-bold text-sm">${item.pax}</span>
-                            <button onclick="updateRoomPax('${item.id}', 1)" class="w-7 h-7 bg-gray-100 rounded-full flex items-center justify-center font-bold">+</button>
+                        <div class="flex flex-col items-center">
+                            <span class="text-[9px] text-gray-400 mb-0.5">ระบุจำนวนคน</span>
+                            <div class="flex items-center gap-3">
+                                <button onclick="updateRoomPax('${item.id}', -1)" class="w-7 h-7 bg-gray-100 rounded-full flex items-center justify-center font-bold">-</button>
+                                <span class="w-4 text-center font-bold text-sm">${item.pax}</span>
+                                <button onclick="updateRoomPax('${item.id}', 1)" class="w-7 h-7 bg-gray-100 rounded-full flex items-center justify-center font-bold">+</button>
+                            </div>
                         </div>
                     </div>`;
             }).join('');
@@ -448,8 +454,6 @@
             }
 
             let finalTotal = total - discount;
-            let deposit = (total - cp * 150) * 0.5 + (cp * 150); // Camp and food usually full or 50%? Let's keep logic simple: 50% of rooms + 100% of camp/food
-            // Or simplified: 50% of everything after discount
             let finalDeposit = finalTotal * 0.5;
 
             finalCalculation = { total: finalTotal, deposit: finalDeposit, discount: discount };
