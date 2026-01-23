@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - ขนำลุงดำ Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Sarabun', sans-serif; background-color: #f8f9fa; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .nav-active { border-bottom: 3px solid #2c3e2d; color: #2c3e2d; font-weight: bold; }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Navbar -->
+    <nav class="bg-slate-800 text-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
+            <h1 class="text-xl font-bold">Admin Panel - ขนำลุงดำ</h1>
+            <button onclick="refreshData()" class="bg-blue-500 hover:bg-blue-600 px-3 py-1 rounded text-sm transition-all">รีเฟรชข้อมูล</button>
+        </div>
+        <div class="max-w-6xl mx-auto px-4 flex gap-4 overflow-x-auto text-sm bg-slate-700">
+            <button onclick="switchTab('bookings')" id="btn-bookings" class="px-4 py-3 nav-active whitespace-nowrap">รายการจอง</button>
+            <button onclick="switchTab('rooms')" id="btn-rooms" class="px-4 py-3 text-gray-300 whitespace-nowrap">จัดการห้องพัก</button>
+            <button onclick="switchTab('foods')" id="btn-foods" class="px-4 py-3 text-gray-300 whitespace-nowrap">จัดการอาหาร</button>
+            <button onclick="switchTab('promos')" id="btn-promos" class="px-4 py-3 text-gray-300 whitespace-nowrap">โปรโมชั่น</button>
+        </div>
+    </nav>
+
+    <main class="max-w-6xl mx-auto p-4">
+        <!-- Dashboard / Bookings -->
+        <div id="tab-bookings" class="tab-content active">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-bold text-gray-700">รายการจองล่าสุด</h2>
+                <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">รอตรวจสอบ</span>
+            </div>
+            
+            <div class="grid grid-cols-1 gap-4" id="booking-list">
+                <!-- Loading State -->
+                <div class="text-center py-10 text-gray-500">กำลังโหลดข้อมูล...</div>
+            </div>
+        </div>
+
+        <!-- Rooms Management -->
+        <div id="tab-rooms" class="tab-content">
+            <h2 class="text-lg font-bold mb-4">จัดการห้องพัก</h2>
+            <div class="bg-white rounded-lg shadow overflow-hidden">
+                <table class="w-full text-left text-sm">
+                    <thead class="bg-gray-50 border-b">
+                        <tr>
+                            <th class="p-3">ID</th>
+                            <th class="p-3">ชื่อห้อง</th>
+                            <th class="p-3">ราคาเริ่มต้น</th>
+                            <th class="p-3 text-center">จัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="room-table-body">
+                        <!-- Rooms data -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Foods Management -->
+        <div id="tab-foods" class="tab-content">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-bold text-gray-700">จัดการเมนูอาหาร</h2>
+                <button class="bg-green-600 text-white px-3 py-1 rounded text-sm">+ เพิ่มเมนู</button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="food-list-admin">
+                <!-- Foods data -->
+            </div>
+        </div>
+
+        <!-- Promotions Management -->
+        <div id="tab-promos" class="tab-content">
+            <h2 class="text-lg font-bold mb-4">รหัสส่วนลด (Promo Codes)</h2>
+            <div class="bg-white p-4 rounded-lg shadow" id="promo-list-admin">
+                <!-- Promo data -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal for Slip View -->
+    <div id="slip-modal" class="fixed inset-0 bg-black bg-opacity-70 z-[60] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg max-w-sm w-full p-4 overflow-hidden relative">
+            <button onclick="closeModal()" class="absolute top-2 right-2 bg-gray-200 rounded-full w-8 h-8 flex items-center justify-center font-bold">✕</button>
+            <h3 class="font-bold mb-4">ตรวจสอบสลิป</h3>
+            <img id="modal-slip-img" src="" class="w-full h-auto rounded shadow-inner mb-4">
+            <div class="flex gap-2">
+                <button onclick="updateBookingStatus('Confirmed')" class="flex-1 bg-green-600 text-white py-2 rounded font-bold">อนุมัติ</button>
+                <button onclick="updateBookingStatus('Rejected')" class="flex-1 bg-red-600 text-white py-2 rounded font-bold">ไม่อนุมัติ</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "https://script.google.com/macros/s/AKfycbwQjaz5oaVekrtSlw_kGqt9gLOg0uQeXphG4H2Q5cqrv4ZSEiJnzO63lctvaaYTRr9HNQ/exec"; // ใช้ URL เดียวกับหน้าจอง
+        let allData = {};
+        let currentBookingId = null;
+
+        async function refreshData() {
+            const list = document.getElementById('booking-list');
+            list.innerHTML = `<div class="text-center py-10">กำลังโหลด...</div>`;
+            
+            try {
+                const res = await fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'getInitialData' })
+                });
+                allData = await res.json();
+                
+                // ในระบบจริง admin ต้องมีสิทธิ์ดู Bookings ทั้งหมด 
+                // สำหรับตัวอย่างนี้ เราจะเรียกใช้ getInitialData และแสดงข้อมูลอื่นๆ
+                renderRooms();
+                renderFoods();
+                renderPromos();
+                
+                // สำหรับ Bookings แนะนำให้สร้าง action แยกใน Code.gs เช่น 'getAllBookings'
+                // แต่ตอนนี้จะใช้ Mock-up แสดง UI ให้ดูความสวยงามก่อนครับ
+                renderMockBookings(); 
+            } catch (e) {
+                list.innerHTML = `<div class="text-center py-10 text-red-500">โหลดข้อมูลไม่สำเร็จ กรุณาตรวจสอบ API URL</div>`;
+            }
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('nav-active', 'text-white'));
+            document.querySelectorAll('nav button').forEach(b => b.classList.add('text-gray-300'));
+            
+            document.getElementById(`tab-${tab}`).classList.add('active');
+            document.getElementById(`btn-${tab}`).classList.add('nav-active', 'text-white');
+        }
+
+        function renderRooms() {
+            const tbody = document.getElementById('room-table-body');
+            tbody.innerHTML = allData.rooms.map(room => `
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="p-3 font-bold">${room.id}</td>
+                    <td class="p-3">${room.name}</td>
+                    <td class="p-3">฿${room.basePrice.toLocaleString()}</td>
+                    <td class="p-3 text-center">
+                        <button class="text-blue-500 hover:underline">แก้ไข</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function renderFoods() {
+            const container = document.getElementById('food-list-admin');
+            container.innerHTML = allData.foods.map(food => `
+                <div class="bg-white p-3 rounded shadow flex justify-between items-center">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-gray-100 rounded flex items-center justify-center">🍲</div>
+                        <div>
+                            <p class="font-bold text-sm">${food.name}</p>
+                            <p class="text-xs text-gray-500">฿${food.price}</p>
+                        </div>
+                    </div>
+                    <button class="text-red-500 text-xs">ลบ</button>
+                </div>
+            `).join('');
+        }
+
+        function renderPromos() {
+            const container = document.getElementById('promo-list-admin');
+            container.innerHTML = allData.promotions.map(p => `
+                <div class="flex justify-between border-b py-2 text-sm">
+                    <div>
+                        <span class="font-mono bg-gray-100 px-2 rounded font-bold">${p.code}</span>
+                        <span class="ml-2 text-gray-600">${p.value}${p.type === 'percent' ? '%' : '฿'}</span>
+                    </div>
+                    <span class="text-xs text-gray-400">หมดอายุ: ${p.expiry}</span>
+                </div>
+            `).join('');
+        }
+
+        function renderMockBookings() {
+            const list = document.getElementById('booking-list');
+            // ตัวอย่างข้อมูลจำลอง (ในงานจริงควรดึงจาก Sheet Bookings)
+            const mocks = [
+                { id: 'KLD-20240520-001', name: 'คุณอลงกต', checkIn: '2024-05-25', total: 3200, status: 'Pending', slip: 'https://via.placeholder.com/300x500?text=Slip+Sample' },
+                { id: 'KLD-20240520-002', name: 'คุณสมชาย', checkIn: '2024-05-26', total: 1500, status: 'Confirmed', slip: '' }
+            ];
+
+            list.innerHTML = mocks.map(b => `
+                <div class="bg-white p-4 rounded-lg shadow border-l-4 ${b.status === 'Pending' ? 'border-yellow-400' : 'border-green-500'}">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-xs text-gray-400 font-mono">${b.id}</p>
+                            <p class="font-bold text-gray-800">${b.name}</p>
+                            <p class="text-xs text-gray-500 mt-1">Check-in: ${b.checkIn}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="font-bold text-kanam">฿${b.total.toLocaleString()}</p>
+                            <span class="text-[10px] px-2 py-0.5 rounded ${b.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}">${b.status}</span>
+                        </div>
+                    </div>
+                    <div class="mt-3 flex gap-2">
+                        ${b.status === 'Pending' ? `<button onclick="viewSlip('${b.slip}', '${b.id}')" class="flex-1 bg-slate-800 text-white text-xs py-2 rounded">ตรวจสลิป</button>` : ''}
+                        <button class="flex-1 border text-xs py-2 rounded">ดูรายละเอียด</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function viewSlip(url, id) {
+            currentBookingId = id;
+            document.getElementById('modal-slip-img').src = url;
+            document.getElementById('slip-modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('slip-modal').classList.add('hidden');
+        }
+
+        async function updateBookingStatus(status) {
+            // ในส่วนนี้คุณต้องไปเพิ่ม Action 'updateBookingStatus' ใน Code.gs ด้วยครับ
+            alert(`กำลังเปลี่ยนสถานะ ${currentBookingId} เป็น ${status}`);
+            closeModal();
+            refreshData();
+        }
+
+        init();
+        function init() {
+            refreshData();
+        }
+    </script>
+</body>
+</html>
