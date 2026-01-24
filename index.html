@@ -276,7 +276,7 @@
                     
                     <div class="text-left mt-6">
                         <label class="block text-sm font-bold text-kanam mb-2">แนบสลิปการโอน</label>
-                        <div class="relative border-2 border-dashed border-gray-700 rounded-xl p-4 bg-gray-5 text-center">
+                        <div class="relative border-2 border-dashed border-gray-500 rounded-xl p-4 bg-gray-5 text-center">
                             <input type="file" id="slip-file" onchange="validateForm()" accept="image/*" class="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-kanam file:text-white hover:file:bg-opacity-80 cursor-pointer">
                         </div>
                     </div>
@@ -744,7 +744,7 @@
         async function submitBooking() {
             const btn = document.getElementById('btn-submit');
             btn.disabled = true;
-            btn.innerHTML = `<span class="inline-block animate-spin mr-2">⏳</span> กำลังส่งข้อมูล...`;
+            btn.innerHTML = `<span class="inline-block animate-spin mr-2">⏳</span> กำลังส่งข้อมูลการจอง...`;
 
             const fileInput = document.getElementById('slip-file');
             const reader = new FileReader();
