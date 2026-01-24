@@ -153,7 +153,7 @@
                     <!-- Hotspots จะถูกสร้างที่นี่ -->
                 </div>
 
-                <div class="flex justify-center gap-4 mb-6 text-[12px] font-bold">
+                <div class="flex justify-center gap-4 mb-6 text-[10px] font-bold">
                     <div class="flex items-center gap-1"><span class="w-3 h-3 bg-green-500 rounded-full"></span> ว่าง</div>
                     <div class="flex items-center gap-1"><span class="w-3 h-3 bg-gray-500 rounded-full"></span> ไม่ว่าง</div>
                     <div class="flex items-center gap-1"><span class="w-3 h-3 bg-yellow-400 rounded-full"></span> ที่เลือก</div>
@@ -382,10 +382,10 @@
         }
 
         function getFoodEmoji(name) {
-            if (name.includes('กระทะ')) return ' 🥘';
+            if (name.includes('หมูกระทะ')) return '🔥';
             if (name.includes('กาแฟ') || name.includes('ดริป')) return '☕';
-            if (name.includes('ชาบู')) return '🍲';
-            return '🍱';
+            if (name.includes('ไข่')) return '🍳';
+            return '🍲';
         }
 
         // --- LOGIC ---
@@ -736,7 +736,9 @@
                     promoCode: appliedPromo ? appliedPromo.code : "",
                     totalPrice: finalCalculation.total,
                     deposit: finalCalculation.deposit,
-                    slipBase64: reader.result
+                    slipBase64: reader.result,
+                    // เพิ่มบรรทัดนี้: ส่งชื่อไลน์ไปด้วย
+                    lineName: userProfile.displayName || ''
                 };
                 
                 try {
