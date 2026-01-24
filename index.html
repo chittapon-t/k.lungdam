@@ -201,7 +201,7 @@
                     <div class="flex justify-between items-center">
                         <div class="flex items-center gap-3">
                             <div class="w-14 h-14 rounded-lg bg-gray-100 overflow-hidden border border-gray-200">
-                                <img src="https://scontent.fbkk33-2.fna.fbcdn.net/v/t39.30808-6/488590661_639967278803017_7507696734329530911_n.jpg?_nc_cat=102&ccb=1-7&_nc_sid=833d8c&oh=00_AfqDujM5D_gsmujTnxDC9WRcw4y0jKbZD8ABbL3iSJNCPQ&oe=6978B18E" class="w-full h-full object-cover" alt="CAMP">
+                                <img src="https://lh3.googleusercontent.com/pw/AP1GczOP3McLJXLMt2R9_tx3Jk1fIORM8V1ZCfAlQs8s0xmWQYtIsLjrWwwirDArp-aBNnFRWH-2iHze-FZPCxyerHW8nmLiI-MsW9nYChcatvL7ZPpUp63zDmO650f1C0aSZSnfzSOGW-R6_NRhyDbpgMwd=w1216-h913-s-no-gm?authuser=0" class="w-full h-full object-cover" alt="CAMP">
                             </div>
                             <div>
                                 <span class="font-bold text-sm block">ลานกางเต็นท์ (CAMP)</span>
@@ -276,7 +276,7 @@
                     
                     <div class="text-left mt-6">
                         <label class="block text-sm font-bold text-kanam mb-2">แนบสลิปการโอน</label>
-                        <div class="relative border-2 border-dashed border-gray-200 rounded-xl p-4 bg-gray-50 text-center">
+                        <div class="relative border-2 border-dashed border-gray-200 rounded-xl p-4 bg-gray-500 text-center">
                             <input type="file" id="slip-file" onchange="validateForm()" accept="image/*" class="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-kanam file:text-white hover:file:bg-opacity-80 cursor-pointer">
                         </div>
                     </div>
@@ -285,7 +285,7 @@
                 <div class="mt-6 flex items-start bg-amber-50 p-4 rounded-xl border border-amber-100">
                     <input type="checkbox" id="terms" onchange="validateForm()" class="mt-1 mr-3 scale-150 accent-kanam">
                     <label for="terms" class="text-[11px] text-amber-900 leading-relaxed font-medium">
-                        ยอมรับเงื่อนไข: มัดจำแล้วไม่คืนเงินทุกกรณี สามารถเลื่อนวันเข้าพักได้ 1 ครั้ง (แจ้งล่วงหน้า 7 วัน)
+                        ยอมรับเงื่อนไข: มัดจำแล้วไม่คืนเงินทุกกรณี สามารถเลื่อนวันเข้าพักได้(แจ้งล่วงหน้า 7 วัน) กรณีโรคระบาด/ภัยพิบัติ เลื่อนได้ไม่จำกัด
                     </label>
                 </div>
 
@@ -426,10 +426,10 @@
         }
 
         function getFoodEmoji(name) {
-            if (name.includes('หมูกระทะ')) return '🔥';
+            if (name.includes('กระทะ')) return '🥘';
             if (name.includes('กาแฟ') || name.includes('ดริป')) return '☕';
-            if (name.includes('ไข่')) return '🍳';
-            return '🍲';
+            if (name.includes('ชาบู')) return '🍲';
+            return '🍱';
         }
 
         // --- LOGIC ---
