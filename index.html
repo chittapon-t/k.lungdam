@@ -105,6 +105,36 @@
             padding: 5px;
             cursor: pointer;
         }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+            align-items: center;
+            justify-content: center;
+        }
+        .modal.show { display: flex; animation: fadeIn 0.3s; }
+        .modal-content {
+            background-color: #fff;
+            margin: auto;
+            padding: 2rem;
+            border-radius: 1.5rem;
+            width: 90%;
+            max-width: 350px;
+            text-align: center;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            transform: scale(0.9);
+            transition: transform 0.3s ease-out;
+        }
+        .modal.show .modal-content { transform: scale(1); }
     </style>
 </head>
 <body class="pb-10">
@@ -260,6 +290,20 @@
                 </div>
 
                 <button id="btn-submit" disabled onclick="submitBooking()" class="w-full bg-gray-300 text-white py-5 rounded-2xl mt-8 font-bold text-lg shadow-xl transition-all">ยืนยันการจอง</button>
+            </div>
+        </div>
+
+        <!-- Success Modal -->
+        <div id="success-modal" class="modal">
+            <div class="modal-content">
+                <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span class="text-4xl">✅</span>
+                </div>
+                <h3 class="text-2xl font-bold text-kanam mb-2">จองสำเร็จ!</h3>
+                <p class="text-gray-500 mb-6 text-sm">ระบบได้รับข้อมูลเรียบร้อยแล้ว<br>กรุณารอแอดมินตรวจสอบสลิปและยืนยัน</p>
+                <button onclick="closeLiff()" class="w-full bg-kanam text-white py-3 rounded-xl font-bold shadow-lg hover:opacity-90 transition-all">
+                    ปิดกลับเข้าหน้าแชท
+                </button>
             </div>
         </div>
     </div>
@@ -712,7 +756,8 @@
                     checkOut: document.getElementById('checkout').value,
                     customer: { 
                         name: document.getElementById('cust-name').value, 
-                        phone: document.getElementById('cust-phone').value, 
+                        // เพิ่ม ' นำหน้าเบอร์โทร เพื่อป้องกันเลข 0 หาย
+                        phone: "'" + document.getElementById('cust-phone').value, 
                         lineID: userProfile.userId || 'Guest',
                         note: document.getElementById('cust-note').value
                     },
@@ -737,7 +782,6 @@
                     totalPrice: finalCalculation.total,
                     deposit: finalCalculation.deposit,
                     slipBase64: reader.result,
-                    // เพิ่มบรรทัดนี้: ส่งชื่อไลน์ไปด้วย
                     lineName: userProfile.displayName || ''
                 };
                 
@@ -749,8 +793,8 @@
                     const result = await res.json();
                     
                     if (result.status === 'success') { 
-                        alert("✨ จองสำเร็จ! ทางเราจะรีบตรวจสอบสลิปและแจ้งยืนยันผ่าน LINE โดยเร็วที่สุดครับ"); 
-                        liff.closeWindow(); 
+                        // แสดง Modal แทน alert
+                        document.getElementById('success-modal').classList.add('show');
                     } else { 
                         alert("❌ ขออภัย: " + result.message); 
                         btn.disabled = false;
@@ -762,6 +806,10 @@
                     btn.innerHTML = `ยืนยันการจอง`;
                 }
             };
+        }
+
+        function closeLiff() {
+            liff.closeWindow();
         }
 
         // Start App
