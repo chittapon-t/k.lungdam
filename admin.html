@@ -70,7 +70,7 @@
               <tr>
                 <th class="p-4 font-semibold">เช็คอิน</th>
                 <th class="p-4 font-semibold">ชื่อลูกค้า</th>
-                <th class="p-4 font-semibold">ที่พัก</th>
+                <th class="p-4 font-semibold">ที่พัก/อาหาร</th>
                 <th class="p-4 font-semibold">สถานะ</th>
                 <th class="p-4 font-semibold text-right">ยอดค้าง</th>
                 <th class="p-4 font-semibold text-center">จัดการ</th>
@@ -174,6 +174,16 @@
       return `${d.getDate()} ${months[d.getMonth()]}${includeYear ? ' ' + (d.getFullYear() + 543) : ''}`;
     }
 
+    // แปลง Google Drive URL ให้แสดงผลได้ทันที
+    function convertDriveUrl(url) {
+      if (!url) return '';
+      // กรณีลิงก์ปกติ view?usp=drivesdk หรือ view
+      if (url.includes('drive.google.com') && url.includes('view')) {
+          return url.replace('file/d/', 'uc?export=view&id=').replace('/view', '').split('?')[0] + '?export=view&id=' + url.split('/d/')[1].split('/')[0];
+      }
+      return url;
+    }
+
     // เรนเดอร์รายการล่าสุด (Card View)
     function renderRecent() {
       const list = document.getElementById('recentList');
@@ -186,7 +196,15 @@
 
       list.innerHTML = recent.map(b => {
         const roomNames = b.rooms.map(r => masterData.rooms.find(m => m.id === r.id)?.name || r.id).join(', ');
+        const foodNames = b.foods.map(f => {
+            const info = masterData.foods.find(m => m.id === f.id);
+            return `${info ? info.name : f.id} (x${f.qty})`;
+        }).join(', ');
+        
         const isPending = b.status === 'Pending';
+        // ใช้ชื่อไลน์แทน UserID
+        const lineDisplayName = b.lineName || b.lineID || 'ไม่ระบุ';
+
         return `
           <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 hover:shadow-md transition-all group">
             <div class="flex justify-between items-start mb-4">
@@ -194,7 +212,12 @@
               <span class="text-[10px] px-2.5 py-1 rounded-full font-bold uppercase ${getStatusClass(b.status)}">${b.status}</span>
             </div>
             <h4 class="font-bold text-slate-800 text-lg mb-1 group-hover:text-blue-600 transition">${b.name}</h4>
-            <p class="text-xs text-slate-500 mb-4 flex items-center gap-1">🏠 ${roomNames}</p>
+            <div class="text-xs text-slate-400 mb-2 flex items-center gap-1">
+                <span>💬 ${lineDisplayName}</span>
+            </div>
+            <p class="text-xs text-slate-500 mb-1 flex items-center gap-1">🏠 ${roomNames}</p>
+            ${foodNames ? `<p class="text-xs text-slate-500 mb-4 flex items-center gap-1">🍲 ${foodNames}</p>` : ''}
+            
             <div class="grid grid-cols-2 gap-4 text-xs py-4 border-t border-slate-50">
               <div>
                 <p class="text-slate-400 mb-1">ระยะเวลา</p>
@@ -220,14 +243,22 @@
       
       tbody.innerHTML = sorted.map(b => {
         const roomNames = b.rooms.map(r => masterData.rooms.find(m => m.id === r.id)?.name || r.id).join(', ');
+        const foodNames = b.foods.map(f => {
+            const info = masterData.foods.find(m => m.id === f.id);
+            return `${info ? info.name : f.id} (x${f.qty})`;
+        }).join(', ');
+        
         return `
           <tr class="hover:bg-slate-50/50 transition">
             <td class="p-4 font-medium text-slate-700">${formatThaiDate(b.checkIn)}</td>
             <td class="p-4">
                <div class="font-bold text-slate-800">${b.name}</div>
-               <div class="text-[10px] text-slate-400 uppercase tracking-tighter">${b.bookingID}</div>
+               <div class="text-[10px] text-slate-400">💬 ${b.lineName || 'ไม่ระบุ'}</div>
             </td>
-            <td class="p-4 text-xs text-slate-500 max-w-[200px] truncate">${roomNames}</td>
+            <td class="p-4 text-xs text-slate-500 max-w-[200px]">
+                <div>🏠 ${roomNames}</div>
+                ${foodNames ? `<div class="text-slate-400 mt-1">🍲 ${foodNames}</div>` : ''}
+            </td>
             <td class="p-4"><span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${getStatusClass(b.status)}">${b.status}</span></td>
             <td class="p-4 text-right font-bold text-red-500">฿${(b.totalPrice - b.deposit).toLocaleString()}</td>
             <td class="p-4 text-center">
@@ -310,9 +341,24 @@
           </div>`;
       }).join('');
 
+      const foodDetails = b.foods.length > 0 ? `
+         <div class="mt-4 pt-2 border-t border-slate-50">
+           <p class="text-xs font-bold text-slate-400 mb-2">อาหารที่สั่ง</p>
+           ${b.foods.map(f => {
+              const info = masterData.foods.find(m => m.id === f.id);
+              return `
+              <div class="flex justify-between items-center py-1">
+                 <span class="text-xs text-slate-600">${info?.name || f.id} (x${f.qty})</span>
+                 <span class="text-xs font-bold text-slate-600">฿${(f.price * f.qty).toLocaleString()}</span>
+              </div>`;
+           }).join('')}
+         </div>
+      ` : '';
+
       const modal = document.getElementById('detailModal');
       const content = document.getElementById('modalContent');
       const isPending = b.status === 'Pending';
+      const directSlipUrl = convertDriveUrl(b.slipUrl);
       
       content.innerHTML = `
         <div class="flex flex-col md:flex-row gap-10">
@@ -326,7 +372,7 @@
             <h2 class="text-3xl font-bold text-slate-800 mb-2">${b.name}</h2>
             <p class="text-slate-500 flex items-center gap-4 mb-8">
               <span>📞 ${b.phone}</span>
-              <span>💬 ${b.lineID || '-'}</span>
+              <span>💬 ${b.lineName || b.lineID || '-'}</span>
             </p>
 
             <div class="grid grid-cols-2 gap-6 mb-8 bg-slate-50 p-6 rounded-[2rem]">
@@ -346,6 +392,7 @@
               <h3 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">🏠 รายละเอียดการจอง</h3>
               <div class="text-sm text-slate-600 space-y-1 bg-white border border-slate-100 rounded-2xl p-5">
                 ${roomDetails}
+                ${foodDetails}
               </div>
             </div>
 
@@ -382,7 +429,7 @@
                 <button onclick="closeModal()" class="w-8 h-8 flex items-center justify-center bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200 transition text-xl">&times;</button>
               </div>
               <div class="group relative overflow-hidden rounded-[2rem] border-4 border-slate-50 shadow-xl">
-                <img src="${b.slipUrl}" class="w-full h-auto object-cover min-h-[400px] cursor-zoom-in hover:scale-110 transition duration-500" alt="Slip" onerror="this.src='https://via.placeholder.com/400x600?text=No+Slip+Found'">
+                <img src="${directSlipUrl}" class="w-full h-auto object-cover min-h-[400px] cursor-zoom-in hover:scale-110 transition duration-500" alt="Slip" onerror="this.src='https://via.placeholder.com/400x600?text=No+Slip+Found'">
                 <a href="${b.slipUrl}" target="_blank" class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white font-bold">คลิกเพื่อดูรูปขยาย</a>
               </div>
               <p class="text-center text-[10px] text-slate-400 mt-4 italic">ตรวจสอบความถูกต้องของ วันที่/เวลา และยอดเงินในสลิป</p>
