@@ -15,11 +15,56 @@
         .step-content { display: none; }
         .step-content.active { display: block; animation: fadeIn 0.3s; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        /* Room Hotspots */
-        #layout-container { position: relative; border-radius: 12px; overflow: hidden; background: #cbd5e1; }
-        .hotspot { position: absolute; width: 13%; aspect-ratio: 1/1; border-radius: 50%; border: 2px solid white; cursor: pointer; display: flex; align-items: center; justify-content: center; overflow: visible; transition: all 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .hotspot img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; opacity: 0.9; }
-        .hotspot-label { position: absolute; z-index: 20; color: white; font-size: 9px; font-weight: bold; text-shadow: 1px 1px 2px black; text-align: center; width: 160%; background: rgba(0,0,0,0.4); padding: 2px 0; border-radius: 4px; bottom: 10%; }
+        
+        /* Map Container Style ปรับปรุงใหม่ */
+        #layout-container { 
+            position: relative; 
+            border-radius: 12px; 
+            overflow: hidden; 
+            background: #cbd5e1; 
+            min-height: 300px; /* ป้องกันกล่องยุบ */
+        }
+        
+        .hotspot { 
+            position: absolute; 
+            width: 14%; 
+            aspect-ratio: 1/1; 
+            border-radius: 50%; 
+            border: 2px solid white; 
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            overflow: visible; 
+            transition: all 0.2s; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2); 
+            z-index: 10; /* ให้ลอยเหนือรูปแน่นอน */
+            background: rgba(255,255,255,0.2); /* พื้นหลังจางๆ เผื่อรูปโหลดไม่ขึ้น */
+        }
+        .hotspot img { 
+            width: 100%; 
+            height: 100%; 
+            object-fit: cover; 
+            border-radius: 50%; 
+            opacity: 0.95; 
+        }
+        .hotspot-label { 
+            position: absolute; 
+            z-index: 20; 
+            color: white; 
+            font-size: 10px; 
+            font-weight: bold; 
+            text-shadow: 1px 1px 3px black; 
+            text-align: center; 
+            width: 180%; 
+            background: rgba(0,0,0,0.6); 
+            padding: 2px 4px; 
+            border-radius: 4px; 
+            bottom: -20px; /* ย้ายลงมาข้างล่างปุ่ม */
+            left: 50%;
+            transform: translateX(-50%);
+            pointer-events: none;
+        }
         .status-available { border-color: #10b981; background-color: #10b981; }
         .status-booked { border-color: #6b7280; background-color: #9ca3af; filter: grayscale(100%); opacity: 0.7; cursor: not-allowed; }
         .status-booked::after { content: '❌'; position: absolute; font-size: 16px; z-index: 30; }
@@ -55,12 +100,13 @@
             <!-- STEP 2 -->
             <div id="step-2" class="step-content">
                 <div id="layout-container" class="mb-6 shadow-inner border border-slate-200">
-                    <img src="https://lh3.googleusercontent.com/pw/AP1GczNzsJplv6jr4mDDSC8wsMLS6T8-qOXwcOW3nE2yXJ-z5WWRWw7Q2XssA87-tUh6NFuStIUbPxYcOzjup6jSEpgEG1rOs2vMQ0VZ3AcKP4-qisvj7gLWcZlP0p4YRJoWYBbLQpy7kcuuSoGHeP9c2Hmq=w913-h913-s-no-gm?authuser=0" class="w-full block opacity-80">
+                    <!-- ใช้รูป Placeholder ที่เสถียรกว่า -->
+                    <img id="map-image" src="https://via.placeholder.com/800x600/cccccc/969696?text=Map+Layout" class="w-full block opacity-80" onerror="this.src='https://via.placeholder.com/800x600?text=No+Map+Image'">
                 </div>
                 
                 <div class="space-y-4">
                     <h3 class="font-bold text-kanam text-lg border-l-4 border-kanam pl-3">🏠 ห้องที่เลือก</h3>
-                    <div id="selected-list" class="space-y-3"><div class="text-center py-8 text-gray-400 text-sm italic">👆 แตะที่รูปบ้านในแผนผังเพื่อเลือก</div></div>
+                    <div id="selected-list" class="space-y-3"><div class="text-center py-8 text-gray-400 text-sm italic">👆 แตะที่ปุ่มบนแผนผังเพื่อเลือกห้อง</div></div>
                 </div>
 
                 <div class="mt-8 space-y-4">
@@ -111,10 +157,9 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, collection, getDocs, addDoc, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-        // REMOVED: Firebase Storage imports
 
         // --- 1. ใส่ค่า Firebase Config ตรงนี้ ---
-        const firebaseConfig = {
+       const firebaseConfig = {
     apiKey: "AIzaSyCOSVrDrt1xriMG4ZdDaZI5bH1c9ZHW3rE",
     authDomain: "lungdam-booking.firebaseapp.com",
     projectId: "lungdam-booking",
@@ -124,14 +169,19 @@
     measurementId: "G-JJHKT7E58D"
   };
         
-        // --- 2. ใส่ URL ของ Code.gs ที่ Deploy ใหม่ตรงนี้ ---
+        // --- 2. ใส่ URL ของ Code.gs ตรงนี้ ---
         const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbwQjaz5oaVekrtSlw_kGqt9gLOg0uQeXphG4H2Q5cqrv4ZSEiJnzO63lctvaaYTRr9HNQ/exec';
 
         // Init Firebase
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+        let app, db;
+        try {
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+        } catch(e) {
+            console.error("Firebase Init Error:", e);
+            Swal.fire('Config Error', 'กรุณาใส่ firebaseConfig ในไฟล์ index.html', 'error');
+        }
 
-        // State
         let state = {
             step: 1,
             rooms: [], foods: [],
@@ -140,7 +190,6 @@
             user: { lineId: '', name: '' }
         };
 
-        // --- GLOBAL FUNCTIONS ---
         window.init = async () => {
             const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate()+1);
             document.getElementById('checkin').value = tomorrow.toISOString().split('T')[0];
@@ -155,15 +204,26 @@
             } catch(e) {}
 
             try {
+                if(!db) return; // Stop if no db
                 const rSnap = await getDocs(collection(db, "rooms"));
-                state.rooms = []; rSnap.forEach(d => state.rooms.push({id: d.id, ...d.data()}));
+                state.rooms = []; 
+                rSnap.forEach(d => {
+                    const data = d.data();
+                    // Fallback for missing coords
+                    if (!data.coords) data.coords = {x: 50, y: 50}; 
+                    state.rooms.push({id: d.id, ...data});
+                });
                 
                 const fSnap = await getDocs(collection(db, "foods"));
                 state.foods = []; fSnap.forEach(d => state.foods.push({id: d.id, ...d.data()}));
                 
+                console.log("Loaded Rooms:", state.rooms); // Debug Log
                 renderMap();
                 renderFoods();
-            } catch(e) { console.error(e); Swal.fire('Error', 'กรุณาตรวจสอบ Firebase Config', 'error'); }
+            } catch(e) { 
+                console.error(e); 
+                Swal.fire('Connection Error', 'ไม่สามารถดึงข้อมูลห้องพักได้ ตรวจสอบ Config', 'error'); 
+            }
         };
 
         window.updateMinCheckout = () => {
@@ -198,37 +258,57 @@
         };
 
         async function checkAvailability() {
-            const q = query(collection(db, "bookings"), where("status", "!=", "Cancelled"));
-            const snapshot = await getDocs(q);
-            const bookedIDs = [];
-            const targetIn = new Date(state.dates.in);
-            const targetOut = new Date(state.dates.out);
+            try {
+                const q = query(collection(db, "bookings"), where("status", "!=", "Cancelled"));
+                const snapshot = await getDocs(q);
+                const bookedIDs = [];
+                const targetIn = new Date(state.dates.in);
+                const targetOut = new Date(state.dates.out);
 
-            snapshot.forEach(doc => {
-                const b = doc.data();
-                const bIn = new Date(b.checkIn);
-                const bOut = new Date(b.checkOut);
-                
-                if(bIn < targetOut && bOut > targetIn) {
-                    b.rooms.forEach(r => {
-                       if(r.id !== 'CAMP') bookedIDs.push(r.id);
-                    });
-                }
-            });
-            updateMapStatus(bookedIDs);
+                snapshot.forEach(doc => {
+                    const b = doc.data();
+                    const bIn = new Date(b.checkIn);
+                    const bOut = new Date(b.checkOut);
+                    
+                    if(bIn < targetOut && bOut > targetIn) {
+                        b.rooms.forEach(r => {
+                        if(r.id !== 'CAMP') bookedIDs.push(r.id);
+                        });
+                    }
+                });
+                updateMapStatus(bookedIDs);
+            } catch(e) {
+                console.error("Availability Check Error:", e);
+                // Continue even if error to allow testing map rendering
+            }
         }
 
         function renderMap() {
             const container = document.getElementById('layout-container');
+            // Remove old hotspots only
             container.querySelectorAll('.hotspot').forEach(e => e.remove());
+            
+            if(state.rooms.length === 0) {
+                console.warn("No rooms to render!");
+                return;
+            }
+
             state.rooms.forEach(r => {
                 if(r.id === 'CAMP') return;
                 const el = document.createElement('div');
                 el.className = `hotspot status-available`;
-                el.style.left = r.coords.x + '%';
-                el.style.top = r.coords.y + '%';
+                
+                // Safety Check for Coords
+                const x = r.coords?.x !== undefined ? r.coords.x : 50;
+                const y = r.coords?.y !== undefined ? r.coords.y : 50;
+                
+                el.style.left = x + '%';
+                el.style.top = y + '%';
                 el.id = `room-btn-${r.id}`;
-                el.innerHTML = `<img src="${r.imageUrl || 'https://via.placeholder.com/100'}" onerror="this.src='https://via.placeholder.com/100'"><span class="hotspot-label">${r.name}</span>`;
+                el.innerHTML = `
+                    <img src="${r.imageUrl || 'https://via.placeholder.com/100?text='+r.id}" onerror="this.src='https://via.placeholder.com/100?text=Icon'">
+                    <span class="hotspot-label">${r.name}</span>
+                `;
                 el.onclick = () => toggleRoom(r.id);
                 container.appendChild(el);
             });
@@ -239,15 +319,25 @@
             state.rooms.forEach(r => {
                 if(r.id === 'CAMP') return;
                 const el = document.getElementById(`room-btn-${r.id}`);
-                if(bookedIDs.includes(r.id)) {
-                    el.className = 'hotspot status-booked';
-                    el.onclick = null;
-                } else {
-                    el.className = 'hotspot status-available';
-                    el.onclick = () => toggleRoom(r.id);
+                if (el) {
+                    if(bookedIDs.includes(r.id)) {
+                        el.className = 'hotspot status-booked';
+                        el.onclick = null;
+                    } else {
+                        // Reset to available if not selected
+                        const isSelected = state.selectedRooms.some(item => item.id === r.id);
+                        if(isSelected) {
+                             el.className = 'hotspot status-selected';
+                             el.onclick = () => toggleRoom(r.id);
+                        } else {
+                             el.className = 'hotspot status-available';
+                             el.onclick = () => toggleRoom(r.id);
+                        }
+                    }
                 }
             });
-            state.selectedRooms = []; renderSelectedList();
+            // Don't clear selected rooms here, just update status visual
+            renderSelectedList();
         }
 
         window.toggleRoom = (id) => {
@@ -255,18 +345,18 @@
             const el = document.getElementById(`room-btn-${id}`);
             if(idx > -1) {
                 state.selectedRooms.splice(idx, 1);
-                el.classList.remove('status-selected');
+                if(el) el.className = 'hotspot status-available';
             } else {
                 const r = state.rooms.find(x => x.id === id);
                 state.selectedRooms.push({ id: id, pax: r.maxPax, name: r.name, basePrice: r.basePrice }); 
-                el.classList.add('status-selected');
+                if(el) el.className = 'hotspot status-selected';
             }
             renderSelectedList();
         };
 
         function renderSelectedList() {
             const div = document.getElementById('selected-list');
-            if(state.selectedRooms.length === 0) div.innerHTML = `<div class="text-center py-8 text-gray-400 text-sm italic">👆 แตะที่รูปบ้านในแผนผังเพื่อเลือก</div>`;
+            if(state.selectedRooms.length === 0) div.innerHTML = `<div class="text-center py-8 text-gray-400 text-sm italic">👆 แตะที่ปุ่มบนแผนผังเพื่อเลือก</div>`;
             else div.innerHTML = state.selectedRooms.map(item => `
                 <div class="flex justify-between items-center p-3 border rounded-xl bg-white shadow-sm">
                     <div><div class="font-bold text-kanam text-sm">${item.name}</div><div class="text-xs text-gray-400">฿${item.basePrice} | Max ${item.pax}</div></div>
@@ -321,49 +411,18 @@
             const file = document.getElementById('slip').files[0];
             if(!name || !phone || !file) return Swal.fire('เตือน', 'กรุณากรอกข้อมูลและแนบสลิป', 'warning');
 
-            // 1. Convert Image to Base64
             const reader = new FileReader();
             reader.readAsDataURL(file);
             reader.onload = async () => {
-                Swal.fire({ title: 'กำลังอัปโหลดสลิป...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                Swal.fire({ title: 'กำลังอัปโหลด...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
                 try {
-                    // 2. Upload to GAS (Google Drive)
-                    const uploadRes = await fetch(GAS_API_URL, {
-                        method: 'POST',
-                        mode: 'no-cors', // IMPORTANT: GAS post returns opaque response in no-cors
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({
-                            action: 'uploadSlip',
-                            fileName: Date.now() + '_' + file.name,
-                            base64: reader.result
-                        })
-                    });
-                    
-                    // NOTE: 'no-cors' means we can't read the response JSON directly to get the URL easily in pure client-side without a proxy.
-                    // WORKAROUND: For this specific "Hybrid" setup without a proxy, we will use a trick.
-                    // We will trust the upload worked and assume a pending URL, OR we switch to `fetch` with `redirect: follow` if GAS is published as "Anyone".
-                    // Better approach for stability: We will use the existing `Code.gs` structure but we need `ContentService` to return JSONP or handle CORS.
-                    // Since standard GAS `ContentService` has CORS issues with `POST` from browser, we will use a simpler trick:
-                    // We will just proceed. The GAS script receives the image and saves it. 
-                    // However, we need the URL to save to Firebase.
-                    
-                    // RETRY: Let's try standard fetch. If GAS is set to "Anyone", it usually follows redirects.
-                    // If this fails due to CORS, user might need to use a proxy or just save "Slip uploaded to Admin Drive" text.
-                    
-                    // Let's try the most robust way for beginners: Save "Pending Admin Check" as slip URL for now,
-                    // but actually send the image to GAS to save in Drive so Admin can see it there.
-                    
-                    // Real fix: We can't easily get the URL back in 'no-cors'.
-                    // So we will just send the data to GAS -> GAS saves image -> GAS sends Notify.
-                    // We store "See in Line/Drive" in Firebase.
-                    
                     const foodsToSave = Object.keys(state.selectedFoods).filter(k=>state.selectedFoods[k]>0).map(k => {
                         const f = state.foods.find(x=>x.id==k);
                         return { id: k, name: f.name, qty: state.selectedFoods[k], price: f.price };
                     });
 
-                    // 3. Save Data to Firestore (Slip URL = 'Sent to Admin')
+                    // Hybrid: Save to Firestore first (Slip = Pending)
                     const bookingData = {
                         checkIn: state.dates.in,
                         checkOut: state.dates.out,
@@ -373,41 +432,30 @@
                         totalPrice: state.total,
                         deposit: state.deposit,
                         status: 'Pending',
-                        slipUrl: 'Image sent to Admin Line/Drive', 
+                        slipUrl: 'Uploading...', 
                         timestamp: new Date().toISOString()
                     };
                     const docRef = await addDoc(collection(db, "bookings"), bookingData);
 
-                    // 4. Send Notify + Image to GAS
+                    // Send to GAS (Upload + Notify)
                     await fetch(GAS_API_URL, {
                         method: 'POST',
                         mode: 'no-cors',
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({
-                            action: 'uploadSlip', // Reuse this action to save and notify
+                            action: 'uploadSlip',
                             base64: reader.result,
                             fileName: file.name,
-                            // Send payload for notification inside
                             payload: {
                                 bookingID: docRef.id.substring(0,6),
                                 name, phone, lineName: state.user.name || '-',
                                 checkIn: state.dates.in, checkOut: state.dates.out,
                                 rooms: state.selectedRooms.map(r=>r.name).join(','),
                                 total: state.total, deposit: state.deposit,
-                                slipUrl: "Attached in Drive" // GAS will replace this with real Drive Link
+                                slipUrl: "Drive Attachment"
                             }
                         })
                     });
-                    
-                    // Modify GAS Code.gs slightly to handle this dual action or just call notify inside upload.
-                    // The provided Code.gs separates them. Let's trigger notify separately?
-                    // No, we can't get the URL back to send in notify.
-                    // So we will use a "Composite Action" in Code.gs or just rely on GAS saving it.
-                    
-                    // To keep it simple for the user (who just copy-pastes):
-                    // I'll update Code.gs to handle "uploadSlip" by saving AND returning JSON (even if frontend can't read it, GAS executes it).
-                    // Actually, let's just send the notification from GAS immediately after upload in the SAME request.
-                    // *I will update Code.gs below to support this better flow*
 
                     await Swal.fire('สำเร็จ', 'ระบบได้รับข้อมูลแล้ว', 'success');
                     liff.closeWindow();
@@ -419,7 +467,6 @@
             };
         };
         
-        // Start
         window.init();
     </script>
 </body>
