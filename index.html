@@ -19,7 +19,7 @@
         #layout-container { position: relative; border-radius: 12px; overflow: hidden; background: #cbd5e1; min-height: 300px; }
         .hotspot { position: absolute; width: 14%; aspect-ratio: 1/1; border-radius: 50%; border: 2px solid white; cursor: pointer; display: flex; align-items: center; justify-content: center; overflow: visible; transition: all 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.2); z-index: 10; background: rgba(255,255,255,0.2); }
         .hotspot img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; opacity: 0.95; }
-        .hotspot-label { position: absolute; z-index: 20; color: white; font-size: 10px; font-weight: bold; text-shadow: 1px 1px 3px black; text-align: center; width: 220%; background: rgba(0,0,0,0.6); padding: 2px 0; border-radius: 4px; bottom: -24px; left: 50%; transform: translateX(-50%); pointer-events: none; line-height: 1.2; }
+        .hotspot-label { position: absolute; z-index: 20; color: white; font-size: 10px; font-weight: bold; text-shadow: 1px 1px 3px black; text-align: center; width: 220%; background: rgba(0,0,0,0.6); padding: 2px 0; border-radius: 4px; bottom: -24px; left: 50%; transform: translateX(-50%); pointer-events: none; }
         .status-available { border-color: #10b981; background-color: #10b981; }
         .status-booked { border-color: #6b7280; background-color: #9ca3af; filter: grayscale(100%); opacity: 0.7; cursor: not-allowed; }
         .status-booked::after { content: '❌'; position: absolute; font-size: 16px; z-index: 30; }
@@ -55,8 +55,7 @@
             <!-- STEP 2 -->
             <div id="step-2" class="step-content">
                 <div id="layout-container" class="mb-6 shadow-inner border border-slate-200">
-                    <!-- แผนผังใหม่ -->
-                    <img id="map-image" src="https://drive.google.com/uc?export=view&id=1MtBiMvqO5BBPLlY2SFssaFXJsg8qt9TT" class="w-full block opacity-90" onerror="this.src='https://via.placeholder.com/800x600?text=Error+Loading+Map'">
+                    <img src="https://drive.google.com/uc?export=view&id=1MtBiMvqO5BBPLlY2SFssaFXJsg8qt9TT" class="w-full block opacity-90" onerror="this.src='https://via.placeholder.com/800x600?text=Error+Loading+Map'">
                 </div>
                 
                 <div class="space-y-4">
@@ -113,24 +112,15 @@
 
     <script>
         // --- CONFIGURATION ---
-        // ใส่ URL ที่ได้จากการ Deploy Code.gs (ที่มีฟังก์ชัน getInitialData)
         const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbwQjaz5oaVekrtSlw_kGqt9gLOg0uQeXphG4H2Q5cqrv4ZSEiJnzO63lctvaaYTRr9HNQ/exec';
 
-        // --- SAMPLE DATA (สำรอง กรณีเน็ตหลุด) ---
+        // --- SAMPLE DATA (Fallback) ---
         const SAMPLE_ROOMS = [
             {id: 'NP', name: 'โฮมสเตย์หนำโป', basePrice: 1600, maxPax: 8, coords: {x: 50, y: 30}},
             {id: 'RN1', name: 'บ้านพักริมน้ำ 1', basePrice: 1400, maxPax: 3, coords: {x: 20, y: 50}},
-            {id: 'RN2', name: 'บ้านพักริมน้ำ 2', basePrice: 1400, maxPax: 3, coords: {x: 80, y: 50}},
-            {id: 'T1', name: 'เต็นท์กระโจม 1', basePrice: 1200, maxPax: 4, coords: {x: 30, y: 70}},
-            {id: 'T2', name: 'เต็นท์กระโจม 2', basePrice: 1200, maxPax: 4, coords: {x: 70, y: 70}},
-            {id: 'K1', name: 'เต็นท์สนาม K1', basePrice: 700, maxPax: 2, coords: {x: 40, y: 85}},
-            {id: 'K2', name: 'เต็นท์สนาม K2', basePrice: 700, maxPax: 2, coords: {x: 60, y: 85}},
             {id: 'CAMP', name: 'ลานกางเต็นท์', basePrice: 150, maxPax: 20, coords: {x: 80, y: 80}}
         ];
-        const SAMPLE_FOODS = [
-            {id: 'F01', name: 'ชุดหมูกระทะลุงดำ', price: 390},
-            {id: 'F02', name: 'ชุดไก่กระทะลุงดำ', price: 390}
-        ];
+        const SAMPLE_FOODS = [{id: 'F01', name: 'ชุดหมูกระทะลุงดำ', price: 390}];
 
         let state = {
             step: 1,
@@ -146,41 +136,26 @@
             window.updateMinCheckout();
 
             try { await liff.init({ liffId: "2008803474-hRJaVbm7" }); if(liff.isLoggedIn()) state.user = await liff.getProfile(); } catch(e) {}
-            
             await loadMasterData();
         };
 
         async function loadMasterData() {
             try {
-                // ดึงข้อมูลจาก Google Sheets ผ่าน API
-                const res = await fetch(GAS_API_URL, {
-                    method: 'POST',
-                    mode: 'no-cors', // Hack for initial fetch not working sometimes
-                    // Actually, simple GET/POST with redirect might fail in browser without CORS.
-                    // We will use standard post and handle the text response.
-                });
-                // GAS Post Request with text/plain response usually works.
-                // But for getInitialData we need to read the body.
-                // Use standard fetch.
+                // Fetch Master Data
                 const response = await fetch(GAS_API_URL, {
                      method: 'POST',
                      body: JSON.stringify({ action: 'getInitialData' })
                 });
                 const data = await response.json();
                 
-                if(data.rooms && data.rooms.length > 0) state.rooms = data.rooms;
-                else state.rooms = SAMPLE_ROOMS;
-
-                if(data.foods && data.foods.length > 0) state.foods = data.foods;
-                else state.foods = SAMPLE_FOODS;
+                state.rooms = (data.rooms && data.rooms.length > 0) ? data.rooms : SAMPLE_ROOMS;
+                state.foods = (data.foods && data.foods.length > 0) ? data.foods : SAMPLE_FOODS;
 
             } catch(e) {
                 console.error("Load Data Error:", e);
-                // Fallback
                 state.rooms = SAMPLE_ROOMS;
                 state.foods = SAMPLE_FOODS;
             }
-
             renderMap();
             renderFoods();
         }
@@ -210,7 +185,6 @@
             }
             document.querySelectorAll('.step-content').forEach(e => e.classList.remove('active'));
             document.getElementById(`step-${step}`).classList.add('active');
-            for(let i=1;i<=3;i++) document.getElementById(`p-${i}`).className = i<=step ? 'text-kanam font-bold' : 'text-gray-300';
             window.scrollTo(0,0);
         };
 
@@ -218,19 +192,11 @@
             try {
                 const res = await fetch(GAS_API_URL, {
                     method: 'POST',
-                    body: JSON.stringify({ 
-                        action: 'checkAvailability', 
-                        checkIn: state.dates.in, 
-                        checkOut: state.dates.out 
-                    })
+                    body: JSON.stringify({ action: 'checkAvailability', checkIn: state.dates.in, checkOut: state.dates.out })
                 });
                 const data = await res.json();
                 updateMapStatus(data.bookedRoomIDs || []);
-            } catch(e) {
-                console.error(e);
-                // If fail, just clear bookings (risk of double booking but better than blocking)
-                updateMapStatus([]); 
-            }
+            } catch(e) { updateMapStatus([]); }
         }
 
         function renderMap() {
@@ -266,13 +232,13 @@
             renderSelectedList();
         }
 
-        // --- PRICING LOGIC (คำนวณราคาตามจำนวนคน) ---
+        // --- PRICING LOGIC ---
         function calculateRoomPrice(id, pax) {
-            if (id === 'NP') { return pax <= 5 ? 1600 : 2200; }
-            if (id === 'RN1' || id === 'RN2') { return pax <= 2 ? 1400 : 1750; }
-            if (id === 'T1' || id === 'T2') { return pax <= 2 ? 1200 : 1550; }
-            if (id === 'K1' || id === 'K2') { return 700; }
-            if (id === 'CAMP') { return 150 * pax; }
+            if (id === 'NP') return pax <= 5 ? 1600 : 2200;
+            if (id.startsWith('RN')) return pax <= 2 ? 1400 : 1750;
+            if (id.startsWith('T')) return pax <= 2 ? 1200 : 1550;
+            if (id.startsWith('K')) return 700;
+            if (id === 'CAMP') return 150 * pax;
             const r = state.rooms.find(x => x.id === id);
             return r ? r.basePrice : 0;
         }
@@ -285,8 +251,7 @@
                 if(el) el.className = 'hotspot status-available';
             } else {
                 const r = state.rooms.find(x => x.id === id);
-                let defaultPax = 2; 
-                if (id === 'NP') defaultPax = 4;
+                let defaultPax = (id === 'NP') ? 4 : 2;
                 state.selectedRooms.push({ id: id, pax: defaultPax, name: r.name }); 
                 if(el) el.className = 'hotspot status-selected';
             }
@@ -297,11 +262,9 @@
             const item = state.selectedRooms.find(x => x.id === id);
             const r = state.rooms.find(x => x.id === id);
             if (!item || !r) return;
-
             let newPax = item.pax + delta;
             if (newPax < 1) return;
             if (newPax > r.maxPax) return Swal.fire('เตือน', `ห้องนี้พักได้สูงสุด ${r.maxPax} ท่าน`, 'warning');
-            
             item.pax = newPax;
             renderSelectedList();
         };
@@ -313,12 +276,8 @@
                 const price = calculateRoomPrice(item.id, item.pax);
                 return `
                 <div class="flex justify-between items-center p-3 border rounded-xl bg-white shadow-sm mb-2">
-                    <div>
-                        <div class="font-bold text-kanam text-sm">${item.name}</div>
-                        <div class="text-xs text-green-600 font-bold">฿${price.toLocaleString()}</div>
-                    </div>
+                    <div><div class="font-bold text-kanam text-sm">${item.name}</div><div class="text-xs text-green-600 font-bold">฿${price.toLocaleString()}</div></div>
                     <div class="flex items-center gap-2">
-                        <span class="text-xs text-gray-400 mr-1">ผู้เข้าพัก:</span>
                         <button onclick="updatePax('${item.id}', -1)" class="w-6 h-6 bg-gray-100 rounded text-xs font-bold">-</button>
                         <span class="font-bold w-4 text-center text-sm">${item.pax}</span>
                         <button onclick="updatePax('${item.id}', 1)" class="w-6 h-6 bg-gray-100 rounded text-xs font-bold">+</button>
@@ -335,9 +294,9 @@
                 <div class="flex justify-between items-center p-3 border rounded-xl bg-white">
                     <span>${f.name} (฿${f.price})</span>
                     <div class="flex items-center gap-2">
-                        <button onclick="updateFood('${f.id}', -1)" class="w-6 h-6 bg-gray-100 rounded">-</button>
+                        <button onclick="window.updateFood('${f.id}', -1)" class="w-6 h-6 bg-gray-100 rounded">-</button>
                         <span id="food-cnt-${f.id}">0</span>
-                        <button onclick="updateFood('${f.id}', 1)" class="w-6 h-6 bg-gray-100 rounded">+</button>
+                        <button onclick="window.updateFood('${f.id}', 1)" class="w-6 h-6 bg-gray-100 rounded">+</button>
                     </div>
                 </div>`).join('');
         }
@@ -389,17 +348,6 @@
                     }));
 
                     const payload = {
-                        action: 'uploadSlip', // Using uploadSlip to trigger both save & notify in Hybrid/Sheets mode
-                        base64: reader.result,
-                        fileName: file.name,
-                        // For GAS to process properly, we need to send 'createBooking' action primarily if Code.gs expects it
-                        // But since we want to upload slip first or together...
-                        // Let's use the 'createBooking' structure if possible. 
-                        // Wait, current Code.gs expects 'createBooking' separately OR 'uploadSlip'.
-                        // Let's do 'createBooking' and pass slipBase64 directly. Code.gs handles it.
-                    };
-                    
-                    const bookingPayload = {
                         action: 'createBooking',
                         checkIn: state.dates.in, checkOut: state.dates.out,
                         customer: { name, phone, lineID: state.user.lineId || '' },
@@ -411,7 +359,7 @@
 
                     const res = await fetch(GAS_API_URL, {
                         method: 'POST',
-                        body: JSON.stringify(bookingPayload)
+                        body: JSON.stringify(payload)
                     });
                     const result = await res.json();
 
