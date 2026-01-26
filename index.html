@@ -55,7 +55,8 @@
             <!-- STEP 2 -->
             <div id="step-2" class="step-content">
                 <div id="layout-container" class="mb-6 shadow-inner border border-slate-200">
-                    <img id="map-image" src="https://via.placeholder.com/800x600/cccccc/969696?text=Map+Layout" class="w-full block opacity-80" onerror="this.src='https://via.placeholder.com/800x600?text=No+Map+Image'">
+                    <!-- Updated Map Image (Correct Link) -->
+                    <img id="map-image" src="https://drive.google.com/uc?export=view&id=1MtBiMvqO5BBPLlY2SFssaFXJsg8qt9TT" class="w-full block opacity-90" onerror="this.src='https://via.placeholder.com/800x600?text=Error+Loading+Map'">
                 </div>
                 
                 <div class="space-y-4">
@@ -128,7 +129,6 @@
         const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbwQjaz5oaVekrtSlw_kGqt9gLOg0uQeXphG4H2Q5cqrv4ZSEiJnzO63lctvaaYTRr9HNQ/exec';
 
         // --- SAMPLE DATA (Fallback) ---
-        // ใช้ข้อมูลจริงเป็น Sample เลยเพื่อความเนียน
         const SAMPLE_ROOMS = [
             {id: 'NP', name: 'โฮมสเตย์หนำโป', basePrice: 1600, maxPax: 8, coords: {x: 50, y: 30}},
             {id: 'RN1', name: 'บ้านพักริมน้ำ 1', basePrice: 1400, maxPax: 3, coords: {x: 20, y: 50}},
@@ -255,28 +255,26 @@
             renderSelectedList();
         }
 
-        // --- PRICING LOGIC (หัวใจสำคัญ: คำนวณราคาตามจำนวนคน) ---
+        // --- PRICING LOGIC ---
         function calculateRoomPrice(id, pax) {
-            // Logic ราคาตามที่แจ้ง
-            if (id === 'NP') { // โฮมสเตย์หนำโป
+            if (id === 'NP') { 
                 if (pax <= 5) return 1600;
-                return 2200; // 6-8 คน
+                return 2200; 
             }
-            if (id === 'RN1' || id === 'RN2') { // ริมน้ำ 1, 2
+            if (id === 'RN1' || id === 'RN2') {
                 if (pax <= 2) return 1400;
-                return 1750; // 3 คน
+                return 1750;
             }
-            if (id === 'T1' || id === 'T2') { // เต็นท์กระโจม 1, 2
+            if (id === 'T1' || id === 'T2') {
                 if (pax <= 2) return 1200;
-                return 1550; // 3-4 คน
+                return 1550;
             }
-            if (id === 'K1' || id === 'K2') { // เต็นท์สนาม
+            if (id === 'K1' || id === 'K2') {
                 return 700;
             }
-            if (id === 'CAMP') { // ลานกางเต็นท์
+            if (id === 'CAMP') {
                 return 150 * pax;
             }
-            // Fallback
             const r = state.rooms.find(x => x.id === id);
             return r ? r.basePrice : 0;
         }
@@ -289,29 +287,22 @@
                 if(el) el.className = 'hotspot status-available';
             } else {
                 const r = state.rooms.find(x => x.id === id);
-                // Default Pax: เริ่มต้นที่ขั้นต่ำของช่วงราคาแรก
                 let defaultPax = 2; 
                 if (id === 'NP') defaultPax = 4;
-                
                 state.selectedRooms.push({ id: id, pax: defaultPax, name: r.name }); 
                 if(el) el.className = 'hotspot status-selected';
             }
             renderSelectedList();
         };
         
-        // ฟังก์ชันปรับจำนวนคน (อัปเดตราคา Real-time)
         window.updatePax = (id, delta) => {
             const item = state.selectedRooms.find(x => x.id === id);
             const r = state.rooms.find(x => x.id === id);
             if (!item || !r) return;
 
             let newPax = item.pax + delta;
-            // ตรวจสอบ Max/Min Pax ตามกฎ
             if (newPax < 1) return;
             if (newPax > r.maxPax) return Swal.fire('เตือน', `ห้องนี้พักได้สูงสุด ${r.maxPax} ท่าน`, 'warning');
-
-            // เตือนช่วงราคา (Optional: เพื่อความชัดเจน)
-            // if (id === 'NP' && newPax === 6 && delta > 0) Swal.fire('แจ้งทราบ', '6-8 ท่าน ราคา 2,200 บาท', 'info');
             
             item.pax = newPax;
             renderSelectedList();
