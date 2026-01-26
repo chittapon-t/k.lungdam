@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Panel - ขนำลุงดำ (Real Data)</title>
+  <title>Admin Panel - ขนำลุงดำ</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -19,318 +19,140 @@
   <div class="max-w-7xl mx-auto px-4 py-6">
     <header class="flex justify-between items-center mb-8">
       <div>
-        <h1 class="text-3xl font-bold text-slate-800">จัดการการจอง ⚡</h1>
-        <p class="text-slate-500 text-sm flex items-center gap-2">
-          <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-          เชื่อมต่อ Firebase Real-time
-        </p>
+        <h1 class="text-3xl font-bold text-slate-800">จัดการการจอง</h1>
+        <p class="text-slate-500 text-sm">เชื่อมต่อกับ Google Sheets</p>
       </div>
-      <div class="flex gap-2">
-        <button onclick="initSystemData()" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-xs hover:bg-slate-700 shadow-lg shadow-slate-800/20 transition">
-            🔄 อัปเดตข้อมูลห้อง/อาหาร (กดเมื่อเริ่มระบบใหม่)
-        </button>
-      </div>
+      <button onclick="loadAllData()" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-xs hover:bg-slate-700 shadow transition">
+          🔄 รีเฟรชข้อมูล
+      </button>
     </header>
 
-    <nav class="flex border-b border-slate-200 mb-8 gap-6 text-slate-400">
-      <button onclick="switchTab('bookings')" id="tab-bookings" class="pb-3 px-2 tab-active transition-colors">รายการจอง</button>
-      <button onclick="switchTab('settings')" id="tab-settings" class="pb-3 px-2 transition-colors">จัดการห้อง/อาหาร</button>
-    </nav>
-
-    <!-- Bookings Tab -->
-    <div id="content-bookings" class="tab-content">
-      <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-        <div class="overflow-x-auto">
-          <table class="w-full text-left">
-            <thead class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold">
-              <tr>
-                <th class="p-4">วันที่เข้าพัก</th>
-                <th class="p-4">ลูกค้า</th>
-                <th class="p-4">รายการที่จอง</th>
-                <th class="p-4 text-right">ยอดเงิน</th>
-                <th class="p-4 text-center">สถานะ</th>
-                <th class="p-4 text-center">หลักฐาน</th>
-                <th class="p-4 text-center">จัดการ</th>
-              </tr>
-            </thead>
-            <tbody id="bookingTableBody" class="text-sm divide-y divide-slate-50">
-              <tr><td colspan="7" class="p-12 text-center text-gray-400">กำลังเชื่อมต่อฐานข้อมูล...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- Settings Tab -->
-    <div id="content-settings" class="tab-content hidden grid grid-cols-1 md:grid-cols-2 gap-8">
-      <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-        <h3 class="font-bold mb-4 flex justify-between items-center text-slate-700">
-          <span>🏠 ห้องพัก (Real Data)</span> 
-          <button onclick="addRoom()" class="bg-slate-800 text-white px-3 py-1 rounded-lg text-xs hover:bg-slate-700">+ เพิ่มห้อง</button>
-        </h3>
-        <div id="roomList" class="space-y-2 max-h-[600px] overflow-y-auto pr-2"></div>
-      </div>
-      <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-        <h3 class="font-bold mb-4 flex justify-between items-center text-slate-700">
-          <span>🍲 เมนูอาหาร</span> 
-          <button onclick="addFood()" class="bg-green-600 text-white px-3 py-1 rounded-lg text-xs hover:bg-green-700">+ เพิ่มเมนู</button>
-        </h3>
-        <div id="foodList" class="space-y-2 max-h-[600px] overflow-y-auto pr-2"></div>
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left">
+          <thead class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold">
+            <tr>
+              <th class="p-4">วันที่เข้าพัก</th>
+              <th class="p-4">ลูกค้า</th>
+              <th class="p-4">รายการ</th>
+              <th class="p-4 text-right">ยอดเงิน</th>
+              <th class="p-4 text-center">สถานะ</th>
+              <th class="p-4 text-center">จัดการ</th>
+            </tr>
+          </thead>
+          <tbody id="bookingTableBody" class="text-sm divide-y divide-slate-50">
+            <tr><td colspan="6" class="p-12 text-center text-gray-400">กำลังโหลดข้อมูล...</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
 
-  <!-- Firebase Scripts -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, onSnapshot, doc, updateDoc, addDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-    // --- 1. ใส่ค่า Firebase Config ของคุณตรงนี้ ---
-    const firebaseConfig = {
-       // ใส่ Config ตัวเดิมของคุณได้เลยครับ
-       apiKey: "AIzaSyCOSVrDrt1xriMG4ZdDaZI5bH1c9ZHW3rE",
-       authDomain: "lungdam-booking.firebaseapp.com",
-       projectId: "lungdam-booking",
-       storageBucket: "lungdam-booking.firebasestorage.app",
-       messagingSenderId: "997913997260",
-       appId: "1:997913997260:web:1e94427ffe5d73eb7b7769"
-    };
-
-    // Initialize
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
-    // --- REALTIME LISTENERS ---
-    
-    // 1. Listen to Bookings
-    onSnapshot(collection(db, "bookings"), (snapshot) => {
-      const tbody = document.getElementById('bookingTableBody');
-      if(snapshot.empty) {
-        tbody.innerHTML = '<tr><td colspan="7" class="p-12 text-center text-gray-400">ยังไม่มีรายการจองเข้ามา</td></tr>';
-        return;
-      }
-      
-      let html = '';
-      const bookings = [];
-      snapshot.forEach(doc => bookings.push({id: doc.id, ...doc.data()}));
-      
-      // เรียงลำดับ: วันที่จองล่าสุดขึ้นก่อน
-      bookings.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-      bookings.forEach(b => {
-        const roomsTxt = b.rooms.map(r => `${r.name} (${r.pax} ท่าน)`).join(', ');
-        const foodsTxt = b.foods && b.foods.length > 0 ? `<div class="text-[10px] text-gray-400 mt-1">+ ${b.foods.map(f=>f.name).join(', ')}</div>` : '';
-        const remaining = b.totalPrice - b.deposit;
-        
-        // แปลงสถานะเป็นไทย
-        let statusDisplay = b.status;
-        if(b.status === 'Pending') statusDisplay = 'รอตรวจสอบ';
-        if(b.status === 'Confirmed') statusDisplay = 'ยืนยันแล้ว';
-        if(b.status === 'Cancelled') statusDisplay = 'ยกเลิก';
-
-        html += `
-          <tr class="hover:bg-slate-50 transition group">
-            <td class="p-4 align-top">
-               <div class="font-bold text-slate-700 whitespace-nowrap">${formatDate(b.checkIn)}</div>
-               <div class="text-xs text-slate-400">ถึง ${formatDate(b.checkOut)}</div>
-               <div class="text-[10px] text-gray-300 mt-1">จองเมื่อ: ${new Date(b.timestamp).toLocaleDateString('th-TH')}</div>
-            </td>
-            <td class="p-4 align-top">
-               <div class="font-bold text-slate-800">${b.customer.name}</div>
-               <div class="text-xs text-slate-500 font-mono">${b.customer.phone}</div>
-               <div class="text-[10px] text-green-600 truncate max-w-[100px]">${b.customer.lineId || ''}</div>
-            </td>
-            <td class="p-4 align-top">
-               <div class="text-sm font-medium text-slate-700">${roomsTxt}</div>
-               ${foodsTxt}
-            </td>
-            <td class="p-4 align-top text-right">
-               <div class="font-bold text-slate-700">฿${b.totalPrice.toLocaleString()}</div>
-               ${b.status !== 'Confirmed' ? `<div class="text-xs text-red-500 font-medium">มัดจำ ฿${b.deposit.toLocaleString()}</div>` : `<div class="text-xs text-green-600 font-medium">ชำระแล้ว</div>`}
-            </td>
-            <td class="p-4 align-top text-center">
-               <span class="inline-block px-2 py-1 rounded-full text-[10px] font-bold status-${b.status}">${statusDisplay}</span>
-            </td>
-             <td class="p-4 align-top text-center">
-               ${b.slipUrl ? `<a href="${b.slipUrl}" target="_blank" class="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 hover:underline bg-blue-50 px-2 py-1 rounded border border-blue-100">📄 ดูสลิป</a>` : '<span class="text-xs text-gray-300">-</span>'}
-            </td>
-            <td class="p-4 align-top text-center">
-               <button onclick="viewBooking('${b.id}')" class="bg-white border border-slate-200 text-slate-600 hover:bg-slate-800 hover:text-white hover:border-slate-800 transition px-3 py-1.5 rounded-lg text-xs font-medium shadow-sm">จัดการ</button>
-            </td>
-          </tr>
-        `;
-      });
-      tbody.innerHTML = html;
-      window.currentBookings = bookings;
-    });
-
-    // 2. Listen to Rooms
-    onSnapshot(collection(db, "rooms"), (snapshot) => {
-      const div = document.getElementById('roomList');
-      div.innerHTML = '';
-      if(snapshot.empty) div.innerHTML = '<div class="text-center text-gray-300 text-xs py-4">ยังไม่มีห้องพัก</div>';
-      
-      const rooms = [];
-      snapshot.forEach(doc => rooms.push({_id: doc.id, ...doc.data()}));
-      
-      // Sort logic (Optional)
-      
-      rooms.forEach(r => {
-        div.innerHTML += `
-          <div class="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100 mb-2">
-             <div class="text-sm">
-                <span class="font-bold text-slate-700">${r.name}</span> <span class="text-xs text-gray-400 ml-1">(${r.id})</span>
-                <div class="text-xs text-slate-500 mt-0.5">ราคาเริ่มต้น ฿${r.basePrice.toLocaleString()} • พักได้สูงสุด ${r.maxPax} ท่าน</div>
-             </div>
-             <button onclick="window.delDoc('rooms', '${r._id}')" class="text-red-400 hover:text-red-600 text-xs p-2">🗑️</button>
-          </div>
-        `;
-      });
-    });
-
-    // 3. Listen to Foods
-    onSnapshot(collection(db, "foods"), (snapshot) => {
-      const div = document.getElementById('foodList');
-      div.innerHTML = '';
-      if(snapshot.empty) div.innerHTML = '<div class="text-center text-gray-300 text-xs py-4">ยังไม่มีเมนูอาหาร</div>';
-
-      snapshot.forEach(doc => {
-        const f = doc.data();
-        div.innerHTML += `
-          <div class="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100 mb-2">
-             <div class="text-sm">
-                <span class="font-bold text-slate-700">${f.name}</span>
-                <div class="text-xs text-green-600 font-medium mt-0.5">฿${f.price.toLocaleString()}</div>
-             </div>
-             <button onclick="window.delDoc('foods', '${doc.id}')" class="text-red-400 hover:text-red-600 text-xs p-2">🗑️</button>
-          </div>
-        `;
-      });
-    });
-
-    // --- ACTIONS ---
-    window.viewBooking = async (id) => {
-      const b = window.currentBookings.find(x => x.id === id);
-      const { value: action } = await Swal.fire({
-        title: `จัดการ: ${b.customer.name}`,
-        html: `
-          <div class="text-left text-sm bg-slate-50 p-4 rounded-lg border border-slate-100">
-            <p><b>ยอดมัดจำ:</b> <span class="text-red-500">฿${b.deposit.toLocaleString()}</span></p>
-            <p><b>ยอดคงเหลือ:</b> ฿${(b.totalPrice - b.deposit).toLocaleString()}</p>
-            <div class="mt-3 pt-3 border-t border-slate-200">
-                <a href="${b.slipUrl}" target="_blank" class="text-blue-600 underline font-bold flex items-center gap-1">🔎 ตรวจสอบสลิป</a>
-            </div>
-          </div>
-          <p class="text-xs text-gray-400 mt-4 text-center">ยืนยันการจองเมื่อตรวจสอบเงินแล้ว</p>
-        `,
-        showDenyButton: true,
-        showCancelButton: true,
-        confirmButtonText: '✅ ยืนยัน (Confirm)',
-        denyButtonText: '🚫 ยกเลิก (Cancel)',
-        confirmButtonColor: '#166534',
-        denyButtonColor: '#991b1b',
-        cancelButtonText: 'ปิด'
-      });
-
-      if (action !== undefined) { 
-        const status = action ? 'Confirmed' : 'Cancelled';
-        Swal.fire({title: 'กำลังบันทึก...', didOpen: () => Swal.showLoading()});
-        await updateDoc(doc(db, "bookings", id), { status: status });
-        Swal.fire('เรียบร้อย', `สถานะเปลี่ยนเป็น ${status} แล้ว`, 'success');
-      }
-    };
-
-    window.addRoom = async () => {
-       const { value: form } = await Swal.fire({
-         title: 'เพิ่มห้องพัก',
-         html: `
-            <div class="space-y-3">
-                <input id="r-id" placeholder="รหัสห้อง (เช่น NP)" class="swal2-input w-full text-sm">
-                <input id="r-name" placeholder="ชื่อห้องพัก" class="swal2-input w-full text-sm">
-                <div class="flex gap-2">
-                    <input id="r-price" type="number" placeholder="ราคาเริ่มต้น" class="swal2-input w-1/2 text-sm">
-                    <input id="r-pax" type="number" placeholder="Max Pax" class="swal2-input w-1/2 text-sm">
-                </div>
-            </div>
-         `,
-         preConfirm: () => {
-             const id = document.getElementById('r-id').value;
-             const name = document.getElementById('r-name').value;
-             return {id: id, name: name, basePrice: Number(document.getElementById('r-price').value), maxPax: Number(document.getElementById('r-pax').value), coords: {x:50,y:50}, imageUrl: ''};
-         }
-       });
-       if(form) { await addDoc(collection(db, "rooms"), form); Swal.fire('สำเร็จ', '', 'success'); }
-    };
-    
-    window.addFood = async () => {
-       const { value: form } = await Swal.fire({
-         title: 'เพิ่มเมนูอาหาร',
-         html: `<input id="f-name" placeholder="ชื่อเมนู" class="swal2-input"><input id="f-price" type="number" placeholder="ราคา" class="swal2-input">`,
-         preConfirm: () => ({id: 'F'+Date.now(), name: document.getElementById('f-name').value, price: Number(document.getElementById('f-price').value)})
-       });
-       if(form) { await addDoc(collection(db, "foods"), form); Swal.fire('สำเร็จ', '', 'success'); }
-    };
-
-    window.delDoc = async (col, id) => {
-       if(confirm('ลบรายการนี้?')) await deleteDoc(doc(db, col, id));
-    };
-
-    // --- IMPORTANT: อัปเดตข้อมูลจริงที่นี่ ---
-    window.initSystemData = async () => {
-       const res = await Swal.fire({
-           title: 'อัปเดตข้อมูลจริง?', 
-           text: "ระบบจะล้างข้อมูลห้อง/อาหารเก่า แล้วใส่ข้อมูลจริงชุดใหม่เข้าไป (ข้อมูลการจองจะไม่หาย)", 
-           icon: 'warning', showCancelButton: true, confirmButtonText: 'ลุยเลย'
-       });
-       
-       if(!res.isConfirmed) return;
-       Swal.fire({ title: 'กำลังอัปเดต...', didOpen: () => Swal.showLoading() });
-
-       // 1. ลบห้องและอาหารเก่าออกให้หมดก่อน (Batch Delete) เพื่อไม่ให้ซ้ำ
-       // หมายเหตุ: การลบแบบนี้ใน Client-side loop อาจช้าหน่อยถ้าข้อมูลเยอะ แต่สำหรับเริ่มต้น OK
-       const rSnap = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js").then(m => m.getDocs(collection(db, "rooms")));
-       rSnap.forEach(d => deleteDoc(doc(db, "rooms", d.id)));
-       
-       const fSnap = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js").then(m => m.getDocs(collection(db, "foods")));
-       fSnap.forEach(d => deleteDoc(doc(db, "foods", d.id)));
-
-       // 2. ใส่ข้อมูลจริง (Real Data)
-       const rooms = [
-        {id: 'NP', name: 'โฮมสเตย์หนำโป', basePrice: 1600, maxPax: 8, coords: {x: 50, y: 30}, imageUrl: ''},
-        {id: 'RN1', name: 'บ้านพักริมน้ำ 1', basePrice: 1400, maxPax: 3, coords: {x: 20, y: 50}, imageUrl: ''},
-        {id: 'RN2', name: 'บ้านพักริมน้ำ 2', basePrice: 1400, maxPax: 3, coords: {x: 80, y: 50}, imageUrl: ''},
-        {id: 'T1', name: 'เต็นท์กระโจม 1', basePrice: 1200, maxPax: 4, coords: {x: 30, y: 70}, imageUrl: ''},
-        {id: 'T2', name: 'เต็นท์กระโจม 2', basePrice: 1200, maxPax: 4, coords: {x: 70, y: 70}, imageUrl: ''},
-        {id: 'K1', name: 'เช่าเต็นท์สนาม K1', basePrice: 700, maxPax: 2, coords: {x: 40, y: 85}, imageUrl: ''},
-        {id: 'K2', name: 'เช่าเต็นท์สนาม K2', basePrice: 700, maxPax: 2, coords: {x: 60, y: 85}, imageUrl: ''},
-        {id: 'CAMP', name: 'ลานกางเต็นท์', basePrice: 150, maxPax: 20, coords: {x: 80, y: 80}, imageUrl: ''}
-       ];
-       
-       const foods = [
-        {id: 'F01', name: 'ชุดหมูกระทะลุงดำ', price: 390},
-        {id: 'F02', name: 'ชุดไก่กระทะลุงดำ', price: 390},
-        {id: 'F03', name: 'ชุดชาบูหมูลุงดำ', price: 390},
-        {id: 'F04', name: 'ชุดชาบูไก่ลุงดำ', price: 390},
-        {id: 'F05', name: 'เซ็ตอาหารพื้นบ้าน', price: 390}
-       ];
-
-       // ทยอยเพิ่มข้อมูล
-       for(const r of rooms) await addDoc(collection(db, "rooms"), r);
-       for(const f of foods) await addDoc(collection(db, "foods"), f);
-       
-       Swal.fire('เรียบร้อย', 'อัปเดตข้อมูลจริงขึ้นระบบแล้ว', 'success');
-    };
-
-    function formatDate(d) { if(!d) return '-'; return d.split('-').reverse().join('/'); }
-  </script>
-  
   <script>
-    function switchTab(t) {
-      document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
-      document.querySelectorAll('nav button').forEach(b => b.classList.remove('tab-active'));
-      document.getElementById('content-'+t).classList.remove('hidden');
-      document.getElementById('tab-'+t).classList.add('tab-active');
+    // URL ของ Script คุณ
+    const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbwQjaz5oaVekrtSlw_kGqt9gLOg0uQeXphG4H2Q5cqrv4ZSEiJnzO63lctvaaYTRr9HNQ/exec';
+    let currentBookings = [];
+
+    async function loadAllData() {
+        document.getElementById('bookingTableBody').innerHTML = '<tr><td colspan="6" class="p-12 text-center text-gray-400">กำลังโหลดข้อมูล...</td></tr>';
+        
+        try {
+            const res = await fetch(GAS_API_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'getAllBookings' })
+            });
+            const data = await res.json();
+            currentBookings = data;
+            renderTable(data);
+        } catch(e) {
+            console.error(e);
+            Swal.fire('Error', 'ไม่สามารถโหลดข้อมูลได้', 'error');
+        }
     }
+
+    function renderTable(bookings) {
+        if(!bookings || bookings.length === 0) {
+            document.getElementById('bookingTableBody').innerHTML = '<tr><td colspan="6" class="p-12 text-center text-gray-400">ไม่มีข้อมูล</td></tr>';
+            return;
+        }
+
+        // เรียงลำดับ (ล่าสุดอยู่บน)
+        // bookings เก็บวันที่เป็น string ไทย หรือ YYYY-MM-DD แล้วแต่ Code.gs ส่งมา
+        // ถ้าส่งมาเป็น checkIn ที่เป็น standard date string ก็ sort ได้เลย
+        bookings.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+        const html = bookings.map(b => {
+            const roomsTxt = b.rooms.map(r => r.id).join(', ');
+            const remaining = b.totalPrice - b.deposit;
+            let statusDisplay = b.status;
+            if(b.status === 'Pending') statusDisplay = 'รอตรวจสอบ';
+            else if(b.status === 'Confirmed') statusDisplay = 'ยืนยันแล้ว';
+            else if(b.status === 'Cancelled') statusDisplay = 'ยกเลิก';
+
+            return `
+            <tr class="hover:bg-slate-50 transition">
+                <td class="p-4 align-top">
+                    <div class="font-bold text-slate-700">${b.checkIn}</div>
+                    <div class="text-xs text-slate-400">ถึง ${b.checkOut}</div>
+                </td>
+                <td class="p-4 align-top">
+                    <div class="font-bold text-slate-800">${b.name}</div>
+                    <div class="text-xs text-slate-500">${b.phone}</div>
+                </td>
+                <td class="p-4 align-top">
+                    <div class="text-sm font-medium text-slate-700">${roomsTxt}</div>
+                </td>
+                <td class="p-4 align-top text-right">
+                    <div class="font-bold text-slate-700">฿${b.totalPrice.toLocaleString()}</div>
+                    ${b.status !== 'Confirmed' ? `<div class="text-xs text-red-500">มัดจำ ฿${b.deposit.toLocaleString()}</div>` : `<div class="text-xs text-green-600">ชำระแล้ว</div>`}
+                </td>
+                <td class="p-4 align-top text-center">
+                    <span class="inline-block px-2 py-1 rounded-full text-[10px] font-bold status-${b.status}">${statusDisplay}</span>
+                </td>
+                <td class="p-4 align-top text-center">
+                    <button onclick="viewBooking('${b.bookingID}')" class="bg-white border border-slate-200 text-slate-600 hover:bg-slate-800 hover:text-white transition px-3 py-1.5 rounded-lg text-xs font-medium">จัดการ</button>
+                </td>
+            </tr>`;
+        }).join('');
+        document.getElementById('bookingTableBody').innerHTML = html;
+    }
+
+    async function viewBooking(id) {
+        const b = currentBookings.find(x => x.bookingID === id);
+        const { value: action } = await Swal.fire({
+            title: `จัดการ: ${b.name}`,
+            html: `
+            <div class="text-left text-sm bg-slate-50 p-4 rounded-lg border border-slate-100">
+                <p><b>ยอดคงเหลือ:</b> ฿${(b.totalPrice - b.deposit).toLocaleString()}</p>
+                <div class="mt-3 pt-3 border-t border-slate-200">
+                    <a href="${b.slipUrl}" target="_blank" class="text-blue-600 underline font-bold flex items-center gap-1">🔎 ตรวจสอบสลิป</a>
+                </div>
+            </div>`,
+            showDenyButton: true,
+            showCancelButton: true,
+            confirmButtonText: '✅ ยืนยัน',
+            denyButtonText: '🚫 ยกเลิก',
+            confirmButtonColor: '#166534',
+            denyButtonColor: '#991b1b',
+            cancelButtonText: 'ปิด'
+        });
+
+        if (action !== undefined) {
+            const status = action ? 'Confirmed' : 'Cancelled';
+            Swal.fire({title: 'กำลังบันทึก...', didOpen: () => Swal.showLoading()});
+            
+            await fetch(GAS_API_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'updateBookingStatus', bookingID: id, status: status })
+            });
+            
+            await loadAllData();
+            Swal.fire('เรียบร้อย', `สถานะเปลี่ยนเป็น ${status} แล้ว`, 'success');
+        }
+    }
+
+    // Load initial data
+    loadAllData();
   </script>
 </body>
 </html>
