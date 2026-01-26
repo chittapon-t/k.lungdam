@@ -3,394 +3,333 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Panel - ขนำลุงดำ</title>
+  <title>Admin Panel - ขนำลุงดำ (Hybrid)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
-  <!-- FullCalendar -->
-  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
-  <!-- SweetAlert2 for nice modals -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
   <style>
     body { font-family: 'Kanit', sans-serif; background-color: #f8fafc; }
-    .status-pending { background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
-    .status-confirmed { background-color: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
-    .status-cancelled { background-color: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+    .status-Pending { background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+    .status-Confirmed { background-color: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+    .status-Cancelled { background-color: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
     .tab-active { border-bottom: 3px solid #2c3e2d; color: #2c3e2d; font-weight: 600; }
-    .fc-event { cursor: pointer; padding: 2px 5px; border-radius: 4px; border: none; }
-    /* Hide scrollbar for Chrome, Safari and Opera */
-    .no-scrollbar::-webkit-scrollbar { display: none; }
-    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
 </head>
 <body class="min-h-screen pb-12">
-  <div class="max-w-6xl mx-auto px-4 py-6">
-    <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+  <div class="max-w-7xl mx-auto px-4 py-6">
+    <header class="flex justify-between items-center mb-8">
       <div>
-        <h1 class="text-3xl font-bold text-slate-800">ระบบจัดการหลังบ้าน</h1>
-        <p class="text-slate-500 flex items-center gap-2">
+        <h1 class="text-3xl font-bold text-slate-800">จัดการการจอง ⚡</h1>
+        <p class="text-slate-500 text-sm flex items-center gap-2">
           <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-          ขนำลุงดำ - Kha Nam Lung Dam Admin
+          เชื่อมต่อ Firebase Real-time
         </p>
       </div>
-      <div class="flex gap-3">
-        <button onclick="loadAllData()" class="bg-white border border-slate-200 px-5 py-2.5 rounded-xl shadow-sm hover:bg-slate-50 transition flex items-center gap-2 font-medium text-slate-700">
-          <span id="refreshIcon">🔄</span> รีเฟรช
-        </button>
-        <button onclick="logout()" class="bg-red-50 text-red-600 px-4 py-2.5 rounded-xl font-medium hover:bg-red-100 transition">ออกจากระบบ</button>
+      <div class="flex gap-2">
+        <button onclick="initSystemData()" class="text-xs text-gray-400 hover:text-gray-600 underline">รีเซ็ตข้อมูลตัวอย่าง</button>
       </div>
     </header>
 
-    <!-- Navigation Tabs -->
-    <nav class="flex overflow-x-auto border-b border-slate-200 mb-8 gap-8 text-slate-400 no-scrollbar">
-      <button onclick="switchTab('recent')" id="tab-recent" class="pb-3 px-2 transition-all tab-active whitespace-nowrap">🕒 รายการจองล่าสุด</button>
-      <button onclick="switchTab('all')" id="tab-all" class="pb-3 px-2 transition-all whitespace-nowrap">📑 รายการทั้งหมด</button>
-      <button onclick="switchTab('calendar')" id="tab-calendar" class="pb-3 px-2 transition-all whitespace-nowrap">📅 ปฏิทิน</button>
-      <button onclick="switchTab('settings')" id="tab-settings" class="pb-3 px-2 transition-all whitespace-nowrap">⚙️ ตั้งค่าระบบ</button>
+    <nav class="flex border-b border-slate-200 mb-8 gap-6 text-slate-400">
+      <button onclick="switchTab('bookings')" id="tab-bookings" class="pb-3 px-2 tab-active transition-colors">รายการจอง</button>
+      <button onclick="switchTab('settings')" id="tab-settings" class="pb-3 px-2 transition-colors">จัดการห้อง/อาหาร</button>
     </nav>
 
-    <!-- Tab Contents -->
-    <div id="loading" class="text-center py-32 hidden">
-        <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-slate-200 border-t-slate-800 mb-4"></div>
-        <p class="text-slate-400 font-medium">กำลังโหลด...</p>
-    </div>
-
-    <!-- 1. Recent Bookings -->
-    <section id="content-recent" class="tab-content">
-      <div id="recentList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
-    </section>
-
-    <!-- 2. All Bookings Table -->
-    <section id="content-all" class="tab-content hidden">
+    <!-- Bookings Tab -->
+    <div id="content-bookings" class="tab-content">
       <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
         <div class="overflow-x-auto">
-          <table class="w-full text-left border-collapse">
-            <thead class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
+          <table class="w-full text-left">
+            <thead class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold">
               <tr>
-                <th class="p-4">วันที่</th>
+                <th class="p-4">วันที่เข้าพัก</th>
                 <th class="p-4">ลูกค้า</th>
-                <th class="p-4">รายละเอียด</th>
-                <th class="p-4">สถานะ</th>
-                <th class="p-4 text-right">ยอดค้าง</th>
+                <th class="p-4">รายการที่จอง</th>
+                <th class="p-4 text-right">ยอดเงิน</th>
+                <th class="p-4 text-center">สถานะ</th>
+                <th class="p-4 text-center">หลักฐาน</th>
                 <th class="p-4 text-center">จัดการ</th>
               </tr>
             </thead>
-            <tbody id="allBookingsTable" class="text-sm divide-y divide-slate-50"></tbody>
+            <tbody id="bookingTableBody" class="text-sm divide-y divide-slate-50">
+              <tr><td colspan="7" class="p-12 text-center text-gray-400">กำลังเชื่อมต่อฐานข้อมูล...</td></tr>
+            </tbody>
           </table>
         </div>
       </div>
-    </section>
+    </div>
 
-    <!-- 3. Calendar View -->
-    <section id="content-calendar" class="tab-content hidden">
-      <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-        <div id="calendar"></div>
-      </div>
-    </section>
-
-    <!-- 4. Settings (Full Functionality Added) -->
-    <section id="content-settings" class="tab-content hidden grid grid-cols-1 md:grid-cols-2 gap-8">
-      
-      <!-- Rooms -->
-      <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
-        <h3 class="font-bold text-xl mb-6 flex justify-between items-center text-slate-800">
-          <span>🏠 ห้องพัก</span>
-          <button onclick="addItem('Rooms')" class="bg-slate-800 text-white px-3 py-1 rounded-lg text-xs font-bold hover:bg-slate-700 transition">+ เพิ่ม</button>
+    <!-- Settings Tab -->
+    <div id="content-settings" class="tab-content hidden grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+        <h3 class="font-bold mb-4 flex justify-between items-center text-slate-700">
+          <span>🏠 ห้องพัก</span> 
+          <button onclick="addRoom()" class="bg-slate-800 text-white px-3 py-1 rounded-lg text-xs hover:bg-slate-700">+ เพิ่มห้อง</button>
         </h3>
-        <div id="roomSettingsList" class="space-y-3"></div>
+        <div id="roomList" class="space-y-2 max-h-[500px] overflow-y-auto pr-2"></div>
       </div>
-
-      <!-- Foods -->
-      <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
-        <h3 class="font-bold text-xl mb-6 flex justify-between items-center text-slate-800">
-          <span>🍲 เมนูอาหาร</span>
-          <button onclick="addItem('Foods')" class="bg-green-600 text-white px-3 py-1 rounded-lg text-xs font-bold hover:bg-green-700 transition">+ เพิ่ม</button>
+      <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+        <h3 class="font-bold mb-4 flex justify-between items-center text-slate-700">
+          <span>🍲 เมนูอาหาร</span> 
+          <button onclick="addFood()" class="bg-green-600 text-white px-3 py-1 rounded-lg text-xs hover:bg-green-700">+ เพิ่มเมนู</button>
         </h3>
-        <div id="foodSettingsList" class="space-y-3"></div>
+        <div id="foodList" class="space-y-2 max-h-[500px] overflow-y-auto pr-2"></div>
       </div>
-
-      <!-- Promotions -->
-      <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
-        <h3 class="font-bold text-xl mb-6 flex justify-between items-center text-slate-800">
-          <span>🎟️ โค้ดส่วนลด</span>
-          <button onclick="addItem('Promotions')" class="bg-blue-600 text-white px-3 py-1 rounded-lg text-xs font-bold hover:bg-blue-700 transition">+ เพิ่ม</button>
-        </h3>
-        <div id="promoSettingsList" class="space-y-3"></div>
-      </div>
-    </section>
+    </div>
   </div>
 
-  <script>
-    // --- CONFIGURATION ---
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwQjaz5oaVekrtSlw_kGqt9gLOg0uQeXphG4H2Q5cqrv4ZSEiJnzO63lctvaaYTRr9HNQ/exec';
-    const ADMIN_PASS = '1234'; // รหัสผ่านง่ายๆ (Client-side)
+  <!-- Firebase Scripts -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, onSnapshot, doc, updateDoc, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    // --- 1. ใส่ค่า Firebase Config ของคุณตรงนี้ ---
+    const firebaseConfig = {
+    apiKey: "AIzaSyCOSVrDrt1xriMG4ZdDaZI5bH1c9ZHW3rE",
+    authDomain: "lungdam-booking.firebaseapp.com",
+    projectId: "lungdam-booking",
+    storageBucket: "lungdam-booking.firebasestorage.app",
+    messagingSenderId: "997913997260",
+    appId: "1:997913997260:web:1e94427ffe5d73eb7b7769",
+    measurementId: "G-JJHKT7E58D"
+  };
+
+    // Initialize
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // --- REALTIME LISTENERS ---
     
-    let bookings = [];
-    let masterData = {};
-    let calendar;
-
-    // --- AUTHENTICATION ---
-    async function checkAuth() {
-        const session = sessionStorage.getItem('adminAuth');
-        if (session !== 'true') {
-            const { value: password } = await Swal.fire({
-                title: 'กรุณาใส่รหัสผ่านแอดมิน',
-                input: 'password',
-                allowOutsideClick: false,
-                confirmButtonText: 'เข้าสู่ระบบ',
-                confirmButtonColor: '#2c3e2d'
-            });
-
-            if (password === ADMIN_PASS) {
-                sessionStorage.setItem('adminAuth', 'true');
-                loadAllData();
-            } else {
-                await Swal.fire('รหัสผ่านผิด', '', 'error');
-                location.reload();
-            }
-        } else {
-            loadAllData();
-        }
-    }
-
-    function logout() {
-        sessionStorage.removeItem('adminAuth');
-        location.reload();
-    }
-
-    // --- DATA LOADING ---
-    async function loadAllData() {
-      const loading = document.getElementById('loading');
-      loading.classList.remove('hidden');
-      
-      try {
-        const [bResp, iResp] = await Promise.all([
-          fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'getAllBookings' }) }),
-          fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'getInitialData' }) })
-        ]);
-        
-        bookings = await bResp.json();
-        masterData = await iResp.json();
-        
-        renderRecent();
-        renderAll();
-        renderCalendar();
-        renderSettings();
-        
-      } catch (e) {
-        Swal.fire('Error', 'ไม่สามารถโหลดข้อมูลได้', 'error');
-      } finally {
-        loading.classList.add('hidden');
+    // 1. Listen to Bookings
+    onSnapshot(collection(db, "bookings"), (snapshot) => {
+      const tbody = document.getElementById('bookingTableBody');
+      if(snapshot.empty) {
+        tbody.innerHTML = '<tr><td colspan="7" class="p-12 text-center text-gray-400">ยังไม่มีรายการจองเข้ามา</td></tr>';
+        return;
       }
-    }
+      
+      let html = '';
+      const bookings = [];
+      snapshot.forEach(doc => bookings.push({id: doc.id, ...doc.data()}));
+      
+      // เรียงลำดับ: วันที่จองล่าสุดขึ้นก่อน
+      bookings.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-    // --- TAB SWITCHING ---
-    function switchTab(tab) {
+      bookings.forEach(b => {
+        const roomsTxt = b.rooms.map(r => r.name).join(', ');
+        const foodsTxt = b.foods && b.foods.length > 0 ? `<div class="text-[10px] text-gray-400 mt-1">+ ${b.foods.map(f=>f.name).join(', ')}</div>` : '';
+        const remaining = b.totalPrice - b.deposit;
+        
+        // แปลงสถานะเป็นไทยเพื่อแสดงผล
+        let statusDisplay = b.status;
+        if(b.status === 'Pending') statusDisplay = 'รอตรวจสอบ';
+        if(b.status === 'Confirmed') statusDisplay = 'ยืนยันแล้ว';
+        if(b.status === 'Cancelled') statusDisplay = 'ยกเลิก';
+
+        html += `
+          <tr class="hover:bg-slate-50 transition group">
+            <td class="p-4 align-top">
+               <div class="font-bold text-slate-700 whitespace-nowrap">${formatDate(b.checkIn)}</div>
+               <div class="text-xs text-slate-400">ถึง ${formatDate(b.checkOut)}</div>
+               <div class="text-[10px] text-gray-300 mt-1">จองเมื่อ: ${new Date(b.timestamp).toLocaleDateString('th-TH')}</div>
+            </td>
+            <td class="p-4 align-top">
+               <div class="font-bold text-slate-800">${b.customer.name}</div>
+               <div class="text-xs text-slate-500 font-mono">${b.customer.phone}</div>
+               <div class="text-[10px] text-green-600 truncate max-w-[100px]">${b.customer.lineId || ''}</div>
+            </td>
+            <td class="p-4 align-top">
+               <div class="text-sm font-medium text-slate-700">${roomsTxt}</div>
+               ${foodsTxt}
+            </td>
+            <td class="p-4 align-top text-right">
+               <div class="font-bold text-slate-700">฿${b.totalPrice.toLocaleString()}</div>
+               ${b.status !== 'Confirmed' ? `<div class="text-xs text-red-500 font-medium">มัดจำ ฿${b.deposit.toLocaleString()}</div>` : `<div class="text-xs text-green-600 font-medium">ชำระแล้ว</div>`}
+            </td>
+            <td class="p-4 align-top text-center">
+               <span class="inline-block px-2 py-1 rounded-full text-[10px] font-bold status-${b.status}">${statusDisplay}</span>
+            </td>
+             <td class="p-4 align-top text-center">
+               ${b.slipUrl ? `<a href="${b.slipUrl}" target="_blank" class="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 hover:underline bg-blue-50 px-2 py-1 rounded border border-blue-100">📄 ดูสลิป</a>` : '<span class="text-xs text-gray-300">-</span>'}
+            </td>
+            <td class="p-4 align-top text-center">
+               <button onclick="viewBooking('${b.id}')" class="bg-white border border-slate-200 text-slate-600 hover:bg-slate-800 hover:text-white hover:border-slate-800 transition px-3 py-1.5 rounded-lg text-xs font-medium shadow-sm">จัดการ</button>
+            </td>
+          </tr>
+        `;
+      });
+      tbody.innerHTML = html;
+      window.currentBookings = bookings;
+    });
+
+    // 2. Listen to Rooms
+    onSnapshot(collection(db, "rooms"), (snapshot) => {
+      const div = document.getElementById('roomList');
+      div.innerHTML = '';
+      if(snapshot.empty) div.innerHTML = '<div class="text-center text-gray-300 text-xs py-4">ยังไม่มีห้องพัก</div>';
+      
+      snapshot.forEach(doc => {
+        const r = doc.data();
+        div.innerHTML += `
+          <div class="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100 mb-2">
+             <div class="text-sm">
+                <span class="font-bold text-slate-700">${r.name}</span> <span class="text-xs text-gray-400 ml-1">(${r.id})</span>
+                <div class="text-xs text-slate-500 mt-0.5">฿${r.basePrice.toLocaleString()} • พักได้ ${r.maxPax} ท่าน</div>
+             </div>
+             <button onclick="window.delDoc('rooms', '${doc.id}')" class="text-red-400 hover:text-red-600 text-xs p-2">🗑️</button>
+          </div>
+        `;
+      });
+    });
+
+    // 3. Listen to Foods
+    onSnapshot(collection(db, "foods"), (snapshot) => {
+      const div = document.getElementById('foodList');
+      div.innerHTML = '';
+      if(snapshot.empty) div.innerHTML = '<div class="text-center text-gray-300 text-xs py-4">ยังไม่มีเมนูอาหาร</div>';
+
+      snapshot.forEach(doc => {
+        const f = doc.data();
+        div.innerHTML += `
+          <div class="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100 mb-2">
+             <div class="text-sm">
+                <span class="font-bold text-slate-700">${f.name}</span>
+                <div class="text-xs text-green-600 font-medium mt-0.5">฿${f.price.toLocaleString()}</div>
+             </div>
+             <button onclick="window.delDoc('foods', '${doc.id}')" class="text-red-400 hover:text-red-600 text-xs p-2">🗑️</button>
+          </div>
+        `;
+      });
+    });
+
+    // --- ACTIONS ---
+    window.viewBooking = async (id) => {
+      const b = window.currentBookings.find(x => x.id === id);
+      const { value: action } = await Swal.fire({
+        title: `จัดการ: ${b.customer.name}`,
+        html: `
+          <div class="text-left text-sm bg-slate-50 p-4 rounded-lg border border-slate-100">
+            <p><b>ยอดมัดจำ:</b> <span class="text-red-500">฿${b.deposit.toLocaleString()}</span></p>
+            <p><b>ยอดคงเหลือ:</b> ฿${(b.totalPrice - b.deposit).toLocaleString()}</p>
+            <div class="mt-3 pt-3 border-t border-slate-200">
+                <a href="${b.slipUrl}" target="_blank" class="text-blue-600 underline font-bold flex items-center gap-1">🔎 ตรวจสอบสลิปใน Google Drive</a>
+            </div>
+          </div>
+          <p class="text-xs text-gray-400 mt-4 text-center">เลือกการดำเนินการด้านล่าง</p>
+        `,
+        showDenyButton: true,
+        showCancelButton: true,
+        confirmButtonText: '✅ ยืนยันการจอง (Confirm)',
+        denyButtonText: '🚫 ยกเลิก/ปฏิเสธ (Cancel)',
+        confirmButtonColor: '#166534',
+        denyButtonColor: '#991b1b',
+        cancelButtonText: 'ปิดหน้าต่าง'
+      });
+
+      if (action !== undefined) { // ถ้าไม่ได้กดปุ่มปิด (Cancel button returns dismiss)
+        // action = true (Confirm), action = false (Deny)
+        const status = action ? 'Confirmed' : 'Cancelled';
+        
+        Swal.fire({title: 'กำลังบันทึก...', didOpen: () => Swal.showLoading()});
+        await updateDoc(doc(db, "bookings", id), { status: status });
+        
+        // *Optionally call GAS to notify user about status change here if desired*
+        
+        Swal.fire('เรียบร้อย', `สถานะเปลี่ยนเป็น ${status} แล้ว`, 'success');
+      }
+    };
+
+    window.addRoom = async () => {
+       const { value: form } = await Swal.fire({
+         title: 'เพิ่มห้องพักใหม่',
+         html: `
+            <div class="space-y-3">
+                <input id="r-id" placeholder="รหัสห้อง (เช่น A1)" class="swal2-input w-full text-sm">
+                <input id="r-name" placeholder="ชื่อห้องพัก" class="swal2-input w-full text-sm">
+                <div class="flex gap-2">
+                    <input id="r-price" type="number" placeholder="ราคา (บาท)" class="swal2-input w-1/2 text-sm">
+                    <input id="r-pax" type="number" placeholder="พักได้สูงสุด (คน)" class="swal2-input w-1/2 text-sm">
+                </div>
+            </div>
+         `,
+         focusConfirm: false,
+         showCancelButton: true,
+         preConfirm: () => {
+             const id = document.getElementById('r-id').value;
+             const name = document.getElementById('r-name').value;
+             const price = document.getElementById('r-price').value;
+             const pax = document.getElementById('r-pax').value;
+             if(!id || !name || !price || !pax) Swal.showValidationMessage('กรุณากรอกให้ครบทุกช่อง');
+             return {id: id, name: name, basePrice: Number(price), maxPax: Number(pax), coords: {x:50,y:50}, imageUrl: ''};
+         }
+       });
+       if(form) {
+           await addDoc(collection(db, "rooms"), form);
+           Swal.fire('สำเร็จ', 'เพิ่มห้องพักแล้ว', 'success');
+       }
+    };
+    
+    window.addFood = async () => {
+       const { value: form } = await Swal.fire({
+         title: 'เพิ่มเมนูอาหาร',
+         html: `
+            <div class="space-y-3">
+                <input id="f-name" placeholder="ชื่อเมนู" class="swal2-input w-full text-sm">
+                <input id="f-price" type="number" placeholder="ราคา (บาท)" class="swal2-input w-full text-sm">
+            </div>
+         `,
+         showCancelButton: true,
+         preConfirm: () => {
+             return {id: 'F'+Date.now(), name: document.getElementById('f-name').value, price: Number(document.getElementById('f-price').value)}
+         }
+       });
+       if(form) await addDoc(collection(db, "foods"), form);
+    };
+
+    window.delDoc = async (col, id) => {
+       const res = await Swal.fire({
+           title: 'ลบรายการนี้?', text: "ไม่สามารถกู้คืนได้นะ", icon: 'warning',
+           showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'ลบเลย'
+       });
+       if(res.isConfirmed) await deleteDoc(doc(db, col, id));
+    };
+
+    window.initSystemData = async () => {
+       const res = await Swal.fire({
+           title: 'รีเซ็ตข้อมูล?', 
+           text: "ระบบจะลบข้อมูลห้องเดิมและสร้างข้อมูลตัวอย่างใหม่", 
+           icon: 'question', showCancelButton: true
+       });
+       
+       if(!res.isConfirmed) return;
+
+       // Add sample rooms
+       const rooms = [
+         {id: 'NP', name: 'บ้านน้ำพุ', basePrice: 1600, maxPax: 8, coords: {x:50, y:50}, imageUrl: ''},
+         {id: 'RN1', name: 'ริมน้ำ 1', basePrice: 1400, maxPax: 3, coords: {x:30, y:40}, imageUrl: ''},
+         {id: 'CAMP', name: 'ลานกางเต็นท์', basePrice: 150, maxPax: 20, coords: {x:80, y:80}, imageUrl: ''}
+       ];
+       rooms.forEach(r => addDoc(collection(db, "rooms"), r));
+       
+       const foods = [
+         {id: 'F01', name: 'หมูกระทะ (เล็ก)', price: 350},
+         {id: 'F02', name: 'หมูกระทะ (ใหญ่)', price: 500}
+       ];
+       foods.forEach(f => addDoc(collection(db, "foods"), f));
+       
+       Swal.fire('เรียบร้อย', 'สร้างข้อมูลตัวอย่างเสร็จแล้ว', 'success');
+    };
+
+    function formatDate(d) { if(!d) return '-'; return d.split('-').reverse().join('/'); }
+  </script>
+  
+  <script>
+    function switchTab(t) {
       document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
       document.querySelectorAll('nav button').forEach(b => b.classList.remove('tab-active'));
-      document.getElementById(`content-${tab}`).classList.remove('hidden');
-      document.getElementById(`tab-${tab}`).classList.add('tab-active');
-      if (tab === 'calendar' && calendar) setTimeout(() => calendar.render(), 100);
+      document.getElementById('content-'+t).classList.remove('hidden');
+      document.getElementById('tab-'+t).classList.add('tab-active');
     }
-
-    // --- RENDER FUNCTIONS ---
-    function renderRecent() {
-        const list = document.getElementById('recentList');
-        const recent = [...bookings].reverse().slice(0, 9);
-        list.innerHTML = recent.map(b => createBookingCard(b)).join('') || '<div class="col-span-full text-center text-gray-400">ไม่มีข้อมูล</div>';
-    }
-
-    function createBookingCard(b) {
-        const statusClass = b.status === 'Confirmed' ? 'status-confirmed' : (b.status === 'Pending' ? 'status-pending' : 'status-cancelled');
-        return `
-            <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 hover:shadow-md transition">
-                <div class="flex justify-between mb-2">
-                    <span class="font-bold text-slate-800">${b.name}</span>
-                    <span class="px-2 py-1 text-[10px] rounded-full uppercase font-bold ${statusClass}">${b.status}</span>
-                </div>
-                <div class="text-xs text-slate-500 mb-4">
-                    <p>📅 ${formatDate(b.checkIn)} - ${formatDate(b.checkOut)}</p>
-                    <p>🏠 ${b.rooms.map(r=>r.id).join(', ')}</p>
-                </div>
-                <div class="flex justify-between items-center pt-4 border-t border-slate-50">
-                    <span class="font-bold text-red-500">ค้าง: ฿${(b.totalPrice - b.deposit).toLocaleString()}</span>
-                    <button onclick="viewDetails('${b.bookingID}')" class="bg-slate-800 text-white px-3 py-1.5 rounded-lg text-xs">ดูข้อมูล</button>
-                </div>
-            </div>
-        `;
-    }
-
-    function renderAll() {
-        const tbody = document.getElementById('allBookingsTable');
-        tbody.innerHTML = bookings.map(b => `
-            <tr class="hover:bg-slate-50">
-                <td class="p-4 text-slate-600">${formatDate(b.checkIn)}</td>
-                <td class="p-4 font-medium">${b.name}</td>
-                <td class="p-4 text-xs text-slate-500">${b.rooms.map(r=>r.id).join(', ')}</td>
-                <td class="p-4"><span class="px-2 py-1 text-[10px] rounded-full uppercase font-bold ${b.status === 'Confirmed' ? 'status-confirmed' : (b.status === 'Pending' ? 'status-pending' : 'status-cancelled')}">${b.status}</span></td>
-                <td class="p-4 text-right font-bold text-red-500">฿${(b.totalPrice - b.deposit).toLocaleString()}</td>
-                <td class="p-4 text-center">
-                    <button onclick="viewDetails('${b.bookingID}')" class="text-blue-600 hover:underline">จัดการ</button>
-                </td>
-            </tr>
-        `).join('');
-    }
-
-    function renderSettings() {
-        // Rooms
-        document.getElementById('roomSettingsList').innerHTML = masterData.rooms.map(r => `
-            <div class="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100">
-                <div>
-                    <div class="font-bold text-sm">${r.name} (${r.id})</div>
-                    <div class="text-xs text-slate-400">ราคา: ${r.basePrice}, พัก: ${r.maxPax}</div>
-                </div>
-                <button onclick="deleteItem('Rooms', '${r.id}')" class="text-red-400 hover:text-red-600">🗑️</button>
-            </div>
-        `).join('');
-        
-        // Foods
-        document.getElementById('foodSettingsList').innerHTML = masterData.foods.map(f => `
-            <div class="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100">
-                <div class="flex items-center gap-3">
-                    <div class="font-bold text-sm">${f.name}</div>
-                    <div class="text-xs text-green-600">฿${f.price}</div>
-                </div>
-                <button onclick="deleteItem('Foods', '${f.id}')" class="text-red-400 hover:text-red-600">🗑️</button>
-            </div>
-        `).join('');
-
-        // Promos
-        document.getElementById('promoSettingsList').innerHTML = masterData.promotions.map(p => `
-            <div class="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100">
-                <div>
-                    <div class="font-bold text-sm tracking-widest">${p.code}</div>
-                    <div class="text-xs text-blue-600">ลด ${p.value}${p.type==='percent'?'%':'฿'}</div>
-                </div>
-                <button onclick="deleteItem('Promotions', '${p.code}')" class="text-red-400 hover:text-red-600">🗑️</button>
-            </div>
-        `).join('');
-    }
-
-    // --- ACTIONS (ADD/DELETE) ---
-    async function addItem(type) {
-        let htmlForm = '';
-        if (type === 'Rooms') {
-            htmlForm = `
-                <input id="swal-id" class="swal2-input" placeholder="รหัสห้อง (เช่น A1)">
-                <input id="swal-name" class="swal2-input" placeholder="ชื่อห้องพัก">
-                <input id="swal-type" class="swal2-input" placeholder="ประเภท (House/Camp)">
-                <input id="swal-pax" type="number" class="swal2-input" placeholder="จำนวนคนสูงสุด">
-                <input id="swal-price" type="number" class="swal2-input" placeholder="ราคาพื้นฐาน">
-            `;
-        } else if (type === 'Foods') {
-            htmlForm = `
-                <input id="swal-id" class="swal2-input" placeholder="รหัสอาหาร (เช่น F01)">
-                <input id="swal-name" class="swal2-input" placeholder="ชื่อเมนู">
-                <input id="swal-price" type="number" class="swal2-input" placeholder="ราคา">
-            `;
-        } else if (type === 'Promotions') {
-            htmlForm = `
-                <input id="swal-id" class="swal2-input" placeholder="โค้ดส่วนลด (เช่น SUMMER10)">
-                <input id="swal-val" type="number" class="swal2-input" placeholder="มูลค่าส่วนลด">
-                <select id="swal-type" class="swal2-input"><option value="percent">เปอร์เซ็นต์ (%)</option><option value="fixed">บาท</option></select>
-            `;
-        }
-
-        const { value: formValues } = await Swal.fire({
-            title: `เพิ่ม ${type}`,
-            html: htmlForm,
-            focusConfirm: false,
-            showCancelButton: true,
-            confirmButtonText: 'บันทึก',
-            preConfirm: () => {
-                if (type === 'Rooms') return [document.getElementById('swal-id').value, document.getElementById('swal-name').value, document.getElementById('swal-type').value, document.getElementById('swal-pax').value, document.getElementById('swal-price').value, '{}', ''];
-                if (type === 'Foods') return [document.getElementById('swal-id').value, document.getElementById('swal-name').value, document.getElementById('swal-price').value];
-                if (type === 'Promotions') return [document.getElementById('swal-id').value, document.getElementById('swal-val').value, document.getElementById('swal-type').value, ''];
-            }
-        });
-
-        if (formValues) {
-            Swal.fire({ title: 'กำลังบันทึก...', didOpen: () => Swal.showLoading() });
-            const payload = type === 'Rooms' ? {0:formValues[0],1:formValues[1],2:formValues[2],3:formValues[3],4:formValues[4],5:formValues[5],6:formValues[6]} :
-                            type === 'Foods' ? {0:formValues[0],1:formValues[1],2:formValues[2]} : {0:formValues[0],1:formValues[1],2:formValues[2],3:formValues[3]};
-            
-            await fetch(SCRIPT_URL, {
-                method: 'POST',
-                body: JSON.stringify({ action: 'manageMasterData', type: type, operation: 'add', payload: payload })
-            });
-            await loadAllData();
-            Swal.fire('สำเร็จ', 'เพิ่มข้อมูลเรียบร้อย', 'success');
-        }
-    }
-
-    async function deleteItem(type, id) {
-        const result = await Swal.fire({
-            title: 'ยืนยันการลบ?',
-            text: `คุณต้องการลบ ${id} ใช่หรือไม่?`,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            confirmButtonText: 'ลบเลย'
-        });
-
-        if (result.isConfirmed) {
-            Swal.fire({ title: 'กำลังลบ...', didOpen: () => Swal.showLoading() });
-            await fetch(SCRIPT_URL, {
-                method: 'POST',
-                body: JSON.stringify({ action: 'manageMasterData', type: type, operation: 'delete', id: id })
-            });
-            await loadAllData();
-            Swal.fire('ลบแล้ว', '', 'success');
-        }
-    }
-
-    async function viewDetails(id) {
-        // Simple alert for now, can be expanded like original code
-        const b = bookings.find(x => x.bookingID === id);
-        const action = await Swal.fire({
-            title: b.name,
-            html: `สถานะ: <b>${b.status}</b><br>สลิป: <a href="${b.slipUrl}" target="_blank">ดูรูปภาพ</a>`,
-            showDenyButton: true,
-            showCancelButton: true,
-            confirmButtonText: '✅ ยืนยันการจอง',
-            denyButtonText: '🚫 ยกเลิก/ปฏิเสธ',
-            cancelButtonText: 'ปิด'
-        });
-
-        if (action.isConfirmed) updateStatus(id, 'Confirmed');
-        else if (action.isDenied) updateStatus(id, 'Cancelled');
-    }
-
-    async function updateStatus(id, status) {
-        Swal.fire({ title: 'กำลังอัปเดต...', didOpen: () => Swal.showLoading() });
-        await fetch(SCRIPT_URL, {
-            method: 'POST',
-            body: JSON.stringify({ action: 'updateBookingStatus', bookingID: id, status: status })
-        });
-        loadAllData();
-        Swal.fire('เรียบร้อย', `สถานะเป็น ${status} แล้ว`, 'success');
-    }
-
-    function renderCalendar() {
-      const calendarEl = document.getElementById('calendar');
-      const events = bookings.filter(b => b.status !== 'Cancelled').map(b => ({
-        title: `${b.name}`, start: b.checkIn, end: b.checkOut,
-        backgroundColor: b.status === 'Confirmed' ? '#166534' : '#f59e0b'
-      }));
-
-      if (calendar) calendar.destroy();
-      calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: 'dayGridMonth', locale: 'th', events: events, height: 600
-      });
-      calendar.render();
-    }
-
-    function formatDate(dateStr) {
-        return new Date(dateStr).toLocaleDateString('th-TH', {day:'numeric', month:'short'});
-    }
-
-    // Init
-    window.onload = checkAuth;
   </script>
 </body>
 </html>
