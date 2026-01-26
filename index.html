@@ -55,7 +55,7 @@
             <!-- STEP 2 -->
             <div id="step-2" class="step-content">
                 <div id="layout-container" class="mb-6 shadow-inner border border-slate-200">
-                    <!-- Updated Map Image (Correct Link) -->
+                    <!-- แผนผังใหม่ -->
                     <img id="map-image" src="https://drive.google.com/uc?export=view&id=1MtBiMvqO5BBPLlY2SFssaFXJsg8qt9TT" class="w-full block opacity-90" onerror="this.src='https://via.placeholder.com/800x600?text=Error+Loading+Map'">
                 </div>
                 
@@ -111,24 +111,12 @@
         </div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, getDocs, addDoc, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-        // --- CONFIG ---
-        const firebaseConfig = {
-           // ใส่ Config ของคุณตรงนี้
-           apiKey: "AIzaSyCOSVrDrt1xriMG4ZdDaZI5bH1c9ZHW3rE",
-           authDomain: "lungdam-booking.firebaseapp.com",
-           projectId: "lungdam-booking",
-           storageBucket: "lungdam-booking.firebasestorage.app",
-           messagingSenderId: "997913997260",
-           appId: "1:997913997260:web:1e94427ffe5d73eb7b7769"
-        };
-        // ใส่ URL Code.gs ล่าสุดที่ Deploy
+    <script>
+        // --- CONFIGURATION ---
+        // ใส่ URL ที่ได้จากการ Deploy Code.gs (ที่มีฟังก์ชัน getInitialData)
         const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbwQjaz5oaVekrtSlw_kGqt9gLOg0uQeXphG4H2Q5cqrv4ZSEiJnzO63lctvaaYTRr9HNQ/exec';
 
-        // --- SAMPLE DATA (Fallback) ---
+        // --- SAMPLE DATA (สำรอง กรณีเน็ตหลุด) ---
         const SAMPLE_ROOMS = [
             {id: 'NP', name: 'โฮมสเตย์หนำโป', basePrice: 1600, maxPax: 8, coords: {x: 50, y: 30}},
             {id: 'RN1', name: 'บ้านพักริมน้ำ 1', basePrice: 1400, maxPax: 3, coords: {x: 20, y: 50}},
@@ -141,14 +129,8 @@
         ];
         const SAMPLE_FOODS = [
             {id: 'F01', name: 'ชุดหมูกระทะลุงดำ', price: 390},
-            {id: 'F02', name: 'ชุดไก่กระทะลุงดำ', price: 390},
-            {id: 'F03', name: 'ชุดชาบูหมูลุงดำ', price: 390},
-            {id: 'F04', name: 'ชุดชาบูไก่ลุงดำ', price: 390},
-            {id: 'F05', name: 'เซ็ตอาหารพื้นบ้าน', price: 390}
+            {id: 'F02', name: 'ชุดไก่กระทะลุงดำ', price: 390}
         ];
-
-        let app, db;
-        try { app = initializeApp(firebaseConfig); db = getFirestore(app); } catch(e) {}
 
         let state = {
             step: 1,
@@ -164,21 +146,43 @@
             window.updateMinCheckout();
 
             try { await liff.init({ liffId: "2008803474-hRJaVbm7" }); if(liff.isLoggedIn()) state.user = await liff.getProfile(); } catch(e) {}
+            
             await loadMasterData();
         };
 
         async function loadMasterData() {
             try {
-                if(db) {
-                    const rSnap = await getDocs(collection(db, "rooms"));
-                    state.rooms = []; rSnap.forEach(d => state.rooms.push({id: d.id, ...d.data()}));
-                    const fSnap = await getDocs(collection(db, "foods"));
-                    state.foods = []; fSnap.forEach(d => state.foods.push({id: d.id, ...d.data()}));
-                }
-            } catch(e) {}
-            if(state.rooms.length === 0) state.rooms = SAMPLE_ROOMS;
-            if(state.foods.length === 0) state.foods = SAMPLE_FOODS;
-            renderMap(); renderFoods();
+                // ดึงข้อมูลจาก Google Sheets ผ่าน API
+                const res = await fetch(GAS_API_URL, {
+                    method: 'POST',
+                    mode: 'no-cors', // Hack for initial fetch not working sometimes
+                    // Actually, simple GET/POST with redirect might fail in browser without CORS.
+                    // We will use standard post and handle the text response.
+                });
+                // GAS Post Request with text/plain response usually works.
+                // But for getInitialData we need to read the body.
+                // Use standard fetch.
+                const response = await fetch(GAS_API_URL, {
+                     method: 'POST',
+                     body: JSON.stringify({ action: 'getInitialData' })
+                });
+                const data = await response.json();
+                
+                if(data.rooms && data.rooms.length > 0) state.rooms = data.rooms;
+                else state.rooms = SAMPLE_ROOMS;
+
+                if(data.foods && data.foods.length > 0) state.foods = data.foods;
+                else state.foods = SAMPLE_FOODS;
+
+            } catch(e) {
+                console.error("Load Data Error:", e);
+                // Fallback
+                state.rooms = SAMPLE_ROOMS;
+                state.foods = SAMPLE_FOODS;
+            }
+
+            renderMap();
+            renderFoods();
         }
 
         window.updateMinCheckout = () => {
@@ -194,11 +198,14 @@
             if(step === 2) {
                 state.dates.in = document.getElementById('checkin').value;
                 state.dates.out = document.getElementById('checkout').value;
-                if(!state.dates.in) return Swal.fire('เตือน', 'เลือกวันเข้าพัก', 'warning');
-                Swal.showLoading(); await checkAvailability(); Swal.close();
+                if(!state.dates.in || !state.dates.out) return Swal.fire('เตือน', 'กรุณาเลือกวันเข้าพัก', 'warning');
+                
+                Swal.showLoading();
+                await checkAvailability();
+                Swal.close();
             }
             if(step === 3) {
-                if(state.selectedRooms.length === 0) return Swal.fire('เตือน', 'เลือกห้องพัก', 'warning');
+                if(state.selectedRooms.length === 0) return Swal.fire('เตือน', 'กรุณาเลือกห้องพัก', 'warning');
                 renderSummary();
             }
             document.querySelectorAll('.step-content').forEach(e => e.classList.remove('active'));
@@ -208,18 +215,22 @@
         };
 
         async function checkAvailability() {
-            if(!db) return;
-            const q = query(collection(db, "bookings"), where("status", "!=", "Cancelled"));
-            const snapshot = await getDocs(q);
-            const bookedIDs = [];
-            const tIn = new Date(state.dates.in); const tOut = new Date(state.dates.out);
-            snapshot.forEach(doc => {
-                const b = doc.data();
-                if(new Date(b.checkIn) < tOut && new Date(b.checkOut) > tIn) {
-                    b.rooms.forEach(r => { if(r.id !== 'CAMP') bookedIDs.push(r.id); });
-                }
-            });
-            updateMapStatus(bookedIDs);
+            try {
+                const res = await fetch(GAS_API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ 
+                        action: 'checkAvailability', 
+                        checkIn: state.dates.in, 
+                        checkOut: state.dates.out 
+                    })
+                });
+                const data = await res.json();
+                updateMapStatus(data.bookedRoomIDs || []);
+            } catch(e) {
+                console.error(e);
+                // If fail, just clear bookings (risk of double booking but better than blocking)
+                updateMapStatus([]); 
+            }
         }
 
         function renderMap() {
@@ -255,26 +266,13 @@
             renderSelectedList();
         }
 
-        // --- PRICING LOGIC ---
+        // --- PRICING LOGIC (คำนวณราคาตามจำนวนคน) ---
         function calculateRoomPrice(id, pax) {
-            if (id === 'NP') { 
-                if (pax <= 5) return 1600;
-                return 2200; 
-            }
-            if (id === 'RN1' || id === 'RN2') {
-                if (pax <= 2) return 1400;
-                return 1750;
-            }
-            if (id === 'T1' || id === 'T2') {
-                if (pax <= 2) return 1200;
-                return 1550;
-            }
-            if (id === 'K1' || id === 'K2') {
-                return 700;
-            }
-            if (id === 'CAMP') {
-                return 150 * pax;
-            }
+            if (id === 'NP') { return pax <= 5 ? 1600 : 2200; }
+            if (id === 'RN1' || id === 'RN2') { return pax <= 2 ? 1400 : 1750; }
+            if (id === 'T1' || id === 'T2') { return pax <= 2 ? 1200 : 1550; }
+            if (id === 'K1' || id === 'K2') { return 700; }
+            if (id === 'CAMP') { return 150 * pax; }
             const r = state.rooms.find(x => x.id === id);
             return r ? r.basePrice : 0;
         }
@@ -383,39 +381,47 @@
                 Swal.fire({ title: 'กำลังบันทึก...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
                 try {
                     const foods = Object.keys(state.selectedFoods).filter(k=>state.selectedFoods[k]>0).map(k => {
-                        const f = state.foods.find(x=>x.id==k); return { id: k, name: f.name, qty: state.selectedFoods[k], price: f.price };
+                        const f = state.foods.find(x=>x.id==k); return { foodID: k, name: f.name, qty: state.selectedFoods[k], price: f.price };
                     });
                     
                     const finalRooms = state.selectedRooms.map(r => ({
-                        id: r.id, name: r.name, pax: r.pax, price: calculateRoomPrice(r.id, r.pax)
+                        roomID: r.id, pax: r.pax, price: calculateRoomPrice(r.id, r.pax)
                     }));
 
-                    const bookingData = {
-                        checkIn: state.dates.in, checkOut: state.dates.out,
-                        customer: { name, phone, lineId: state.user.lineId || '' },
-                        rooms: finalRooms, foods: foods,
-                        totalPrice: state.total, deposit: state.deposit,
-                        status: 'Pending', slipUrl: 'Uploading...', timestamp: new Date().toISOString()
+                    const payload = {
+                        action: 'uploadSlip', // Using uploadSlip to trigger both save & notify in Hybrid/Sheets mode
+                        base64: reader.result,
+                        fileName: file.name,
+                        // For GAS to process properly, we need to send 'createBooking' action primarily if Code.gs expects it
+                        // But since we want to upload slip first or together...
+                        // Let's use the 'createBooking' structure if possible. 
+                        // Wait, current Code.gs expects 'createBooking' separately OR 'uploadSlip'.
+                        // Let's do 'createBooking' and pass slipBase64 directly. Code.gs handles it.
                     };
                     
-                    let bid = "OFF-" + Date.now().toString().slice(-4);
-                    if(db) { const ref = await addDoc(collection(db, "bookings"), bookingData); bid = ref.id.substring(0,6); }
+                    const bookingPayload = {
+                        action: 'createBooking',
+                        checkIn: state.dates.in, checkOut: state.dates.out,
+                        customer: { name, phone, lineID: state.user.lineId || '' },
+                        lineName: state.user.name || '',
+                        rooms: finalRooms, foods: foods,
+                        totalPrice: state.total, deposit: state.deposit,
+                        slipBase64: reader.result
+                    };
 
-                    await fetch(GAS_API_URL, {
-                        method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({
-                            action: 'uploadSlip', base64: reader.result, fileName: file.name,
-                            payload: {
-                                bookingID: bid, name, phone, lineName: state.user.name||'-',
-                                checkIn: state.dates.in, checkOut: state.dates.out,
-                                rooms: finalRooms.map(r=>`${r.name}(${r.pax})`).join(','),
-                                total: state.total, deposit: state.deposit, slipUrl: "Drive Attachment"
-                            }
-                        })
+                    const res = await fetch(GAS_API_URL, {
+                        method: 'POST',
+                        body: JSON.stringify(bookingPayload)
                     });
-                    await Swal.fire('สำเร็จ', 'บันทึกข้อมูลแล้ว', 'success');
-                    liff.closeWindow();
-                } catch(e) { console.error(e); Swal.fire('Error', e.message, 'error'); }
+                    const result = await res.json();
+
+                    if(result.status === 'success') {
+                        await Swal.fire('สำเร็จ', 'บันทึกข้อมูลแล้ว', 'success');
+                        liff.closeWindow();
+                    } else {
+                        throw new Error(result.message);
+                    }
+                } catch(e) { console.error(e); Swal.fire('Error', 'เกิดข้อผิดพลาด: ' + e.message, 'error'); }
             };
         };
         
