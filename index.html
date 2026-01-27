@@ -318,21 +318,30 @@
 
                         {/* --- STEP 1: Search --- */}
                         {step === 1 && (
-                            <div className="max-w-md mx-auto p-6 bg-white dark:bg-gray-800 shadow-xl rounded-xl mt-2 border dark:border-gray-700">
-                                <img src="https://lh3.googleusercontent.com/pw/AP1GczPi_rYAbsNGi4X96mW5koYl0JJ3BN9ipRf6UgsXAOQgkyhrs2ChGcZlbsuQ3OLJOYnYhSTYJhWUuu2hwWtPqlt4MUfdUDSS3s4RdRLeD36gPLiK-8OhYLXWmqxVLh2eOtkLIx7pQxrQA6ZnqBYHOftH=w913-h913-s-no-gm?authuser=0" referrerpolicy="no-referrer" className="w-32 mx-auto mb-2"/>
-                                <h1 className="text-xl text-center mb-2 text-green-800 dark:text-green-400">ขนำลุงดำ - Khanamlungdam</h1>
-                                <label className="block text-center mb-2 text-gray-700 dark:text-gray-300">🏡 ขนำลุงดำ ดั้งเดิมมาจากหนำปู่ หรือที่พักตอนปู่มาอยู่ช่วงทำสวนนั้นเอง และค่อยๆ พัฒนาขึ้น แต่ยังคงความอบอุ่น ความรัก เสมือนทุกคนมาเที่ยวบ้านตากอากาศของเพื่อน มีโอกาสเจอสัตว์ แมลงเล็กๆ </label>
-                                <label className="block text-center mb-2 text-gray-700 dark:text-gray-300">พื้นที่เป็นสวนผสม ตามเศรษฐกิจพอเพียง ป่า 3 อย่าง ประโยชน์ 4 อย่าง เงียบสงบ มีลานรอบกองไฟ มีผลไม้ให้กินตามฤดู มีระบบน้ำกรอง ใช้ไฟฟ้าโซลาร์เซลล์ทั้งหมด มีไวไฟ สัญญาณไม่ได้แรงมาก และอาจจะไม่มีสิ่งอำนวยความสะดวกครบครัน แคมป์ปิ้งสไตล์บ้านสวน มีครัวไทยด้วยฟืน มีที่พักหลากหลายแบบ</label>
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-gray-700 dark:text-green-400">วันที่เข้าพัก</label>
-                                        <input type="date" min={getTommorow()} className="w-full border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" onChange={e => setDates({...dates, checkIn: e.target.value})} />
+                            <div className="max-w-md mx-auto bg-white dark:bg-gray-800 shadow-xl rounded-xl mt-4 border dark:border-gray-700 overflow-hidden">
+                                {/* Header Background with Logo Overlay */}
+                                <div className="h-48 relative">
+                                     <img src="https://img5.pic.in.th/file/secure-sv1/LINE_ALBUM__240916_14dd72f9bd7de4facf.jpg" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                                     <div className="absolute inset-0 bg-black bg-opacity-10"></div>
+                                </div>
+                                <div className="p-6 -mt-24 relative z-10">
+                                    <img src="https://lh3.googleusercontent.com/pw/AP1GczPi_rYAbsNGi4X96mW5koYl0JJ3BN9ipRf6UgsXAOQgkyhrs2ChGcZlbsuQ3OLJOYnYhSTYJhWUuu2hwWtPqlt4MUfdUDSS3s4RdRLeD36gPLiK-8OhYLXWmqxVLh2eOtkLIx7pQxrQA6ZnqBYHOftH=w913-h913-s-no-gm?authuser=0" referrerPolicy="no-referrer" className="w-48 h-48 mx-auto rounded-full border-4 border-white dark:border-gray-800 object-cover bg-white shadow-lg mb-4"/>
+                                    
+                                    <h1 className="text-xl text-center mb-2 text-green-800 dark:text-green-400 font-bold">ขนำลุงดำ - Khanamlungdam</h1>
+                                    <label className="block text-center mb-2 text-gray-700 dark:text-gray-300 text-sm">🏡 ขนำลุงดำ ดั้งเดิมมาจากหนำปู่ หรือที่พักตอนปู่มาอยู่ช่วงทำสวนนั้นเอง และค่อยๆ พัฒนาขึ้น แต่ยังคงความอบอุ่น ความรัก เสมือนทุกคนมาเที่ยวบ้านตากอากาศของเพื่อน มีโอกาสเจอสัตว์ แมลงเล็กๆ </label>
+                                    <label className="block text-center mb-4 text-gray-700 dark:text-gray-300 text-sm">พื้นที่เป็นสวนผสม ตามเศรษฐกิจพอเพียง ป่า 3 อย่าง ประโยชน์ 4 อย่าง เงียบสงบ มีลานรอบกองไฟ มีผลไม้ให้กินตามฤดู มีระบบน้ำกรอง ใช้ไฟฟ้าโซลาร์เซลล์ทั้งหมด มีไวไฟ สัญญาณไม่ได้แรงมาก และอาจจะไม่มีสิ่งอำนวยความสะดวกครบครัน แคมป์ปิ้งสไตล์บ้านสวน มีครัวไทยด้วยฟืน มีที่พักหลากหลายแบบ</label>
+                                    
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-gray-700 dark:text-green-400 font-bold mb-1">วันที่เข้าพัก</label>
+                                            <input type="date" min={getTommorow()} className="w-full border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" onChange={e => setDates({...dates, checkIn: e.target.value})} />
+                                        </div>
+                                        <div>
+                                            <label className="block text-gray-700 dark:text-red-300 font-bold mb-1">วันที่ออก</label>
+                                            <input type="date" min={dates.checkIn || getTommorow()} className="w-full border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" onChange={e => setDates({...dates, checkOut: e.target.value})} />
+                                        </div>
+                                        <button onClick={handleSearch} disabled={loading} className="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition font-bold shadow-lg mt-2">{loading ? 'กำลังเตรียมเต็นท์...' : 'ค้นหาที่พักว่าง'}</button>
                                     </div>
-                                    <div>
-                                        <label className="block text-gray-700 dark:text-red-300">วันที่ออก</label>
-                                        <input type="date" min={dates.checkIn || getTommorow()} className="w-full border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" onChange={e => setDates({...dates, checkOut: e.target.value})} />
-                                    </div>
-                                    <button onClick={handleSearch} disabled={loading} className="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition font-bold">{loading ? 'กำลังโหลด...' : 'ค้นหาที่พักว่าง'}</button>
                                 </div>
 
                                 {/* Closed Date Modal */}
@@ -430,7 +439,6 @@
                                     ))}
                                     </div>
                                 </div>
-                                
                                 <button onClick={() => cart.length > 0 ? setStep(3) : alert('เลือกรายการก่อนครับ')} className="w-full bg-green-600 text-white p-3 rounded-lg font-bold">ดำเนินการต่อ</button>
                             </div>
                         )}
