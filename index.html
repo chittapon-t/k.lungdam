@@ -111,7 +111,7 @@
             // UI States
             const [selectedRoomId, setSelectedRoomId] = React.useState(null);
             const [guestCount, setGuestCount] = React.useState(1);
-            const [closedModal, setClosedModal] = React.useState(null); // { date: string, reason: string }
+            const [closedModal, setClosedModal] = React.useState(null); 
 
             // --- FUNCTIONS ---
             const getTommorow = () => {
@@ -211,9 +211,8 @@
 
             React.useEffect(() => {
                 if (step === 3 && pricing.deposit > 0) {
-                    // สร้าง QR Code เป็น Data URL เมื่อเข้าสู่หน้าชำระเงิน
                     const payload = generatePromptPayPayload(PROMPTPAY_PHONE, pricing.deposit);
-                    const qr = new QRious({ value: payload, size: 300 }); // ขนาดใหญ่ขึ้นเพื่อให้ชัดเจน
+                    const qr = new QRious({ value: payload, size: 300 }); 
                     setQrUrl(qr.toDataURL());
                 }
             }, [step, pricing.deposit]);
@@ -223,7 +222,6 @@
                 if (!dates.checkIn || !dates.checkOut) return alert('กรุณาเลือกวันเข้าพัก');
                 if (dates.checkIn >= dates.checkOut) return alert('วันเช็คเอาท์ต้องหลังวันเช็คอิน');
                 
-                // ตรวจสอบวันปิด - แสดง Popup แทน alert
                 const closedFound = getClosedDateOverlap(dates.checkIn, dates.checkOut);
                 if (closedFound) {
                     setClosedModal(closedFound);
@@ -284,6 +282,7 @@
                 if (!canSubmit) return;
                 setLoading(true);
                 const payload = {
+                    action: 'saveBooking', // <--- เพิ่ม action เพื่อผ่าน check หลังบ้าน
                     customer, checkIn: dates.checkIn, checkOut: dates.checkOut,
                     totalGuests: cart.filter(c => c.type !== 'food').reduce((s, c) => s + c.guests, 0),
                     cart, pricing, discountCode: discount.code, slipImage: slipImg
@@ -301,7 +300,7 @@
             if (step === 1) return (
                 <div className="max-w-md mx-auto p-6 bg-white shadow-xl rounded-xl mt-4">
                     <img src="https://lh3.googleusercontent.com/pw/AP1GczPi_rYAbsNGi4X96mW5koYl0JJ3BN9ipRf6UgsXAOQgkyhrs2ChGcZlbsuQ3OLJOYnYhSTYJhWUuu2hwWtPqlt4MUfdUDSS3s4RdRLeD36gPLiK-8OhYLXWmqxVLh2eOtkLIx7pQxrQA6ZnqBYHOftH=w913-h913-s-no-gm?authuser=0" referrerpolicy="no-referrer" className="w-64 mx-auto mb-4"/>
-                    <h1 className="text-xl text-center mb-6 text-green-800">แคมป์ปิ้งธรรมชาติกลางหุบเขา 🏕️</h1>
+                    <h1 className="text-xl text-center mb-6 text-green-800">แคมป์ปิ้งแนวธรรมชาติกลางหุบเขา 🏕️</h1>
                     <div className="space-y-4">
                         <div><label className="block text-gray-700">เข้าพัก</label><input type="date" min={getTommorow()} className="w-full border p-2 rounded" onChange={e => setDates({...dates, checkIn: e.target.value})} /></div>
                         <div><label className="block text-gray-700">ออก</label><input type="date" min={dates.checkIn || getTommorow()} className="w-full border p-2 rounded" onChange={e => setDates({...dates, checkOut: e.target.value})} /></div>
@@ -387,6 +386,9 @@
                             </div>
                         </div>
                     )}
+                    <div className="bg-gray-100 p-4 rounded mb-4"><h3 className="font-bold">🛒 ตะกร้า ({cart.length})</h3>
+                        {cart.map((c,i)=><div key={i} className="flex justify-between text-sm mt-1"><span>{c.name} {c.type==='food'?`x${c.qty}`:`(${c.guests} คน)`}</span><button onClick={()=>setCart(cart.filter((_,idx)=>idx!==i))} className="text-red-500">ลบ</button></div>)}
+                    </div>
 
                     <div className="bg-white p-4 rounded-lg shadow mb-4">
                         <h3 className="font-bold mb-2">🍽️ สั่งอาหาร</h3>
@@ -402,9 +404,7 @@
                         ))}
                         </div>
                     </div>
-                    <div className="bg-gray-100 p-4 rounded mb-4"><h3 className="font-bold">🛒 ตะกร้า ({cart.length})</h3>
-                        {cart.map((c,i)=><div key={i} className="flex justify-between text-sm mt-1"><span>{c.name} {c.type==='food'?`x${c.qty}`:`(${c.guests} คน)`}</span><button onClick={()=>setCart(cart.filter((_,idx)=>idx!==i))} className="text-red-500">ลบ</button></div>)}
-                    </div>
+                    
                     <button onClick={() => cart.length > 0 ? setStep(3) : alert('เลือกรายการก่อนครับ')} className="w-full bg-green-600 text-white p-3 rounded-lg font-bold">ดำเนินการต่อ</button>
                 </div>
             );
@@ -450,10 +450,8 @@
                             {qrUrl ? (
                                 <div className="flex flex-col items-center">
                                     <img src={qrUrl} className="mx-auto border-2 border-gray-200 rounded-lg mb-3 shadow-sm p-1" alt="QR Code" width="200" height="200" />
-                                    <div className="flex gap-2">
-                                        
-                                    </div>
-                                    <p className="text-xs text-gray-400 mt-2">(กรุณาบันทึกหน้าจอเพื่อชำระเงิน)</p>
+                                    
+                                    <p className="text-xs text-gray-400 mt-2">(บันทึกหน้าจอเพื่อชำระเงิน)</p>
                                 </div>
                             ) : (
                                 <div className="h-[200px] flex items-center justify-center text-gray-400">กำลังสร้าง QR Code...</div>
@@ -471,7 +469,7 @@
 
                         <div className="flex items-start gap-2 mb-4 text-xs text-gray-600">
                             <input type="checkbox" className="mt-1" checked={agreed} onChange={e => setAgreed(e.target.checked)} />
-                            <p>ฉันยอมรับเงื่อนไข: ไม่คืนเงินมัดจำทุกกรณี เลื่อนได้หากแจ้งล่วงหน้า 7 วัน กรณีโรคระบาดและภัยพิบัติสามารถเลื่อนที่พักได้ตลอด </p>
+                            <p>ฉันยอมรับเงื่อนไขของ ขนำลุงดำ แคมป์ปิ้ง ทุกประการ </p>
                         </div>
 
                         <button onClick={handleSubmit} disabled={loading || !canSubmit} className={`w-full p-3 rounded-lg font-bold text-white transition ${loading || !canSubmit ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}>{loading ? 'กำลังบันทึก...' : 'ยืนยันการจอง'}</button>
@@ -485,6 +483,7 @@
                     <h2 className="text-2xl font-bold text-green-700 mb-2">จองสำเร็จ!</h2>
                     <p className="text-gray-600 mb-4">รหัส: <strong>{bookingResult}</strong></p>
                     <p className="text-sm text-gray-500">ระบบส่งใบจองให้ทาง LINE แล้วครับ</p>
+                    <p className="text-gray-600 mb-4">เงื่อนไข : เลื่อนที่พักได้ก่อนเข้าพักไม่น้อยกว่า 7 วัน เท่านั้น กรณีโรคระบาดและภัยพิบัติ สามารถเลื่อนที่พักได้ ไม่จำกัดเวลา </p>
                     <button onClick={() => liff.closeWindow()} className="mt-8 bg-gray-800 text-white px-6 py-2 rounded-full">ปิดหน้าต่าง</button>
                 </div>
             );
