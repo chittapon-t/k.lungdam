@@ -38,7 +38,7 @@
             const [filter, setFilter] = React.useState('all'); 
 
             // States for Editing/Adding
-            const [editMode, setEditMode] = React.useState(null); // null = add, object = edit
+            const [editMode, setEditMode] = React.useState(null); 
             const [formDiscount, setFormDiscount] = React.useState({ code: '', type: 'FIXED', value: '' });
             const [formClosed, setFormClosed] = React.useState({ date: '', reason: '' });
             const [formSpecial, setFormSpecial] = React.useState({ date: '', desc: '' });
@@ -99,7 +99,6 @@
                         alert('บันทึกสำเร็จ'); 
                         fetchSettings(); 
                         setEditMode(null);
-                        // Reset forms
                         setFormDiscount({ code: '', type: 'FIXED', value: '' });
                         setFormClosed({ date: '', reason: '' });
                         setFormSpecial({ date: '', desc: '' });
@@ -111,7 +110,7 @@
             const startEdit = (type, item) => {
                 setEditMode(item);
                 if(type === 'discount') setFormDiscount({ code: item.code, type: item.type, value: item.value });
-                if(type === 'closed') setFormClosed({ date: item.date, reason: item.reason }); // Note: Date formatting might need adjust for input type=date
+                if(type === 'closed') setFormClosed({ date: item.date, reason: item.reason });
                 if(type === 'special') setFormSpecial({ date: item.date, desc: item.desc });
             };
 
@@ -123,8 +122,6 @@
                 });
             };
 
-            // --- Components ---
-
             const StatusBadge = ({ status }) => {
                 let color = 'bg-gray-100 text-gray-800';
                 if (status === 'รอตรวจสอบ') color = 'bg-yellow-100 text-yellow-800';
@@ -133,22 +130,18 @@
                 return <span className={`px-2 py-1 rounded text-xs font-bold border ${color}`}>{status}</span>;
             };
 
-            // Calendar Component
             const CalendarView = () => {
                 const [currentDate, setCurrentDate] = React.useState(new Date());
                 const getDaysInMonth = (date) => new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
                 const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
-                
                 const days = [];
                 for(let i=0; i<firstDayOfMonth; i++) days.push(null);
                 for(let i=1; i<=getDaysInMonth(currentDate); i++) days.push(i);
-
                 const getBookingsForDate = (day) => {
                     if(!day) return [];
                     const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth()+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
                     return bookings.filter(b => b.status !== 'ยกเลิก' && b.checkIn <= dateStr && b.checkOut > dateStr);
                 };
-
                 return (
                     <div className="bg-white rounded-lg shadow p-4">
                         <div className="flex justify-between items-center mb-4">
@@ -166,11 +159,7 @@
                                     <div key={idx} className="border-t border-r border-gray-200 calendar-day p-1 relative">
                                         {day && <div className="text-right text-xs text-gray-500 mb-1">{day}</div>}
                                         {dayBookings.map(b => (
-                                            <div key={b.id} 
-                                                onClick={()=>setViewBooking(b)}
-                                                className={`text-[10px] p-1 rounded mb-1 truncate cursor-pointer text-white ${b.status==='ยืนยัน'?'bg-green-500':'bg-yellow-500'}`}>
-                                                {b.name}
-                                            </div>
+                                            <div key={b.id} onClick={()=>setViewBooking(b)} className={`text-[10px] p-1 rounded mb-1 truncate cursor-pointer text-white ${b.status==='ยืนยัน'?'bg-green-500':'bg-yellow-500'}`}>{b.name}</div>
                                         ))}
                                     </div>
                                 );
@@ -180,10 +169,8 @@
                 );
             };
 
-            // Settings Component
             const SettingsView = () => (
                 <div className="space-y-6">
-                    {/* Discounts */}
                     <div className="bg-white p-4 rounded-lg shadow">
                         <h3 className="font-bold text-lg mb-4 text-green-800"><i className="fas fa-tags"></i> โค้ดส่วนลด</h3>
                         <div className="flex gap-2 mb-4 flex-wrap items-end bg-gray-50 p-2 rounded">
@@ -197,16 +184,11 @@
                             {settings.discounts.map((d, i) => (
                                 <li key={i} className="flex justify-between items-center p-2 text-sm">
                                     <span><b>{d.code}</b> : ลด {d.value} {d.type}</span>
-                                    <div className="flex gap-2">
-                                        <button onClick={()=>startEdit('discount', d)} className="text-blue-500"><i className="fas fa-edit"></i></button>
-                                        <button onClick={()=>handleDeleteSetting('discount', d.id)} className="text-red-500"><i className="fas fa-trash"></i></button>
-                                    </div>
+                                    <div className="flex gap-2"><button onClick={()=>startEdit('discount', d)} className="text-blue-500"><i className="fas fa-edit"></i></button><button onClick={()=>handleDeleteSetting('discount', d.id)} className="text-red-500"><i className="fas fa-trash"></i></button></div>
                                 </li>
                             ))}
                         </ul>
                     </div>
-
-                    {/* Closed Dates */}
                     <div className="bg-white p-4 rounded-lg shadow">
                         <h3 className="font-bold text-lg mb-4 text-red-800"><i className="fas fa-calendar-times"></i> วันปิดบริการ</h3>
                         <div className="flex gap-2 mb-4 flex-wrap items-end bg-gray-50 p-2 rounded">
@@ -218,16 +200,11 @@
                             {settings.closed.map((c, i) => (
                                 <li key={i} className="flex justify-between items-center p-2 text-sm text-red-800">
                                     <span>{formatThaiDate(c.date)} ({c.reason})</span>
-                                    <div className="flex gap-2">
-                                        <button onClick={()=>startEdit('closed', c)} className="text-blue-500"><i className="fas fa-edit"></i></button>
-                                        <button onClick={()=>handleDeleteSetting('closed', c.id)} className="text-red-500"><i className="fas fa-trash"></i></button>
-                                    </div>
+                                    <div className="flex gap-2"><button onClick={()=>startEdit('closed', c)} className="text-blue-500"><i className="fas fa-edit"></i></button><button onClick={()=>handleDeleteSetting('closed', c.id)} className="text-red-500"><i className="fas fa-trash"></i></button></div>
                                 </li>
                             ))}
                         </ul>
                     </div>
-
-                    {/* Special Dates */}
                     <div className="bg-white p-4 rounded-lg shadow">
                         <h3 className="font-bold text-lg mb-4 text-blue-800"><i className="fas fa-star"></i> วันพิเศษ (มัดจำ 100%)</h3>
                         <div className="flex gap-2 mb-4 flex-wrap items-end bg-gray-50 p-2 rounded">
@@ -239,10 +216,7 @@
                             {settings.special.map((s, i) => (
                                 <li key={i} className="flex justify-between items-center p-2 text-sm text-blue-800">
                                     <span>{formatThaiDate(s.date)} ({s.desc})</span>
-                                    <div className="flex gap-2">
-                                        <button onClick={()=>startEdit('special', s)} className="text-blue-500"><i className="fas fa-edit"></i></button>
-                                        <button onClick={()=>handleDeleteSetting('special', s.id)} className="text-red-500"><i className="fas fa-trash"></i></button>
-                                    </div>
+                                    <div className="flex gap-2"><button onClick={()=>startEdit('special', s)} className="text-blue-500"><i className="fas fa-edit"></i></button><button onClick={()=>handleDeleteSetting('special', s.id)} className="text-red-500"><i className="fas fa-trash"></i></button></div>
                                 </li>
                             ))}
                         </ul>
@@ -250,8 +224,6 @@
                 </div>
             );
 
-
-            // --- LOGIN UI ---
             if (!isLoggedIn) return (
                 <div className="min-h-screen flex items-center justify-center bg-gray-900 px-4">
                     <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-sm">
@@ -267,10 +239,8 @@
                 </div>
             );
 
-            // --- DASHBOARD UI ---
             return (
                 <div className="min-h-screen pb-20 bg-gray-100">
-                    {/* Top Nav */}
                     <nav className="bg-white shadow p-3 sticky top-0 z-20 flex justify-between items-center">
                         <div className="font-bold text-lg text-green-800">🏕️ จัดการระบบ</div>
                         <div className="flex gap-2">
@@ -279,9 +249,7 @@
                         </div>
                     </nav>
 
-                    {/* Content */}
                     <div className="max-w-7xl mx-auto p-3 md:p-6">
-                        {/* Tabs */}
                         <div className="flex gap-2 mb-4 overflow-x-auto">
                             <button onClick={() => setActiveTab('dashboard')} className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap ${activeTab==='dashboard'?'bg-green-600 text-white':'bg-white text-gray-600 shadow'}`}>📋 รายการจอง</button>
                             <button onClick={() => setActiveTab('calendar')} className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap ${activeTab==='calendar'?'bg-green-600 text-white':'bg-white text-gray-600 shadow'}`}>📅 ปฏิทิน</button>
@@ -290,7 +258,6 @@
 
                         {activeTab === 'dashboard' && (
                             <div>
-                                {/* Filters */}
                                 <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
                                     {['all', 'pending', 'confirmed'].map(f => (
                                         <button key={f} onClick={() => setFilter(f)} className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${filter === f ? 'bg-gray-800 text-white' : 'bg-white text-gray-600 border'}`}>
@@ -298,37 +265,29 @@
                                         </button>
                                     ))}
                                 </div>
-
-                                {/* Booking Cards */}
                                 <div className="space-y-3">
                                     {bookings.filter(b => filter==='all' || (filter==='pending' && b.status==='รอตรวจสอบ') || (filter==='confirmed' && b.status==='ยืนยัน')).map(b => (
                                         <div key={b.id} className="bg-white rounded-lg shadow p-4 border-l-4 border-green-500 relative">
                                             <div className="flex justify-between items-start mb-2">
                                                 <div>
-                                                    <div className="text-xs text-gray-400 font-mono">{b.id}</div>
+                                                    <div className="text-xs text-gray-400 font-mono">{b.id} | {b.timestamp.split(' ')[0]}</div>
                                                     <div className="font-bold text-lg">{b.name}</div>
                                                 </div>
                                                 <StatusBadge status={b.status} />
                                             </div>
-                                            
                                             <div className="text-sm text-gray-600 mb-2">
                                                 <div className="flex items-center gap-2"><i className="fas fa-phone w-4"></i> <a href={`tel:${b.phone}`}>{b.phone}</a></div>
+                                                <div className="flex items-center gap-2"><i className="fab fa-line w-4"></i> {b.lineProfile}</div>
                                             </div>
-
                                             <div className="bg-gray-50 p-2 rounded text-sm mb-2">
                                                 <div className="flex justify-between"><span>เข้าพัก:</span> <b>{formatThaiDate(b.checkIn)}</b></div>
                                                 <div className="flex justify-between"><span>คืนห้อง:</span> <b>{formatThaiDate(b.checkOut)}</b></div>
                                                 <hr className="my-2 border-gray-200"/>
-                                                {/* แสดงห้องพักและจำนวนคน */}
                                                 <div className="font-medium text-green-800 text-sm whitespace-pre-wrap">{b.rooms}</div>
                                                 {b.food !== '-' && <div className="text-orange-600 text-xs mt-1">🍽️ {b.food}</div>}
                                             </div>
-
                                             <div className="flex justify-between items-end">
-                                                <div className="text-left">
-                                                    <div className="text-xs text-gray-400">มัดจำ</div>
-                                                    <div className="font-bold text-red-600 text-lg">{parseInt(b.deposit).toLocaleString()}</div>
-                                                </div>
+                                                <div className="text-left"><div className="text-xs text-gray-400">มัดจำ</div><div className="font-bold text-red-600 text-lg">{parseInt(b.deposit).toLocaleString()}</div></div>
                                                 <div className="flex gap-2">
                                                     {b.slip.includes('http') && <button onClick={() => setViewSlip(b.slip)} className="bg-blue-50 text-blue-600 p-2 rounded hover:bg-blue-100"><i className="fas fa-image"></i> สลิป</button>}
                                                     {b.status === 'รอตรวจสอบ' && (
@@ -346,50 +305,37 @@
                         )}
 
                         {activeTab === 'calendar' && <CalendarView />}
-                        
                         {activeTab === 'settings' && <SettingsView />}
                     </div>
 
-                    {/* Modals */}
                     {viewSlip && (
                         <div className="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50 p-4" onClick={() => setViewSlip(null)}>
                             <div className="relative max-w-full">
                                 <button className="absolute -top-10 right-0 text-white text-2xl"><i className="fas fa-times"></i></button>
-                                <img src={viewSlip} className="max-w-full max-h-[80vh] rounded" />
+                                <img src={viewSlip} className="max-w-full max-h-[80vh] rounded" referrerPolicy="no-referrer" />
                                 <div className="text-center mt-4"><a href={viewSlip} target="_blank" className="text-white underline text-sm">เปิดรูปเต็ม</a></div>
                             </div>
                         </div>
                     )}
 
-                    {/* Calendar Popup: ข้อมูลครบถ้วน */}
                     {viewBooking && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setViewBooking(null)}>
                             <div className="bg-white p-6 rounded-lg w-full max-w-sm shadow-xl overflow-y-auto max-h-[90vh]" onClick={e => e.stopPropagation()}>
-                                <div className="flex justify-between items-start mb-2">
-                                    <h3 className="font-bold text-lg text-green-800">{viewBooking.name}</h3>
-                                    <StatusBadge status={viewBooking.status} />
-                                </div>
+                                <div className="flex justify-between items-start mb-2"><h3 className="font-bold text-lg text-green-800">{viewBooking.name}</h3><StatusBadge status={viewBooking.status} /></div>
                                 <p className="text-xs text-gray-400 mb-2">{viewBooking.id}</p>
-                                
                                 <div className="space-y-2 text-sm text-gray-600">
                                     <p>📞 {viewBooking.phone}</p>
                                     <hr/>
                                     <p>เข้า: <b>{formatThaiDate(viewBooking.checkIn)}</b></p>
                                     <p>ออก: <b>{formatThaiDate(viewBooking.checkOut)}</b></p>
                                     <div className="bg-gray-50 p-2 rounded">
-                                        <p className="font-medium text-green-800">{viewBooking.rooms}</p>
+                                        <p className="font-medium text-green-800 whitespace-pre-wrap">{viewBooking.rooms}</p>
                                         {viewBooking.food !== '-' && <p className="text-orange-600 mt-1">🍽️ {viewBooking.food}</p>}
                                     </div>
-                                    <div className="flex justify-between items-center pt-2">
-                                        <span>ยอดมัดจำ:</span>
-                                        <span className="text-red-600 font-bold text-lg">{parseInt(viewBooking.deposit).toLocaleString()} บ.</span>
-                                    </div>
+                                    <div className="flex justify-between items-center pt-2"><span>ยอดมัดจำ:</span><span className="text-red-600 font-bold text-lg">{parseInt(viewBooking.deposit).toLocaleString()} บ.</span></div>
                                 </div>
-
                                 <div className="mt-4 flex flex-col gap-2">
-                                    {viewBooking.slip.includes('http') && (
-                                        <button onClick={() => setViewSlip(viewBooking.slip)} className="w-full py-2 border border-blue-500 text-blue-500 rounded hover:bg-blue-50">ดูสลิปโอนเงิน</button>
-                                    )}
+                                    {viewBooking.slip.includes('http') && <button onClick={() => setViewSlip(viewBooking.slip)} className="w-full py-2 border border-blue-500 text-blue-500 rounded hover:bg-blue-50">ดูสลิปโอนเงิน</button>}
                                     <button onClick={() => setViewBooking(null)} className="w-full py-2 bg-gray-200 rounded">ปิดหน้าต่าง</button>
                                 </div>
                             </div>
