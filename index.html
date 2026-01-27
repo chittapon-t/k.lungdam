@@ -451,11 +451,9 @@
                                 <div className="flex flex-col items-center">
                                     <img src={qrUrl} className="mx-auto border-2 border-gray-200 rounded-lg mb-3 shadow-sm p-1" alt="QR Code" width="200" height="200" />
                                     <div className="flex gap-2">
-                                        <a href={qrUrl} download="payment-qr.png" className="bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-xs font-bold hover:bg-blue-200 transition flex items-center">
-                                            <i className="fas fa-download mr-2"></i> บันทึกรูป
-                                        </a>
+                                        
                                     </div>
-                                    <p className="text-xs text-gray-400 mt-2">(กดค้างที่รูปเพื่อบันทึกได้เช่นกัน)</p>
+                                    <p className="text-xs text-gray-400 mt-2">(กรุณาบันทึกหน้าจอเพื่อชำระเงิน)</p>
                                 </div>
                             ) : (
                                 <div className="h-[200px] flex items-center justify-center text-gray-400">กำลังสร้าง QR Code...</div>
