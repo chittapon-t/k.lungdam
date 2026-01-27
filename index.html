@@ -292,6 +292,7 @@
             // --- RENDER ---
             if (step === 1) return (
                 <div className="max-w-md mx-auto p-6 bg-white shadow-xl rounded-xl mt-10">
+                    <img src="https://drive.google.com/uc?export=view&id=1Iq6GU727vQsip6GuESYmSpaFUHV3uj-k" referrerPolicy="no-referrer" className="w-32 mx-auto mb-4"/>
                     <h1 className="text-2xl font-bold text-center mb-6 text-green-800">ขนำลุงดำ แคมป์ปิ้ง 🏕️</h1>
                     <div className="space-y-4">
                         <div><label className="block text-gray-700">เข้าพัก</label><input type="date" min={getTommorow()} className="w-full border p-2 rounded" onChange={e => setDates({...dates, checkIn: e.target.value})} /></div>
@@ -305,7 +306,7 @@
                 <div className="max-w-4xl mx-auto p-4 relative">
                     <div className="flex justify-between items-center mb-4"><h2 className="text-xl font-bold">เลือกที่พัก</h2></div>
                     <div className="map-container bg-blue-100 mb-6" style={{paddingBottom: '56.25%'}}>
-                        <img src="https://photos.app.goo.gl/Z3BLvqgtZDDmVNR3A" referrerpolicy="no-referrer" className="absolute top-0 left-0 w-full h-full object-cover" />
+                        <img src="https://drive.google.com/uc?export=view&id=1MtBiMvqO5BBPLlY2SFssaFXJsg8qt9TT" referrerPolicy="no-referrer" className="absolute top-0 left-0 w-full h-full object-cover" />
                         {Object.keys(pinPos).map(key => {
                             if (!ROOM_DATA[key]) return null;
                             const isBooked = availability.bookedRooms.includes(key);
