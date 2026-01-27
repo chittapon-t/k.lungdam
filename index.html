@@ -292,7 +292,7 @@
             // --- RENDER ---
             if (step === 1) return (
                 <div className="max-w-md mx-auto p-6 bg-white shadow-xl rounded-xl mt-10">
-                    <img src="https://lh3.googleusercontent.com/pw/AP1GczPi_rYAbsNGi4X96mW5koYl0JJ3BN9ipRf6UgsXAOQgkyhrs2ChGcZlbsuQ3OLJOYnYhSTYJhWUuu2hwWtPqlt4MUfdUDSS3s4RdRLeD36gPLiK-8OhYLXWmqxVLh2eOtkLIx7pQxrQA6ZnqBYHOftH=w913-h913-s-no-gm?authuser=0" referrerPolicy="no-referrer" className="w-32 mx-auto mb-4"/>
+                    <img src="https://lh3.googleusercontent.com/pw/AP1GczPi_rYAbsNGi4X96mW5koYl0JJ3BN9ipRf6UgsXAOQgkyhrs2ChGcZlbsuQ3OLJOYnYhSTYJhWUuu2hwWtPqlt4MUfdUDSS3s4RdRLeD36gPLiK-8OhYLXWmqxVLh2eOtkLIx7pQxrQA6ZnqBYHOftH=w913-h913-s-no-gm?authuser=0" referrerpolicy="no-referrer" className="w-32 mx-auto mb-4"/>
                     <h1 className="text-2xl font-bold text-center mb-6 text-green-800">ขนำลุงดำ แคมป์ปิ้ง 🏕️</h1>
                     <div className="space-y-4">
                         <div><label className="block text-gray-700">เข้าพัก</label><input type="date" min={getTommorow()} className="w-full border p-2 rounded" onChange={e => setDates({...dates, checkIn: e.target.value})} /></div>
@@ -306,7 +306,7 @@
                 <div className="max-w-4xl mx-auto p-4 relative">
                     <div className="flex justify-between items-center mb-4"><h2 className="text-xl font-bold">เลือกที่พัก</h2></div>
                     <div className="map-container bg-blue-100 mb-6" style={{paddingBottom: '100%'}}>
-                        <img src="https://img2.pic.in.th/Gemini_Generated_Image_68av0x68av0x68av.png" referrerPolicy="no-referrer" className="absolute top-0 left-0 w-full h-full object-cover" />
+                        <img src="https://lh3.googleusercontent.com/pw/AP1GczNEavVPXe8k2v8Wg-YE9impS9_DEOJde7Epo6lmtBthvPAcdN475dezM_Wo4gpcBkvVLAZTVkaf2TlMNx6KPkssbdRhZhCgZcvSTHOmfViGmL1WGH9aS7rzm1uBZbUUlRfrCYh8AvzUtxIVG2p265Wm=w899-h703-s-no-gm?authuser=0" referrerPolicy="no-referrer" className="absolute top-0 left-0 w-full h-full object-cover" />
                         {Object.keys(pinPos).map(key => {
                             if (!ROOM_DATA[key]) return null;
                             const isBooked = availability.bookedRooms.includes(key);
@@ -316,7 +316,16 @@
                             return (
                                 <div key={key} className={`map-pin flex flex-col items-center ${disable ? 'opacity-50 grayscale' : ''} ${inCart ? 'selected' : ''}`}
                                     style={{left: `${pinPos[key].x}%`, top: `${pinPos[key].y}%`}}
-                                    onClick={() => { if(!disable) openRoomModal(key); }}>
+                                    onClick={() => { 
+                                        if(disable) return;
+                                        if(inCart) {
+                                            // เอาออกจากตะกร้า ถ้ามีอยู่แล้ว
+                                            setCart(cart.filter(c => c.id !== key));
+                                        } else {
+                                            // เปิดหน้าเลือกจำนวน ถ้ายังไม่มี
+                                            openRoomModal(key);
+                                        }
+                                    }}>
                                     <div className={`p-1 px-2 rounded-lg text-xs font-bold shadow-md whitespace-nowrap ${disable ? 'bg-gray-400 text-white' : (inCart ? 'bg-yellow-400 text-black' : 'bg-white text-green-800')}`}>
                                         {ROOM_DATA[key].name} {key==='Z8' && `(${availability.zone8Available})`}
                                     </div>
