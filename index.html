@@ -13,7 +13,7 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- LIFF SDK (เพิ่มใหม่) -->
+    <!-- LIFF SDK -->
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 
     <!-- QR Code Generator -->
@@ -56,7 +56,7 @@
     <script type="text/babel">
         // --- CONFIGURATION ---
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwQjaz5oaVekrtSlw_kGqt9gLOg0uQeXphG4H2Q5cqrv4ZSEiJnzO63lctvaaYTRr9HNQ/exec"; 
-        const LIFF_ID = "2008803474-hRJaVbm7"; // สร้าง LIFF ใน LINE Developers และนำ ID มาใส่
+        const LIFF_ID = "2008803474-hRJaVbm7"; 
         
         // ข้อมูลห้องพัก & ราคา
         const ROOM_DATA = {
@@ -80,7 +80,8 @@
 
         const HIGH_SEASON = ['2025-12-30', '2025-12-31', '2026-01-01', '2026-01-02'];
 
-        const INITIAL_POSITIONS = {
+        // ตำแหน่งเริ่มต้น (Fallback ถ้าโหลดจากชีตไม่ได้)
+        const DEFAULT_POSITIONS = {
             'R1': {x: 20, y: 30}, 'R2': {x: 40, y: 50}, 'R3': {x: 60, y: 50},
             'T1': {x: 25, y: 70}, 'T2': {x: 35, y: 75}, 'K1': {x: 70, y: 70},
             'K2': {x: 80, y: 70}, 'Z8': {x: 50, y: 20}
@@ -92,18 +93,20 @@
             const [availability, setAvailability] = React.useState(null);
             const [loading, setLoading] = React.useState(false);
             const [cart, setCart] = React.useState([]);
-            // เพิ่ม lineDisplayName ใน State
             const [customer, setCustomer] = React.useState({ name: '', phone: '', userId: '', lineDisplayName: '' });
-            const [devMode, setDevMode] = React.useState(false);
-            const [pinPos, setPinPos] = React.useState(INITIAL_POSITIONS);
+            
+            // ใช้ State เก็บตำแหน่งปุ่ม เริ่มต้นด้วย Default
+            const [pinPos, setPinPos] = React.useState(DEFAULT_POSITIONS);
+            
             const [discount, setDiscount] = React.useState({ code: '', val: 0, type: '' });
             const [slipImg, setSlipImg] = React.useState(null);
             const [bookingResult, setBookingResult] = React.useState(null);
             const [agreed, setAgreed] = React.useState(false);
             const [liffError, setLiffError] = React.useState(null);
 
-            // --- LIFF INITIALIZATION ---
+            // --- INITIALIZATION ---
             React.useEffect(() => {
+                // 1. LIFF Init
                 if (LIFF_ID) {
                     liff.init({ liffId: LIFF_ID })
                         .then(() => {
@@ -111,23 +114,30 @@
                                 liff.getProfile().then(profile => {
                                     setCustomer(prev => ({
                                         ...prev,
-                                        name: profile.displayName, // ชื่อสำหรับใส่ในช่องกรอก (แก้ไขได้)
+                                        name: profile.displayName,
                                         userId: profile.userId,
-                                        lineDisplayName: profile.displayName // ชื่อโปรไฟล์จริง (เก็บแยกไว้ส่งหลังบ้าน)
+                                        lineDisplayName: profile.displayName
                                     }));
                                 });
-                            } else {
-                                // ถ้าไม่ได้ Login และเปิดใน External Browser
-                                if (!liff.isInClient()) {
-                                    // อาจจะ Show ปุ่ม Login
-                                }
                             }
                         })
                         .catch((err) => {
                             console.error('LIFF Init Error', err);
-                            setLiffError('ไม่สามารถเชื่อมต่อ LINE ได้ (ทดลองใช้งานโหมดทั่วไป)');
+                            setLiffError('ไม่สามารถเชื่อมต่อ LINE ได้');
                         });
                 }
+
+                // 2. Fetch Map Config from Google Sheet
+                fetch(`${GOOGLE_SCRIPT_URL}?action=getMapConfig`)
+                    .then(r => r.json())
+                    .then(res => {
+                        if (res.status === 'success') {
+                            console.log("Loaded Map Config:", res.data);
+                            setPinPos(res.data);
+                        }
+                    })
+                    .catch(e => console.error("Error loading map config:", e));
+
             }, []);
 
             const loginLine = () => {
@@ -306,14 +316,6 @@
                 reader.readAsDataURL(file);
             };
 
-            const handleDragEnd = (id, e) => {
-                if(!devMode) return;
-                const rect = e.target.parentElement.getBoundingClientRect();
-                const x = ((e.clientX - rect.left) / rect.width) * 100;
-                const y = ((e.clientY - rect.top) / rect.height) * 100;
-                setPinPos({ ...pinPos, [id]: {x, y} });
-            };
-
             // --- RENDER ---
 
             if (step === 1) return (
@@ -352,7 +354,7 @@
                 <div className="max-w-4xl mx-auto p-4">
                     <div className="flex justify-between items-center mb-4">
                         <h2 className="text-xl font-bold">เลือกที่พัก (ว่าง)</h2>
-                        <button onClick={() => setDevMode(!devMode)} className="text-xs text-gray-400">Dev Mode</button>
+                        <div className="text-xs text-gray-400">Map Loaded from Sheet</div>
                     </div>
                     
                     <div className="map-container bg-blue-100 mb-6" style={{paddingBottom: '56.25%'}}>
@@ -364,13 +366,14 @@
                             const isZ8Full = key === 'Z8' && availability.zone8Available <= 0;
                             const disable = isBooked || isZ8Full;
                             const inCart = cart.find(c => c.id === key);
+                            
+                            // ถ้า Key ใน Sheet ไม่ตรงกับ Room Data ให้ข้าม
+                            if (!ROOM_DATA[key]) return null;
 
                             return (
                                 <div key={key} 
                                     className={`map-pin flex flex-col items-center ${disable ? 'opacity-50 grayscale' : ''} ${inCart ? 'selected' : ''}`}
                                     style={{left: `${pinPos[key].x}%`, top: `${pinPos[key].y}%`}}
-                                    draggable={devMode}
-                                    onDragEnd={(e) => handleDragEnd(key, e)}
                                     onClick={() => {
                                         if(disable) return;
                                         const r = ROOM_DATA[key];
