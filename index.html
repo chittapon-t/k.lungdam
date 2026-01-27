@@ -19,23 +19,44 @@
     <!-- QR Code Generator -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     
-    <!-- PromptPay Library Helper -->
+    <!-- PromptPay Library Helper (Standard EMVCo) -->
     <script>
         function generatePromptPayPayload(phoneNumber, amount) {
-            const pAmount = amount.toFixed(2);
-            const target = "0016A00000067701011101130066" + phoneNumber.replace(/^0/, '66');
-            let data = ["0002010102122937", target, "5802TH530376454", pAmount.length < 10 ? "0" + pAmount.length : pAmount.length, pAmount, "6304"];
-            let str = data.join("");
-            function crc16(s) {
-                let crc = 0xFFFF;
-                for (let i = 0; i < s.length; i++) {
-                    let x = ((crc >> 8) ^ s.charCodeAt(i)) & 0xFF;
-                    x ^= x >> 4;
-                    crc = ((crc << 8) ^ (x << 12) ^ (x << 5) ^ x) & 0xFFFF;
-                }
-                return crc.toString(16).toUpperCase().padStart(4, '0');
+            // 1. Sanitize and Format Phone (08x... -> 668x...)
+            const target = phoneNumber.replace(/^0/, '66');
+            
+            // 2. Build Tag 29 (Merchant Account Information)
+            // ID 00: AID (A000000677010111)
+            // ID 01: Mobile Number (00 + 66...)
+            const f01 = '00' + target; 
+            const tag29Value = '0016A000000677010111' + '01' + String(f01.length).padStart(2,'0') + f01;
+            const tag29 = '29' + String(tag29Value.length).padStart(2,'0') + tag29Value;
+            
+            // 3. Build Tag 53 (Currency THB = 764)
+            const tag53 = '5303764';
+            
+            // 4. Build Tag 54 (Amount)
+            const amtStr = amount.toFixed(2);
+            const tag54 = '54' + String(amtStr.length).padStart(2,'0') + amtStr;
+            
+            // 5. Build Tag 58 (Country TH)
+            const tag58 = '5802TH';
+            
+            // 6. Assemble Data (Tag 00 + Tag 01 + Tag 29 + Tag 53 + Tag 54 + Tag 58 + Tag 63)
+            // 00 02 01 (Version)
+            // 01 02 12 (Dynamic QR - 12 means one-time use/dynamic amount)
+            const data = '000201' + '010212' + tag29 + tag53 + tag54 + tag58 + '6304';
+            
+            // 7. Calculate CRC16 (CCITT-FALSE)
+            let crc = 0xFFFF;
+            for (let i = 0; i < data.length; i++) {
+                let x = ((crc >> 8) ^ data.charCodeAt(i)) & 0xFF;
+                x ^= x >> 4;
+                crc = ((crc << 8) ^ (x << 12) ^ (x << 5) ^ x) & 0xFFFF;
             }
-            return str + crc16(str);
+            const crcStr = crc.toString(16).toUpperCase().padStart(4, '0');
+            
+            return data + crcStr;
         }
     </script>
 
@@ -61,6 +82,10 @@
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwQjaz5oaVekrtSlw_kGqt9gLOg0uQeXphG4H2Q5cqrv4ZSEiJnzO63lctvaaYTRr9HNQ/exec"; 
         const LIFF_ID = "2008803474-hRJaVbm7"; 
         
+        // ข้อมูลเบอร์พร้อมเพย์
+        const PROMPTPAY_PHONE = "0615924262";
+        const PROMPTPAY_NAME = "อลงกต ทวีผ่อง";
+
         const ROOM_DATA = {
             'R1': { name: 'โฮมสเตย์หนำโป', tiers: [{max: 5, price: 1600}, {max: 8, price: 2200}], bf: false, type: 'room', desc: 'บ้านหลังใหญ่ อบอุ่น', min: 1, maxCap: 8 },
             'R2': { name: 'บ้านพักริมน้ำ 1', tiers: [{max: 2, price: 1400}, {max: 3, price: 1750}], bf: true, type: 'room', desc: 'วิวริมน้ำ บรรยากาศดี', min: 1, maxCap: 3 },
@@ -184,7 +209,8 @@
                     setTimeout(() => {
                         const canvas = document.getElementById('qr-code');
                         if (canvas) {
-                            const payload = generatePromptPayPayload("0615924262", pricing.deposit);
+                            // ใช้เบอร์พร้อมเพย์และยอดมัดจำตามที่ระบุ
+                            const payload = generatePromptPayPayload(PROMPTPAY_PHONE, pricing.deposit);
                             new QRious({ element: canvas, value: payload, size: 200 });
                         }
                     }, 100);
@@ -266,7 +292,6 @@
             // --- RENDER ---
             if (step === 1) return (
                 <div className="max-w-md mx-auto p-6 bg-white shadow-xl rounded-xl mt-10">
-                    <img src="https://photos.app.goo.gl/bZC14i7fC2pnjrV8A" referrerpolicy="no-referrer" className="w-32 mx-auto mb-4"/>
                     <h1 className="text-2xl font-bold text-center mb-6 text-green-800">ขนำลุงดำ แคมป์ปิ้ง 🏕️</h1>
                     <div className="space-y-4">
                         <div><label className="block text-gray-700">เข้าพัก</label><input type="date" min={getTommorow()} className="w-full border p-2 rounded" onChange={e => setDates({...dates, checkIn: e.target.value})} /></div>
@@ -280,7 +305,7 @@
                 <div className="max-w-4xl mx-auto p-4 relative">
                     <div className="flex justify-between items-center mb-4"><h2 className="text-xl font-bold">เลือกที่พัก</h2></div>
                     <div className="map-container bg-blue-100 mb-6" style={{paddingBottom: '56.25%'}}>
-                        <img src="https://photos.app.goo.gl/1zYZacCz7Qoa3Mgq8" referrerpolicy="no-referrer" className="absolute top-0 left-0 w-full h-full object-cover" />
+                        <img src="https://photos.app.goo.gl/Z3BLvqgtZDDmVNR3A" referrerpolicy="no-referrer" className="absolute top-0 left-0 w-full h-full object-cover" />
                         {Object.keys(pinPos).map(key => {
                             if (!ROOM_DATA[key]) return null;
                             const isBooked = availability.bookedRooms.includes(key);
@@ -382,7 +407,8 @@
                         <div className="text-center mb-6">
                             <p className="mb-2 font-bold">สแกนจ่ายมัดจำ (พร้อมเพย์)</p>
                             <canvas id="qr-code" className="mx-auto border p-2 rounded"></canvas>
-                            <p className="text-sm mt-1">อลงกต ทวีผ่อง</p>
+                            <p className="text-sm mt-1">{PROMPTPAY_NAME}</p>
+                            <p className="text-xs text-gray-500">{PROMPTPAY_PHONE}</p>
                         </div>
 
                         <div className="mb-4"><label className="block mb-1 text-sm">สลิปโอนเงิน <span className="text-red-500">*</span></label><input type="file" accept="image/*" onChange={e=>{
