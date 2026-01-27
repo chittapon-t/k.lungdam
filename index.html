@@ -12,6 +12,7 @@
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
     <!-- LIFF SDK -->
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
@@ -22,41 +23,22 @@
     <!-- PromptPay Library Helper (Standard EMVCo) -->
     <script>
         function generatePromptPayPayload(phoneNumber, amount) {
-            // 1. Sanitize and Format Phone (08x... -> 668x...)
             const target = phoneNumber.replace(/^0/, '66');
-            
-            // 2. Build Tag 29 (Merchant Account Information)
-            // ID 00: AID (A000000677010111)
-            // ID 01: Mobile Number (00 + 66...)
             const f01 = '00' + target; 
             const tag29Value = '0016A000000677010111' + '01' + String(f01.length).padStart(2,'0') + f01;
             const tag29 = '29' + String(tag29Value.length).padStart(2,'0') + tag29Value;
-            
-            // 3. Build Tag 53 (Currency THB = 764)
             const tag53 = '5303764';
-            
-            // 4. Build Tag 54 (Amount)
             const amtStr = amount.toFixed(2);
             const tag54 = '54' + String(amtStr.length).padStart(2,'0') + amtStr;
-            
-            // 5. Build Tag 58 (Country TH)
             const tag58 = '5802TH';
-            
-            // 6. Assemble Data (Tag 00 + Tag 01 + Tag 29 + Tag 53 + Tag 54 + Tag 58 + Tag 63)
-            // 00 02 01 (Version)
-            // 01 02 12 (Dynamic QR - 12 means one-time use/dynamic amount)
             const data = '000201' + '010212' + tag29 + tag53 + tag54 + tag58 + '6304';
-            
-            // 7. Calculate CRC16 (CCITT-FALSE)
             let crc = 0xFFFF;
             for (let i = 0; i < data.length; i++) {
                 let x = ((crc >> 8) ^ data.charCodeAt(i)) & 0xFF;
                 x ^= x >> 4;
                 crc = ((crc << 8) ^ (x << 12) ^ (x << 5) ^ x) & 0xFFFF;
             }
-            const crcStr = crc.toString(16).toUpperCase().padStart(4, '0');
-            
-            return data + crcStr;
+            return data + crc.toString(16).toUpperCase().padStart(4, '0');
         }
     </script>
 
@@ -67,11 +49,9 @@
         .map-pin { position: absolute; transform: translate(-50%, -100%); cursor: pointer; transition: all 0.2s; }
         .map-pin:hover { transform: translate(-50%, -110%) scale(1.1); z-index: 10; }
         .map-pin.selected { border: 3px solid #fcd34d; z-index: 20; transform: translate(-50%, -110%) scale(1.1); }
-        /* Modal Animation */
-        .modal-enter { opacity: 0; transform: scale(0.9); }
-        .modal-enter-active { opacity: 1; transform: scale(1); transition: opacity 300ms, transform 300ms; }
-        .modal-exit { opacity: 1; }
-        .modal-exit-active { opacity: 0; transition: opacity 300ms; }
+        /* Animation */
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .animate-pop { animation: fadeIn 0.3s ease-out forwards; }
     </style>
 </head>
 <body>
@@ -120,7 +100,6 @@
             const [customer, setCustomer] = React.useState({ name: '', phone: '', userId: '', lineDisplayName: '' });
             const [pinPos, setPinPos] = React.useState(DEFAULT_POSITIONS);
             
-            // System Settings from Backend
             const [systemSettings, setSystemSettings] = React.useState({ closed: [], special: [] });
 
             const [discount, setDiscount] = React.useState({ code: '', val: 0, type: '', message: '', status: '' });
@@ -129,9 +108,10 @@
             const [agreed, setAgreed] = React.useState(false);
             const [qrUrl, setQrUrl] = React.useState(null);
             
-            // Modal State
+            // UI States
             const [selectedRoomId, setSelectedRoomId] = React.useState(null);
             const [guestCount, setGuestCount] = React.useState(1);
+            const [closedModal, setClosedModal] = React.useState(null); // { date: string, reason: string }
 
             // --- FUNCTIONS ---
             const getTommorow = () => {
@@ -146,7 +126,6 @@
                 return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear() + 543}`;
             };
 
-            // Check Closed Dates
             const getClosedDateOverlap = (inDate, outDate) => {
                 let current = new Date(inDate);
                 const end = new Date(outDate);
@@ -159,7 +138,6 @@
                 return null;
             };
 
-            // Check Special Dates (High Season)
             const checkDateOverlapHighSeason = (inDate, outDate) => {
                 let current = new Date(inDate);
                 const end = new Date(outDate);
@@ -195,7 +173,7 @@
 
                 let deposit = 0;
                 const isHigh = checkDateOverlapHighSeason(dates.checkIn, dates.checkOut);
-                if (isHigh) deposit = netTotal; // High Season 100%
+                if (isHigh) deposit = netTotal;
                 else {
                     const roomDeposit = (roomTotal - discountAmt) * 0.5;
                     deposit = roomDeposit + z8Total + foodTotal;
@@ -208,7 +186,6 @@
 
             // --- EFFECTS ---
             React.useEffect(() => {
-                // Init LIFF
                 if (LIFF_ID) {
                     liff.init({ liffId: LIFF_ID }).then(() => {
                         if (liff.isLoggedIn()) {
@@ -219,12 +196,10 @@
                     }).catch(err => console.error('LIFF Error', err));
                 }
                 
-                // Fetch Map Config
                 fetch(`${GOOGLE_SCRIPT_URL}?action=getMapConfig`)
                     .then(r => r.json()).then(res => { if (res.status === 'success') setPinPos(res.data); })
                     .catch(e => console.error(e));
 
-                // Fetch Settings (Closed & Special Dates)
                 fetch(`${GOOGLE_SCRIPT_URL}?action=getSettings`)
                     .then(r => r.json()).then(res => { 
                         if (res.status === 'success') {
@@ -232,13 +207,13 @@
                         }
                     })
                     .catch(e => console.error(e));
-
             }, []);
 
             React.useEffect(() => {
-                if (step === 3) {
+                if (step === 3 && pricing.deposit > 0) {
+                    // สร้าง QR Code เป็น Data URL เมื่อเข้าสู่หน้าชำระเงิน
                     const payload = generatePromptPayPayload(PROMPTPAY_PHONE, pricing.deposit);
-                    const qr = new QRious({ value: payload, size: 200 });
+                    const qr = new QRious({ value: payload, size: 300 }); // ขนาดใหญ่ขึ้นเพื่อให้ชัดเจน
                     setQrUrl(qr.toDataURL());
                 }
             }, [step, pricing.deposit]);
@@ -248,10 +223,11 @@
                 if (!dates.checkIn || !dates.checkOut) return alert('กรุณาเลือกวันเข้าพัก');
                 if (dates.checkIn >= dates.checkOut) return alert('วันเช็คเอาท์ต้องหลังวันเช็คอิน');
                 
-                // Check Closed Dates
+                // ตรวจสอบวันปิด - แสดง Popup แทน alert
                 const closedFound = getClosedDateOverlap(dates.checkIn, dates.checkOut);
                 if (closedFound) {
-                    return alert(`ไม่สามารถจองได้: วันที่ ${formatThaiDate(closedFound.date)} ปิดให้บริการ\nเหตุผล: ${closedFound.reason}`);
+                    setClosedModal(closedFound);
+                    return;
                 }
 
                 setLoading(true);
@@ -331,6 +307,23 @@
                         <div><label className="block text-gray-700">ออก</label><input type="date" min={dates.checkIn || getTommorow()} className="w-full border p-2 rounded" onChange={e => setDates({...dates, checkOut: e.target.value})} /></div>
                         <button onClick={handleSearch} disabled={loading} className="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition font-bold">{loading ? 'กำลังโหลด...' : 'ค้นหาที่พักว่าง'}</button>
                     </div>
+
+                    {/* Closed Date Modal */}
+                    {closedModal && (
+                        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-6">
+                            <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center relative animate-pop">
+                                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <i className="fas fa-store-slash text-3xl text-red-500"></i>
+                                </div>
+                                <h3 className="text-xl font-bold text-gray-800 mb-2">วันปิดให้บริการ</h3>
+                                <p className="text-gray-600 mb-1">วันที่ <strong>{formatThaiDate(closedModal.date)}</strong></p>
+                                <p className="text-red-500 font-medium mb-6">"{closedModal.reason}"</p>
+                                <button onClick={() => setClosedModal(null)} className="w-full bg-gray-800 text-white py-3 rounded-xl font-bold hover:bg-gray-700 transition">
+                                    เลือกวันใหม่
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
 
@@ -370,7 +363,6 @@
                         })}
                     </div>
 
-                    {/* Room Selection Modal */}
                     {selectedRoomId && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                             <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm relative">
@@ -395,9 +387,7 @@
                             </div>
                         </div>
                     )}
-                    <div className="bg-gray-100 p-4 rounded mb-4"><h3 className="font-bold">🛒 ตะกร้า ({cart.length})</h3>
-                        {cart.map((c,i)=><div key={i} className="flex justify-between text-sm mt-1"><span>{c.name} {c.type==='food'?`x${c.qty}`:`(${c.guests} คน)`}</span><button onClick={()=>setCart(cart.filter((_,idx)=>idx!==i))} className="text-red-500">ลบ</button></div>)}
-                    </div>
+
                     <div className="bg-white p-4 rounded-lg shadow mb-4">
                         <h3 className="font-bold mb-2">🍽️ สั่งอาหาร</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -412,8 +402,9 @@
                         ))}
                         </div>
                     </div>
-                    
-                        
+                    <div className="bg-gray-100 p-4 rounded mb-4"><h3 className="font-bold">🛒 ตะกร้า ({cart.length})</h3>
+                        {cart.map((c,i)=><div key={i} className="flex justify-between text-sm mt-1"><span>{c.name} {c.type==='food'?`x${c.qty}`:`(${c.guests} คน)`}</span><button onClick={()=>setCart(cart.filter((_,idx)=>idx!==i))} className="text-red-500">ลบ</button></div>)}
+                    </div>
                     <button onClick={() => cart.length > 0 ? setStep(3) : alert('เลือกรายการก่อนครับ')} className="w-full bg-green-600 text-white p-3 rounded-lg font-bold">ดำเนินการต่อ</button>
                 </div>
             );
@@ -457,17 +448,22 @@
                         <div className="text-center mb-6">
                             <p className="mb-2 font-bold">สแกนจ่ายมัดจำ (พร้อมเพย์)</p>
                             {qrUrl ? (
-                                <>
-                                    <img src={qrUrl} className="mx-auto border p-2 rounded mb-2" alt="QR Code" />
-                                    <a href={qrUrl} download="qr-payment.png" className="inline-block bg-blue-100 text-blue-600 px-3 py-1 rounded text-xs font-bold hover:bg-blue-200 transition">
-                                        <i className="fas fa-download mr-1"></i> บันทึกรูป QR Code
-                                    </a>
-                                </>
+                                <div className="flex flex-col items-center">
+                                    <img src={qrUrl} className="mx-auto border-2 border-gray-200 rounded-lg mb-3 shadow-sm p-1" alt="QR Code" width="200" height="200" />
+                                    <div className="flex gap-2">
+                                        <a href={qrUrl} download="payment-qr.png" className="bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-xs font-bold hover:bg-blue-200 transition flex items-center">
+                                            <i className="fas fa-download mr-2"></i> บันทึกรูป
+                                        </a>
+                                    </div>
+                                    <p className="text-xs text-gray-400 mt-2">(กดค้างที่รูปเพื่อบันทึกได้เช่นกัน)</p>
+                                </div>
                             ) : (
                                 <div className="h-[200px] flex items-center justify-center text-gray-400">กำลังสร้าง QR Code...</div>
                             )}
-                            <p className="text-sm mt-3">{PROMPTPAY_NAME}</p>
-                            <p className="text-xs text-gray-500">{PROMPTPAY_PHONE}</p>
+                            <div className="mt-4 bg-gray-50 p-2 rounded">
+                                <p className="text-sm font-bold text-gray-800">{PROMPTPAY_NAME}</p>
+                                <p className="text-xs text-gray-500 font-mono tracking-wider">{PROMPTPAY_PHONE}</p>
+                            </div>
                         </div>
 
                         <div className="mb-4"><label className="block mb-1 text-sm">สลิปโอนเงิน <span className="text-red-500">*</span></label><input type="file" accept="image/*" onChange={e=>{
@@ -477,7 +473,7 @@
 
                         <div className="flex items-start gap-2 mb-4 text-xs text-gray-600">
                             <input type="checkbox" className="mt-1" checked={agreed} onChange={e => setAgreed(e.target.checked)} />
-                            <p>ฉันยอมรับเงื่อนไข: ไม่คืนเงินมัดจำทุกกรณี (เลื่อนได้หากแจ้งล่วงหน้า 7 วัน)</p>
+                            <p>ฉันยอมรับเงื่อนไข: ไม่คืนเงินมัดจำทุกกรณี เลื่อนได้หากแจ้งล่วงหน้า 7 วัน กรณีโรคระบาดและภัยพิบัติสามารถเลื่อนที่พักได้ตลอด </p>
                         </div>
 
                         <button onClick={handleSubmit} disabled={loading || !canSubmit} className={`w-full p-3 rounded-lg font-bold text-white transition ${loading || !canSubmit ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}>{loading ? 'กำลังบันทึก...' : 'ยืนยันการจอง'}</button>
