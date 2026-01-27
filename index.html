@@ -323,9 +323,9 @@
 
             // --- RENDER ---
             if (step === 1) return (
-                <div className="max-w-md mx-auto p-6 bg-white shadow-xl rounded-xl mt-10">
-                    <img src="https://lh3.googleusercontent.com/pw/AP1GczPi_rYAbsNGi4X96mW5koYl0JJ3BN9ipRf6UgsXAOQgkyhrs2ChGcZlbsuQ3OLJOYnYhSTYJhWUuu2hwWtPqlt4MUfdUDSS3s4RdRLeD36gPLiK-8OhYLXWmqxVLh2eOtkLIx7pQxrQA6ZnqBYHOftH=w913-h913-s-no-gm?authuser=0" referrerpolicy="no-referrer" className="w-32 mx-auto mb-4"/>
-                    <h1 className="text-2xl font-bold text-center mb-6 text-green-800">แคมป์ปิ้งธรรมชาติกลางหุบเขา 🏕️</h1>
+                <div className="max-w-md mx-auto p-6 bg-white shadow-xl rounded-xl mt-4">
+                    <img src="https://lh3.googleusercontent.com/pw/AP1GczPi_rYAbsNGi4X96mW5koYl0JJ3BN9ipRf6UgsXAOQgkyhrs2ChGcZlbsuQ3OLJOYnYhSTYJhWUuu2hwWtPqlt4MUfdUDSS3s4RdRLeD36gPLiK-8OhYLXWmqxVLh2eOtkLIx7pQxrQA6ZnqBYHOftH=w913-h913-s-no-gm?authuser=0" referrerpolicy="no-referrer" className="w-64 mx-auto mb-4"/>
+                    <h1 className="text-xl text-center mb-6 text-green-800">แคมป์ปิ้งธรรมชาติกลางหุบเขา 🏕️</h1>
                     <div className="space-y-4">
                         <div><label className="block text-gray-700">เข้าพัก</label><input type="date" min={getTommorow()} className="w-full border p-2 rounded" onChange={e => setDates({...dates, checkIn: e.target.value})} /></div>
                         <div><label className="block text-gray-700">ออก</label><input type="date" min={dates.checkIn || getTommorow()} className="w-full border p-2 rounded" onChange={e => setDates({...dates, checkOut: e.target.value})} /></div>
@@ -343,7 +343,7 @@
                         </div>
                     </div>
                     <div className="map-container bg-blue-100 mb-6" style={{paddingBottom: '100%'}}>
-                        <img src="https://img5.pic.in.th/file/secure-sv1/a23cfa93-2e58-4b68-aa07-8fddfcb7b29a.jpg" referrerpolicy="no-referrer" className="absolute top-0 left-0 w-full h-full object-cover" />
+                        <img src="https://img5.pic.in.th/file/secure-sv1/Gemini_Generated_Image_68av0x68av0x68av.png" referrerpolicy="no-referrer" className="absolute top-0 left-0 w-full h-full object-cover" />
                         {Object.keys(pinPos).map(key => {
                             if (!ROOM_DATA[key]) return null;
                             const isBooked = availability.bookedRooms.includes(key);
@@ -396,6 +396,8 @@
                         </div>
                     )}
                     <div className="bg-gray-100 p-4 rounded mb-4"><h3 className="font-bold">🛒 ตะกร้า ({cart.length})</h3>
+                        {cart.map((c,i)=><div key={i} className="flex justify-between text-sm mt-1"><span>{c.name} {c.type==='food'?`x${c.qty}`:`(${c.guests} คน)`}</span><button onClick={()=>setCart(cart.filter((_,idx)=>idx!==i))} className="text-red-500">ลบ</button></div>)}
+                    </div>
                     <div className="bg-white p-4 rounded-lg shadow mb-4">
                         <h3 className="font-bold mb-2">🍽️ สั่งอาหาร</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -411,8 +413,7 @@
                         </div>
                     </div>
                     
-                        {cart.map((c,i)=><div key={i} className="flex justify-between text-sm mt-1"><span>{c.name} {c.type==='food'?`x${c.qty}`:`(${c.guests} คน)`}</span><button onClick={()=>setCart(cart.filter((_,idx)=>idx!==i))} className="text-red-500">ลบ</button></div>)}
-                    </div>
+                        
                     <button onClick={() => cart.length > 0 ? setStep(3) : alert('เลือกรายการก่อนครับ')} className="w-full bg-green-600 text-white p-3 rounded-lg font-bold">ดำเนินการต่อ</button>
                 </div>
             );
