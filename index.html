@@ -46,8 +46,11 @@
         .map-pin { position: absolute; transform: translate(-50%, -100%); cursor: pointer; transition: all 0.2s; }
         .map-pin:hover { transform: translate(-50%, -110%) scale(1.1); z-index: 10; }
         .map-pin.selected { border: 3px solid #fcd34d; z-index: 20; transform: translate(-50%, -110%) scale(1.1); }
-        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        /* Modal Animation */
+        .modal-enter { opacity: 0; transform: scale(0.9); }
+        .modal-enter-active { opacity: 1; transform: scale(1); transition: opacity 300ms, transform 300ms; }
+        .modal-exit { opacity: 1; }
+        .modal-exit-active { opacity: 0; transition: opacity 300ms; }
     </style>
 </head>
 <body>
@@ -59,14 +62,14 @@
         const LIFF_ID = "2008803474-hRJaVbm7"; 
         
         const ROOM_DATA = {
-            'R1': { name: 'โฮมสเตย์หนำโป', tiers: [{max: 5, price: 1600}, {max: 8, price: 2200}], bf: false, type: 'room', desc: 'บ้านหลังใหญ่ อบอุ่น' },
-            'R2': { name: 'บ้านพักริมน้ำ 1', tiers: [{max: 2, price: 1400}, {max: 3, price: 1750}], bf: true, type: 'room', desc: 'วิวริมน้ำ บรรยากาศดี' },
-            'R3': { name: 'บ้านพักริมน้ำ 2', tiers: [{max: 2, price: 1400}, {max: 3, price: 1750}], bf: true, type: 'room', desc: 'วิวริมน้ำ ส่วนตัว' },
-            'T1': { name: 'เต็นท์กระโจม 1', tiers: [{max: 2, price: 1200}, {max: 4, price: 1550}], bf: true, type: 'tent', desc: 'กระโจมสุดฮิป' },
-            'T2': { name: 'เต็นท์กระโจม 2', tiers: [{max: 2, price: 1200}, {max: 4, price: 1550}], bf: true, type: 'tent', desc: 'กระโจมถ่ายรูปสวย' },
-            'K1': { name: 'เช่าเต็นท์สนาม K1', tiers: [{max: 2, price: 700}], bf: true, type: 'tent_rent', desc: 'เต็นท์พร้อมเครื่องนอน' },
-            'K2': { name: 'เช่าเต็นท์สนาม K2', tiers: [{max: 2, price: 700}], bf: true, type: 'tent_rent', desc: 'เต็นท์พร้อมเครื่องนอน' },
-            'Z8': { name: 'ลานกางเต็นท์', priceHead: 150, max: 20, bf: false, type: 'ground', desc: 'นำเต็นท์มาเอง วิวสวน' }
+            'R1': { name: 'โฮมสเตย์หนำโป', tiers: [{max: 5, price: 1600}, {max: 8, price: 2200}], bf: false, type: 'room', desc: 'บ้านหลังใหญ่ อบอุ่น', min: 1, maxCap: 8 },
+            'R2': { name: 'บ้านพักริมน้ำ 1', tiers: [{max: 2, price: 1400}, {max: 3, price: 1750}], bf: true, type: 'room', desc: 'วิวริมน้ำ บรรยากาศดี', min: 1, maxCap: 3 },
+            'R3': { name: 'บ้านพักริมน้ำ 2', tiers: [{max: 2, price: 1400}, {max: 3, price: 1750}], bf: true, type: 'room', desc: 'วิวริมน้ำ ส่วนตัว', min: 1, maxCap: 3 },
+            'T1': { name: 'เต็นท์กระโจม 1', tiers: [{max: 2, price: 1200}, {max: 4, price: 1550}], bf: true, type: 'tent', desc: 'กระโจมสุดฮิป', min: 1, maxCap: 4 },
+            'T2': { name: 'เต็นท์กระโจม 2', tiers: [{max: 2, price: 1200}, {max: 4, price: 1550}], bf: true, type: 'tent', desc: 'กระโจมถ่ายรูปสวย', min: 1, maxCap: 4 },
+            'K1': { name: 'เช่าเต็นท์สนาม K1', tiers: [{max: 2, price: 700}], bf: true, type: 'tent_rent', desc: 'เต็นท์พร้อมเครื่องนอน', min: 1, maxCap: 2 },
+            'K2': { name: 'เช่าเต็นท์สนาม K2', tiers: [{max: 2, price: 700}], bf: true, type: 'tent_rent', desc: 'เต็นท์พร้อมเครื่องนอน', min: 1, maxCap: 2 },
+            'Z8': { name: 'ลานกางเต็นท์', priceHead: 150, max: 20, bf: false, type: 'ground', desc: 'นำเต็นท์มาเอง วิวสวน', min: 1, maxCap: 20 }
         };
 
         const FOOD_MENU = [
@@ -92,17 +95,26 @@
             const [cart, setCart] = React.useState([]);
             const [customer, setCustomer] = React.useState({ name: '', phone: '', userId: '', lineDisplayName: '' });
             const [pinPos, setPinPos] = React.useState(DEFAULT_POSITIONS);
-            const [discount, setDiscount] = React.useState({ code: '', val: 0, type: '' });
+            const [discount, setDiscount] = React.useState({ code: '', val: 0, type: '', message: '', status: '' });
             const [slipImg, setSlipImg] = React.useState(null);
             const [bookingResult, setBookingResult] = React.useState(null);
             const [agreed, setAgreed] = React.useState(false);
-            const [liffError, setLiffError] = React.useState(null);
+            
+            // Modal State
+            const [selectedRoomId, setSelectedRoomId] = React.useState(null);
+            const [guestCount, setGuestCount] = React.useState(1);
 
-            // --- FUNCTIONS & LOGIC ---
-
+            // --- FUNCTIONS ---
             const getTommorow = () => {
                 const d = new Date(); d.setDate(d.getDate() + 1);
                 return d.toISOString().split('T')[0];
+            };
+
+            const formatThaiDate = (dateStr) => {
+                if(!dateStr) return "-";
+                const date = new Date(dateStr);
+                const months = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+                return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear() + 543}`;
             };
 
             const isHighSeason = (dStr) => HIGH_SEASON.includes(dStr);
@@ -120,19 +132,13 @@
                 return (new Date(dates.checkOut) - new Date(dates.checkIn)) / (1000 * 3600 * 24);
             }
 
-            // Pricing Logic
             const getPricing = () => {
                 const nights = calculateNights();
                 let roomTotal = 0; let foodTotal = 0; let z8Total = 0;
-
                 cart.forEach(item => {
-                    if (item.type === 'food') {
-                        foodTotal += item.price * item.qty;
-                    } else if (item.id === 'Z8') {
-                        z8Total += item.pricePerNight * nights;
-                    } else {
-                        roomTotal += item.pricePerNight * nights;
-                    }
+                    if (item.type === 'food') foodTotal += item.price * item.qty;
+                    else if (item.id === 'Z8') z8Total += item.pricePerNight * nights;
+                    else roomTotal += item.pricePerNight * nights;
                 });
 
                 let discountAmt = 0;
@@ -145,17 +151,16 @@
 
                 let deposit = 0;
                 const isHigh = checkDateOverlapHighSeason(dates.checkIn, dates.checkOut);
-                if (isHigh) {
-                    deposit = netTotal;
-                } else {
+                if (isHigh) deposit = netTotal;
+                else {
                     const roomDeposit = (roomTotal - discountAmt) * 0.5;
                     deposit = roomDeposit + z8Total + foodTotal;
                 }
-                
                 return { total: totalBefore, discount: discountAmt, netTotal: netTotal, deposit: Math.ceil(deposit) };
             };
 
             const pricing = React.useMemo(() => getPricing(), [cart, dates, discount]);
+            const canSubmit = customer.name && customer.phone && slipImg && agreed;
 
             // --- EFFECTS ---
             React.useEffect(() => {
@@ -163,7 +168,8 @@
                     liff.init({ liffId: LIFF_ID }).then(() => {
                         if (liff.isLoggedIn()) {
                             liff.getProfile().then(profile => {
-                                setCustomer(prev => ({...prev, name: profile.displayName, userId: profile.userId, lineDisplayName: profile.displayName}));
+                                // เก็บแค่ userId และ lineDisplayName ไม่เอา name เพื่อให้ลูกค้ากรอกเอง
+                                setCustomer(prev => ({...prev, userId: profile.userId, lineDisplayName: profile.displayName}));
                             });
                         }
                     }).catch(err => console.error('LIFF Error', err));
@@ -173,10 +179,8 @@
                     .catch(e => console.error(e));
             }, []);
 
-            // QR Code Effect (ย้ายมาไว้ตรงนี้ เพื่อไม่ให้ React พัง)
             React.useEffect(() => {
                 if (step === 3) {
-                    // รอให้ DOM render เสร็จก่อนเล็กน้อย
                     setTimeout(() => {
                         const canvas = document.getElementById('qr-code');
                         if (canvas) {
@@ -197,28 +201,54 @@
                     .catch(e => { alert('Error: ' + e); setLoading(false); });
             };
 
-            const addToCart = (roomId, guests) => {
-                if (roomId !== 'Z8' && cart.find(x => x.id === roomId)) return alert('คุณเลือกห้องนี้ไปแล้ว');
+            const openRoomModal = (roomId) => {
+                const room = ROOM_DATA[roomId];
+                if(roomId === 'Z8') setGuestCount(1);
+                else setGuestCount(room.min || 1);
+                setSelectedRoomId(roomId);
+            };
+
+            const confirmRoomSelection = () => {
+                const roomId = selectedRoomId;
+                const guests = guestCount;
                 const roomInfo = ROOM_DATA[roomId];
-                let price = 0;
+                
+                // Validate Z8 Quota
                 if (roomId === 'Z8') {
-                     const currentZ8 = cart.filter(c => c.id === 'Z8').reduce((sum, c) => sum + c.guests, 0);
-                     if (currentZ8 + guests > availability.zone8Available) return alert(`ลานกางเต็นท์ว่างอีก ${availability.zone8Available - currentZ8} ท่าน`);
-                     price = roomInfo.priceHead * guests;
-                } else {
+                    const currentZ8 = cart.filter(c => c.id === 'Z8').reduce((sum, c) => sum + c.guests, 0);
+                    if (currentZ8 + guests > availability.zone8Available) {
+                        alert(`ลานกางเต็นท์ว่างอีก ${availability.zone8Available - currentZ8} ท่าน`);
+                        return;
+                    }
+                }
+
+                let price = 0;
+                if (roomId === 'Z8') price = roomInfo.priceHead * guests;
+                else {
                     const tier = roomInfo.tiers.find(t => guests <= t.max);
-                    if (!tier) return alert('จำนวนคนเกินกำหนด');
+                    if (!tier) { alert('จำนวนคนเกินกำหนด'); return; }
                     price = tier.price;
                 }
+
                 setCart([...cart, { id: roomId, name: roomInfo.name, type: roomInfo.type, guests, pricePerNight: price, nights: calculateNights() }]);
+                setSelectedRoomId(null);
+            };
+
+            const checkDiscountCode = () => {
+                if(!discount.code) return;
+                fetch(`${GOOGLE_SCRIPT_URL}?action=checkDiscount&code=${discount.code}`)
+                .then(r=>r.json()).then(d => {
+                    if(d.status === 'success') { 
+                        setDiscount({...discount, val: parseInt(d.value), type: d.type, message: `ใช้โค้ดสำเร็จ ลด ${d.value} ${d.type==='PERCENT'?'%':'บาท'}`, status: 'success'}); 
+                    } else {
+                        setDiscount({...discount, val: 0, type: '', message: 'ไม่พบโค้ดส่วนลดนี้', status: 'error'}); 
+                    }
+                });
             };
 
             const handleSubmit = () => {
-                if (!customer.name || !customer.phone) return alert('กรุณากรอกชื่อและเบอร์โทร');
-                if (!agreed) return alert('กรุณายอมรับเงื่อนไขการจอง');
-                if (!slipImg) return alert('กรุณาอัปโหลดสลิปโอนเงิน');
+                if (!canSubmit) return;
                 setLoading(true);
-                
                 const payload = {
                     customer, checkIn: dates.checkIn, checkOut: dates.checkOut,
                     totalGuests: cart.filter(c => c.type !== 'food').reduce((s, c) => s + c.guests, 0),
@@ -236,9 +266,8 @@
             // --- RENDER ---
             if (step === 1) return (
                 <div className="max-w-md mx-auto p-6 bg-white shadow-xl rounded-xl mt-10">
-                    <img src="https://drive.google.com/uc?export=view&id=1Iq6GU727vQsip6GuESYmSpaFUHV3uj-k" className="w-32 mx-auto mb-4"/>
+                    <img src="https://drive.google.com/uc?export=view&id=1Iq6GU727vQsip6GuESYmSpaFUHV3uj-k" referrerpolicy="no-referrer" className="w-32 mx-auto mb-4"/>
                     <h1 className="text-2xl font-bold text-center mb-6 text-green-800">ขนำลุงดำ แคมป์ปิ้ง 🏕️</h1>
-                    {customer.name && <div className="bg-green-100 p-2 rounded text-green-800 text-center mb-4 text-sm">👋 สวัสดีคุณ {customer.name}</div>}
                     <div className="space-y-4">
                         <div><label className="block text-gray-700">เข้าพัก</label><input type="date" min={getTommorow()} className="w-full border p-2 rounded" onChange={e => setDates({...dates, checkIn: e.target.value})} /></div>
                         <div><label className="block text-gray-700">ออก</label><input type="date" min={dates.checkIn || getTommorow()} className="w-full border p-2 rounded" onChange={e => setDates({...dates, checkOut: e.target.value})} /></div>
@@ -248,10 +277,10 @@
             );
 
             if (step === 2) return (
-                <div className="max-w-4xl mx-auto p-4">
+                <div className="max-w-4xl mx-auto p-4 relative">
                     <div className="flex justify-between items-center mb-4"><h2 className="text-xl font-bold">เลือกที่พัก</h2></div>
                     <div className="map-container bg-blue-100 mb-6" style={{paddingBottom: '56.25%'}}>
-                        <img src="https://drive.google.com/uc?export=view&id=1MtBiMvqO5BBPLlY2SFssaFXJsg8qt9TT" className="absolute top-0 left-0 w-full h-full object-cover" />
+                        <img src="https://drive.google.com/uc?export=view&id=1MtBiMvqO5BBPLlY2SFssaFXJsg8qt9TT" referrerpolicy="no-referrer" className="absolute top-0 left-0 w-full h-full object-cover" />
                         {Object.keys(pinPos).map(key => {
                             if (!ROOM_DATA[key]) return null;
                             const isBooked = availability.bookedRooms.includes(key);
@@ -261,11 +290,7 @@
                             return (
                                 <div key={key} className={`map-pin flex flex-col items-center ${disable ? 'opacity-50 grayscale' : ''} ${inCart ? 'selected' : ''}`}
                                     style={{left: `${pinPos[key].x}%`, top: `${pinPos[key].y}%`}}
-                                    onClick={() => {
-                                        if(disable) return;
-                                        const guests = prompt(`ระบุจำนวนคน ${ROOM_DATA[key].name}`);
-                                        if (guests) addToCart(key, parseInt(guests));
-                                    }}>
+                                    onClick={() => { if(!disable) openRoomModal(key); }}>
                                     <div className={`p-1 px-2 rounded-lg text-xs font-bold shadow-md whitespace-nowrap ${disable ? 'bg-gray-400 text-white' : (inCart ? 'bg-yellow-400 text-black' : 'bg-white text-green-800')}`}>
                                         {ROOM_DATA[key].name} {key==='Z8' && `(${availability.zone8Available})`}
                                     </div>
@@ -274,7 +299,33 @@
                             )
                         })}
                     </div>
-                    {/* Food & Cart UI simplified for brevity but full logic included above */}
+
+                    {/* Room Selection Modal */}
+                    {selectedRoomId && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                            <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm relative">
+                                <h3 className="text-xl font-bold mb-2 text-green-800">{ROOM_DATA[selectedRoomId].name}</h3>
+                                <p className="text-gray-500 text-sm mb-4">{ROOM_DATA[selectedRoomId].desc}</p>
+                                <div className="flex items-center justify-between mb-6 bg-gray-100 p-3 rounded-lg">
+                                    <button onClick={() => setGuestCount(Math.max((ROOM_DATA[selectedRoomId].min||1), guestCount - 1))} className="w-10 h-10 bg-white rounded shadow text-xl font-bold text-green-600">-</button>
+                                    <div className="text-center">
+                                        <div className="text-2xl font-bold">{guestCount}</div>
+                                        <div className="text-xs text-gray-500">คน</div>
+                                    </div>
+                                    <button onClick={() => {
+                                        let limit = ROOM_DATA[selectedRoomId].maxCap;
+                                        if(selectedRoomId === 'Z8') limit = availability.zone8Available; 
+                                        setGuestCount(Math.min(limit, guestCount + 1));
+                                    }} className="w-10 h-10 bg-white rounded shadow text-xl font-bold text-green-600">+</button>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button onClick={() => setSelectedRoomId(null)} className="flex-1 py-3 text-gray-500 bg-gray-200 rounded-lg font-bold">ยกเลิก</button>
+                                    <button onClick={confirmRoomSelection} className="flex-1 py-3 text-white bg-green-600 rounded-lg font-bold shadow-lg">ยืนยัน</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="bg-white p-4 rounded-lg shadow mb-4">
                         <h3 className="font-bold mb-2">🍽️ สั่งอาหาร</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -297,37 +348,34 @@
             );
 
             if (step === 3) {
-                // Render Summary
                 return (
                     <div className="max-w-md mx-auto p-6 bg-white shadow-xl rounded-xl">
                         <h2 className="text-xl font-bold mb-4">สรุปยอดและชำระเงิน</h2>
                         <div className="space-y-2 mb-4 text-sm">
-                            <p><strong>เข้าพัก:</strong> {dates.checkIn} - {dates.checkOut}</p>
-                            <p><strong>จำนวนคืน:</strong> {calculateNights()} คืน</p>
+                            <p><strong>เข้าพัก:</strong> {formatThaiDate(dates.checkIn)}</p>
+                            <p><strong>คืนห้อง:</strong> {formatThaiDate(dates.checkOut)}</p>
+                            <p><strong>จำนวน:</strong> {calculateNights()} คืน</p>
                             <hr/>
                             {cart.map((c, i) => <div key={i} className="flex justify-between"><span>{c.name}</span><span>{c.type==='food' ? c.price*c.qty : c.pricePerNight*calculateNights()} บ.</span></div>)}
                             <hr/>
-                            <div className="flex justify-between font-bold"><span>สุทธิ</span><span>{pricing.netTotal} บ.</span></div>
+                            {pricing.discount > 0 && <div className="flex justify-between text-red-500 font-bold"><span>ส่วนลด (Code)</span><span>-{pricing.discount} บ.</span></div>}
+                            <div className="flex justify-between font-bold text-lg"><span>สุทธิ</span><span>{pricing.netTotal} บ.</span></div>
                             <div className="bg-yellow-100 p-2 rounded text-center border border-yellow-300 mt-2">
                                 <span className="block text-sm text-yellow-800">ยอดมัดจำที่ต้องโอน</span>
                                 <span className="text-2xl font-bold text-red-600">{pricing.deposit} บาท</span>
                             </div>
                         </div>
 
-                        <div className="flex gap-2 mb-4">
-                            <input placeholder="โค้ดส่วนลด" className="border p-2 rounded flex-1" onChange={e => setDiscount({...discount, code: e.target.value})} />
-                            <button className="bg-gray-800 text-white px-4 rounded" onClick={() => {
-                                fetch(`${GOOGLE_SCRIPT_URL}?action=checkDiscount&code=${discount.code}`).then(r=>r.json()).then(d => {
-                                    if(d.status === 'success') { setDiscount({...discount, val: parseInt(d.value), type: d.type}); alert('ใช้โค้ดสำเร็จ'); } else alert('โค้ดไม่ถูกต้อง');
-                                })
-                            }}>ใช้</button>
+                        <div className="mb-4">
+                            <div className="flex gap-2">
+                                <input placeholder="กรอกโค้ดส่วนลด" className="border p-2 rounded flex-1" onChange={e => setDiscount({...discount, code: e.target.value})} />
+                                <button className="bg-gray-800 text-white px-4 rounded" onClick={checkDiscountCode}>ใช้โค้ด</button>
+                            </div>
+                            {discount.message && <p className={`text-xs mt-1 ${discount.status==='success'?'text-green-600':'text-red-500'}`}>{discount.message}</p>}
                         </div>
 
                         <div className="space-y-3 mb-6">
-                            <div className="flex gap-2">
-                                <input placeholder="ชื่อผู้จอง" className="w-full border p-2 rounded" value={customer.name} onChange={e => setCustomer({...customer, name: e.target.value})} />
-                                {!customer.userId && <button onClick={()=>liff.login()} className="bg-[#00B900] text-white px-2 rounded text-xs">Login</button>}
-                            </div>
+                            <input placeholder="ชื่อผู้จอง" className="w-full border p-2 rounded" value={customer.name} onChange={e => setCustomer({...customer, name: e.target.value})} />
                             <input placeholder="เบอร์โทรศัพท์" className="w-full border p-2 rounded" type="tel" value={customer.phone} onChange={e => setCustomer({...customer, phone: e.target.value})} />
                         </div>
 
@@ -337,7 +385,7 @@
                             <p className="text-sm mt-1">อลงกต ทวีผ่อง</p>
                         </div>
 
-                        <div className="mb-4"><label className="block mb-1 text-sm">สลิปโอนเงิน</label><input type="file" accept="image/*" onChange={e=>{
+                        <div className="mb-4"><label className="block mb-1 text-sm">สลิปโอนเงิน <span className="text-red-500">*</span></label><input type="file" accept="image/*" onChange={e=>{
                             const f=e.target.files[0]; const r=new FileReader();
                             r.onloadend=()=>setSlipImg(r.result); r.readAsDataURL(f);
                         }} className="w-full text-sm" /></div>
@@ -347,7 +395,7 @@
                             <p>ฉันยอมรับเงื่อนไข: ไม่คืนเงินมัดจำทุกกรณี (เลื่อนได้หากแจ้งล่วงหน้า 7 วัน)</p>
                         </div>
 
-                        <button onClick={handleSubmit} disabled={loading} className={`w-full p-3 rounded-lg font-bold text-white ${loading ? 'bg-gray-400' : 'bg-green-600 hover:bg-green-700'}`}>{loading ? 'กำลังบันทึก...' : 'ยืนยันการจอง'}</button>
+                        <button onClick={handleSubmit} disabled={loading || !canSubmit} className={`w-full p-3 rounded-lg font-bold text-white transition ${loading || !canSubmit ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}>{loading ? 'กำลังบันทึก...' : 'ยืนยันการจอง'}</button>
                     </div>
                 );
             }
