@@ -21,7 +21,6 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        // ** ใส่ URL ของ Apps Script ตัวเดียวกับหน้า index.html **
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwQjaz5oaVekrtSlw_kGqt9gLOg0uQeXphG4H2Q5cqrv4ZSEiJnzO63lctvaaYTRr9HNQ/exec"; 
 
         const AdminApp = () => {
@@ -43,7 +42,6 @@
             const [formClosed, setFormClosed] = React.useState({ date: '', reason: '' });
             const [formSpecial, setFormSpecial] = React.useState({ date: '', desc: '' });
 
-            // Helper: Format Date
             const formatThaiDate = (dateStr) => {
                 if(!dateStr || dateStr === '-') return "-";
                 const date = new Date(dateStr);
@@ -90,7 +88,6 @@
             const handleSaveSetting = (type, payload) => {
                 const action = editMode ? 'editSetting' : 'addSetting';
                 const id = editMode ? editMode.id : null;
-                
                 if(!confirm('ยืนยันการบันทึก?')) return;
                 
                 fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action, type, id, payload, password: password }) })
@@ -102,8 +99,7 @@
                         setFormDiscount({ code: '', type: 'FIXED', value: '' });
                         setFormClosed({ date: '', reason: '' });
                         setFormSpecial({ date: '', desc: '' });
-                    }
-                    else alert('Error');
+                    } else alert('Error');
                 });
             };
 
@@ -171,6 +167,7 @@
 
             const SettingsView = () => (
                 <div className="space-y-6">
+                    {/* Discounts */}
                     <div className="bg-white p-4 rounded-lg shadow">
                         <h3 className="font-bold text-lg mb-4 text-green-800"><i className="fas fa-tags"></i> โค้ดส่วนลด</h3>
                         <div className="flex gap-2 mb-4 flex-wrap items-end bg-gray-50 p-2 rounded">
@@ -189,6 +186,7 @@
                             ))}
                         </ul>
                     </div>
+                    {/* Closed Dates */}
                     <div className="bg-white p-4 rounded-lg shadow">
                         <h3 className="font-bold text-lg mb-4 text-red-800"><i className="fas fa-calendar-times"></i> วันปิดบริการ</h3>
                         <div className="flex gap-2 mb-4 flex-wrap items-end bg-gray-50 p-2 rounded">
@@ -205,6 +203,7 @@
                             ))}
                         </ul>
                     </div>
+                    {/* Special Dates */}
                     <div className="bg-white p-4 rounded-lg shadow">
                         <h3 className="font-bold text-lg mb-4 text-blue-800"><i className="fas fa-star"></i> วันพิเศษ (มัดจำ 100%)</h3>
                         <div className="flex gap-2 mb-4 flex-wrap items-end bg-gray-50 p-2 rounded">
@@ -227,10 +226,7 @@
             if (!isLoggedIn) return (
                 <div className="min-h-screen flex items-center justify-center bg-gray-900 px-4">
                     <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-sm">
-                        <div className="text-center mb-6">
-                            <h1 className="text-3xl font-bold text-green-800">Admin Panel</h1>
-                            <p className="text-gray-500">ขนำลุงดำ แคมป์ปิ้ง</p>
-                        </div>
+                        <div className="text-center mb-6"><h1 className="text-3xl font-bold text-green-800">Admin Panel</h1><p className="text-gray-500">ขนำลุงดำ แคมป์ปิ้ง</p></div>
                         <form onSubmit={handleLogin} className="space-y-4">
                             <input type="password" placeholder="รหัสผ่าน" className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" value={password} onChange={e => setPassword(e.target.value)} />
                             <button disabled={loading} className="w-full bg-gray-800 text-white p-3 rounded-lg hover:bg-gray-700 transition font-bold shadow-lg">{loading ? 'กำลังตรวจสอบ...' : 'เข้าสู่ระบบ'}</button>
@@ -269,10 +265,7 @@
                                     {bookings.filter(b => filter==='all' || (filter==='pending' && b.status==='รอตรวจสอบ') || (filter==='confirmed' && b.status==='ยืนยัน')).map(b => (
                                         <div key={b.id} className="bg-white rounded-lg shadow p-4 border-l-4 border-green-500 relative">
                                             <div className="flex justify-between items-start mb-2">
-                                                <div>
-                                                    <div className="text-xs text-gray-400 font-mono">{b.id} | {b.timestamp.split(' ')[0]}</div>
-                                                    <div className="font-bold text-lg">{b.name}</div>
-                                                </div>
+                                                <div><div className="text-xs text-gray-400 font-mono">{b.id} | {b.timestamp.split(' ')[0]}</div><div className="font-bold text-lg">{b.name}</div></div>
                                                 <StatusBadge status={b.status} />
                                             </div>
                                             <div className="text-sm text-gray-600 mb-2">
