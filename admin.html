@@ -162,6 +162,7 @@
                 .catch(e => alert('Error: ' + e.message));
             };
 
+            // Generic Save/Delete Settings
             const handleSaveSetting = (type, payload) => {
                 const action = editMode ? 'editSetting' : 'addSetting'; const id = editMode ? editMode.id : null;
                 if(!confirm('บันทึก?')) return;
@@ -171,7 +172,7 @@
             };
             const handleDeleteSetting = (type, id) => { if(confirm('ลบ?')) fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'deleteSetting', type, id, password: password }) }).then(r=>r.json()).then(res=>fetchSettings()); };
 
-            // CMS Handlers
+            // CMS Handlers with RESIZE and ERROR HANDLING
             const handleFoodFile = async (e) => {
                 const file = e.target.files[0];
                 if (file) {
@@ -210,9 +211,9 @@
                         setFormFood({name:'', price:'', imgBase64:null}); 
                         document.getElementById('foodFileInput').value = ""; 
                         alert('บันทึกสำเร็จ'); 
-                    } else alert('Error: ' + res.message);
+                    } else alert('เกิดข้อผิดพลาด: ' + res.message);
                 })
-                .catch(err => { setLoading(false); alert('Error: ' + err.message); });
+                .catch(err => { setLoading(false); alert('ส่งข้อมูลไม่สำเร็จ: ' + err.message); });
             };
 
             const deleteFood = (id) => {
@@ -225,6 +226,7 @@
                 
                 setLoading(true);
                 let successCount = 0;
+                let errorMsgs = [];
                 
                 // Upload Sequentially to prevent timeouts
                 for (let i = 0; i < formRoomImg.imgBase64s.length; i++) {
@@ -239,9 +241,15 @@
                              }) 
                          }).then(r => r.json());
                          
-                         if (res.status === 'success') successCount++;
+                         if (res.status === 'success') {
+                             successCount++;
+                         } else {
+                             console.error("Server error:", res.message);
+                             errorMsgs.push(res.message);
+                         }
                     } catch (e) {
                         console.error("Upload failed", e);
+                        errorMsgs.push(e.message);
                     }
                 }
                 
@@ -250,7 +258,12 @@
                 fetchCmsData();
                 setFormRoomImg({ ...formRoomImg, imgBase64s: [] });
                 document.getElementById('roomFileInput').value = "";
-                alert(`อัปโหลดเสร็จสิ้น ${successCount} รูป`);
+                
+                if (successCount > 0) {
+                    alert(`อัปโหลดเสร็จสิ้น ${successCount} รูป`);
+                } else {
+                    alert(`อัปโหลดล้มเหลวทั้งหมด:\n${errorMsgs.join('\n')}`);
+                }
             };
             
             const deleteRoomImg = (url) => {
@@ -368,7 +381,7 @@
                                     <div className="flex gap-2 mb-4 flex-wrap items-end bg-orange-50 p-2 rounded">
                                         <input placeholder="ชื่ออาหาร" className="border p-2 rounded text-sm flex-1" value={formFood.name} onChange={e=>setFormFood({...formFood, name:e.target.value})} />
                                         <input placeholder="ราคา" type="number" className="border p-2 rounded text-sm w-20" value={formFood.price} onChange={e=>setFormFood({...formFood, price:e.target.value})} />
-                                        <input type="file" id="foodFileInput" accept="image/*" className="text-xs" onChange={handleFoodFile} />
+                                        <input type="file" id="foodFileInput" accept="image/*" className="text-xs" onChange={e=>handleFoodFile(e)} />
                                         <button onClick={saveFood} disabled={loading} className="bg-orange-600 text-white px-3 py-2 rounded text-sm">{loading?'...':'เพิ่ม'}</button>
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
