@@ -51,6 +51,9 @@
         @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap');
         body { font-family: 'Kanit', sans-serif; }
         .map-container { position: relative; overflow: hidden; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .map-pin { position: absolute; transform: translate(-50%, -100%); cursor: pointer; transition: all 0.2s; }
+        .map-pin:hover { transform: translate(-50%, -110%) scale(1.1); z-index: 10; }
+        .map-pin.selected { border: 3px solid #fcd34d; z-index: 20; transform: translate(-50%, -110%) scale(1.1); }
         /* Animation */
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
         .animate-pop { animation: fadeIn 0.3s ease-out forwards; }
@@ -318,11 +321,11 @@
                             <div className="max-w-md mx-auto bg-white dark:bg-gray-800 shadow-xl rounded-xl mt-4 border dark:border-gray-700 overflow-hidden">
                                 {/* Header Background with Logo Overlay */}
                                 <div className="h-48 relative">
-                                     <img src="https://img5.pic.in.th/file/secure-sv1/LINE_ALBUM__240916_14dd72f9bd7de4facf.jpg" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                                     <img src="https://img5.pic.in.th/file/secure-sv1/LINE_ALBUM__240916_14dd72f9bd7de4facf.jpg" referrerpolicy="no-referrer" className="w-full h-full object-cover" />
                                      <div className="absolute inset-0 bg-black bg-opacity-10"></div>
                                 </div>
                                 <div className="p-6 -mt-24 relative z-10">
-                                    <img src="https://lh3.googleusercontent.com/pw/AP1GczPi_rYAbsNGi4X96mW5koYl0JJ3BN9ipRf6UgsXAOQgkyhrs2ChGcZlbsuQ3OLJOYnYhSTYJhWUuu2hwWtPqlt4MUfdUDSS3s4RdRLeD36gPLiK-8OhYLXWmqxVLh2eOtkLIx7pQxrQA6ZnqBYHOftH=w913-h913-s-no-gm?authuser=0" referrerPolicy="no-referrer" className="w-32 h-32 mx-auto rounded-full border-4 border-white dark:border-gray-800 object-cover bg-white shadow-lg mb-4"/>
+                                    <img src="https://lh3.googleusercontent.com/pw/AP1GczPi_rYAbsNGi4X96mW5koYl0JJ3BN9ipRf6UgsXAOQgkyhrs2ChGcZlbsuQ3OLJOYnYhSTYJhWUuu2hwWtPqlt4MUfdUDSS3s4RdRLeD36gPLiK-8OhYLXWmqxVLh2eOtkLIx7pQxrQA6ZnqBYHOftH=w913-h913-s-no-gm?authuser=0" referrerPolicy="no-referrer" className="w-48 h-48 mx-auto rounded-full border-4 border-white dark:border-gray-800 object-cover bg-white shadow-lg mb-4"/>
                                     
                                     <h1 className="text-xl text-center mb-2 text-green-800 dark:text-green-400 font-bold">ขนำลุงดำ - Khanamlungdam</h1>
                                     <label className="block text-center mb-2 text-gray-700 dark:text-gray-300 text-sm">🏡 ขนำลุงดำ ดั้งเดิมมาจากหนำปู่ หรือที่พักตอนปู่มาอยู่ช่วงทำสวนนั้นเอง และค่อยๆ พัฒนาขึ้น แต่ยังคงความอบอุ่น ความรัก เสมือนทุกคนมาเที่ยวบ้านตากอากาศของเพื่อน มีโอกาสเจอสัตว์ แมลงเล็กๆ </label>
@@ -337,7 +340,7 @@
                                             <label className="block text-gray-700 dark:text-red-300 font-bold mb-1">วันที่ออก</label>
                                             <input type="date" min={dates.checkIn || getTommorow()} className="w-full border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" onChange={e => setDates({...dates, checkOut: e.target.value})} />
                                         </div>
-                                        <button onClick={handleSearch} disabled={loading} className="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition font-bold shadow-lg mt-2">{loading ? 'กำลังเตรียมเต็นท์...รอแปบ...' : 'ค้นหาที่พักว่าง'}</button>
+                                        <button onClick={handleSearch} disabled={loading} className="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition font-bold shadow-lg mt-2">{loading ? 'กำลังโหลด...' : 'ค้นหาที่พักว่าง'}</button>
                                     </div>
                                 </div>
 
@@ -360,7 +363,7 @@
                             </div>
                         )}
 
-                        {/* --- STEP 2: Selection (Updated to Circles) --- */}
+                        {/* --- STEP 2: Selection (Updated to Smaller Circles) --- */}
                         {step === 2 && (
                             <div className="max-w-4xl mx-auto p-4 relative">
                                 <div className="flex justify-between items-center mb-4">
@@ -378,8 +381,8 @@
                                         const disable = isBooked || isZ8Full;
                                         const inCart = cart.find(c => c.id === key);
                                         
-                                        // Dynamic Classes for Circle
-                                        let circleClasses = "w-20 h-20 rounded-full flex items-center justify-center text-center text-xs font-bold border-4 shadow-lg p-1 leading-tight transition-all duration-300";
+                                        // Update to Smaller Circles (w-14 h-14)
+                                        let circleClasses = "w-14 h-14 rounded-full flex items-center justify-center text-center text-[10px] font-bold border-2 shadow-lg p-1 leading-tight transition-all duration-300";
                                         if (disable) circleClasses += " bg-gray-400 text-white border-gray-500 cursor-not-allowed opacity-80 grayscale";
                                         else if (inCart) circleClasses += " bg-yellow-400 text-black border-yellow-600 scale-110 shadow-xl z-20";
                                         else circleClasses += " bg-white dark:bg-gray-800 text-green-800 dark:text-green-400 border-green-600 hover:scale-110 z-10";
@@ -396,7 +399,7 @@
                                                 <div className={circleClasses}>
                                                     <div>
                                                         {ROOM_DATA[key].name}
-                                                        {key==='Z8' && <div className="text-[10px] font-normal">({availability.zone8Available})</div>}
+                                                        {key==='Z8' && <div className="text-[9px] font-normal">({availability.zone8Available})</div>}
                                                     </div>
                                                 </div>
                                             </div>
@@ -515,7 +518,7 @@
 
                                 <div className="flex items-start gap-2 mb-4 text-xs text-gray-600 dark:text-gray-400">
                                     <input type="checkbox" className="mt-1" checked={agreed} onChange={e => setAgreed(e.target.checked)} />
-                                    <p>ฉันอ่านระเบียบและยอมรับเงื่อนไขของ ขนำลุงดำ แคมป์ปิ้ง ทุกประการ </p>
+                                    <p>ฉันอ่านกฎระเบียบและยอมรับเงื่อนไขของ ขนำลุงดำ แคมป์ปิ้ง ทุกประการ </p>
                                 </div>
 
                                 <button onClick={handleSubmit} disabled={loading || !canSubmit} className={`w-full p-3 rounded-lg font-bold text-white transition ${loading || !canSubmit ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}>{loading ? 'กำลังบันทึก...' : 'ยืนยันการจอง'}</button>
@@ -532,7 +535,7 @@
                                 <p className="text-sm text-gray-600 mb-4">เงื่อนไข : ไม่สามารถคืนมัดจำได้</p>
                                 <p className="text-sm text-gray-600 mb-4">เลื่อนที่พักก่อนเข้าพักไม่น้อยกว่า 7 วัน</p>
                                 <p className="text-sm text-gray-600 mb-4">ยกเว้นโรคระบาดและภัยพิบัติเลื่อนที่พักได้</p>
-                                <button onClick={() => liff.closeWindow()} className="mt-8 bg-gray-800 dark:bg-gray-600 text-white px-6 py-2 rounded-full">กดปิดเบาๆหน่อยนะ</button>
+                                <button onClick={() => liff.closeWindow()} className="mt-8 bg-gray-800 dark:bg-gray-600 text-white px-6 py-2 rounded-full">ปิดหน้าต่าง</button>
                             </div>
                         )}
                     </div>
