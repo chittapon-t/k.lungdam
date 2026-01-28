@@ -21,7 +21,6 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        // ** ใส่ URL ของ Apps Script ตัวเดียวกับหน้า index.html **
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwQjaz5oaVekrtSlw_kGqt9gLOg0uQeXphG4H2Q5cqrv4ZSEiJnzO63lctvaaYTRr9HNQ/exec"; 
 
         const AdminApp = () => {
@@ -37,13 +36,15 @@
             const [viewBooking, setViewBooking] = React.useState(null); 
             const [filter, setFilter] = React.useState('all'); 
 
-            // States for Editing/Adding
+            // States for Reschedule
+            const [rescheduleData, setRescheduleData] = React.useState(null); // { id, checkIn, checkOut }
+
+            // States for Settings
             const [editMode, setEditMode] = React.useState(null); 
             const [formDiscount, setFormDiscount] = React.useState({ code: '', type: 'FIXED', value: '' });
             const [formClosed, setFormClosed] = React.useState({ date: '', reason: '' });
             const [formSpecial, setFormSpecial] = React.useState({ date: '', desc: '' });
 
-            // Helper: Format Date
             const formatThaiDate = (dateStr) => {
                 if(!dateStr || dateStr === '-') return "-";
                 const date = new Date(dateStr);
@@ -87,12 +88,37 @@
                 fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'updateStatus', bookingId: id, newStatus: newStatus, password: password }) });
             };
 
+            const handleReschedule = () => {
+                if(!rescheduleData.checkIn || !rescheduleData.checkOut) return alert('กรุณาเลือกวันที่');
+                if(rescheduleData.checkIn >= rescheduleData.checkOut) return alert('วันที่ออกต้องหลังวันที่เข้า');
+                
+                if(!confirm('ยืนยันการเลื่อนวันเข้าพัก?')) return;
+
+                fetch(GOOGLE_SCRIPT_URL, { 
+                    method: 'POST', 
+                    body: JSON.stringify({ 
+                        action: 'rescheduleBooking', 
+                        bookingId: rescheduleData.id, 
+                        newCheckIn: rescheduleData.checkIn, 
+                        newCheckOut: rescheduleData.checkOut, 
+                        password: password 
+                    }) 
+                })
+                .then(r => r.json()).then(res => {
+                    if (res.status === 'success') { 
+                        alert('เลื่อนวันสำเร็จ และแจ้งไลน์ลูกค้าแล้ว'); 
+                        setRescheduleData(null); 
+                        setViewBooking(null);
+                        fetchData(); 
+                    }
+                    else alert('ไม่สำเร็จ: ' + res.message);
+                });
+            };
+
             const handleSaveSetting = (type, payload) => {
                 const action = editMode ? 'editSetting' : 'addSetting';
                 const id = editMode ? editMode.id : null;
-                
                 if(!confirm('ยืนยันการบันทึก?')) return;
-                
                 fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action, type, id, payload, password: password }) })
                 .then(r => r.json()).then(res => {
                     if (res.status === 'success') { 
@@ -102,8 +128,7 @@
                         setFormDiscount({ code: '', type: 'FIXED', value: '' });
                         setFormClosed({ date: '', reason: '' });
                         setFormSpecial({ date: '', desc: '' });
-                    }
-                    else alert('Error');
+                    } else alert('Error');
                 });
             };
 
@@ -287,6 +312,8 @@
                                                 <div className="text-left"><div className="text-xs text-gray-400">มัดจำ</div><div className="font-bold text-red-600 text-lg">{parseInt(b.deposit).toLocaleString()}</div></div>
                                                 <div className="flex gap-2">
                                                     {b.slip.includes('http') && <button onClick={() => setViewSlip(b.slip)} className="bg-blue-50 text-blue-600 p-2 rounded hover:bg-blue-100"><i className="fas fa-image"></i> สลิป</button>}
+                                                    {/* ปุ่มเลื่อนวัน สำหรับรายการใน Dashboard */}
+                                                    <button onClick={() => { setViewBooking(b); }} className="bg-orange-50 text-orange-600 p-2 rounded hover:bg-orange-100"><i className="fas fa-calendar-alt"></i></button>
                                                     {b.status === 'รอตรวจสอบ' && (
                                                         <>
                                                             <button onClick={() => updateStatus(b.id, 'ยืนยัน')} className="bg-green-600 text-white p-2 rounded hover:bg-green-700">ยืนยัน</button>
@@ -315,8 +342,9 @@
                         </div>
                     )}
 
+                    {/* Booking Details Modal with Reschedule */}
                     {viewBooking && (
-                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setViewBooking(null)}>
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => { setViewBooking(null); setRescheduleData(null); }}>
                             <div className="bg-white p-6 rounded-lg w-full max-w-sm shadow-xl overflow-y-auto max-h-[90vh]" onClick={e => e.stopPropagation()}>
                                 <div className="flex justify-between items-start mb-2"><h3 className="font-bold text-lg text-green-800">{viewBooking.name}</h3><StatusBadge status={viewBooking.status} /></div>
                                 <p className="text-xs text-gray-400 mb-2">{viewBooking.id}</p>
@@ -332,8 +360,25 @@
                                     <div className="flex justify-between items-center pt-2"><span>ยอดมัดจำ:</span><span className="text-red-600 font-bold text-lg">{parseInt(viewBooking.deposit).toLocaleString()} บ.</span></div>
                                 </div>
                                 <div className="mt-4 flex flex-col gap-2">
+                                    {/* Reschedule Section */}
+                                    {!rescheduleData ? (
+                                        <button onClick={() => setRescheduleData({ id: viewBooking.id, checkIn: '', checkOut: '' })} className="w-full py-2 bg-orange-100 text-orange-700 rounded hover:bg-orange-200 font-bold"><i className="fas fa-calendar-alt mr-1"></i> เลื่อนวันเข้าพัก</button>
+                                    ) : (
+                                        <div className="bg-orange-50 p-3 rounded border border-orange-200">
+                                            <h4 className="font-bold text-orange-800 mb-2 text-sm">เลือกวันใหม่</h4>
+                                            <div className="space-y-2 mb-2">
+                                                <input type="date" className="w-full border p-1 rounded text-sm" onChange={e => setRescheduleData({...rescheduleData, checkIn: e.target.value})} />
+                                                <input type="date" className="w-full border p-1 rounded text-sm" onChange={e => setRescheduleData({...rescheduleData, checkOut: e.target.value})} />
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <button onClick={() => setRescheduleData(null)} className="flex-1 py-1 bg-gray-200 text-gray-600 rounded text-xs">ยกเลิก</button>
+                                                <button onClick={handleReschedule} className="flex-1 py-1 bg-orange-600 text-white rounded text-xs">บันทึก</button>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {viewBooking.slip.includes('http') && <button onClick={() => setViewSlip(viewBooking.slip)} className="w-full py-2 border border-blue-500 text-blue-500 rounded hover:bg-blue-50">ดูสลิปโอนเงิน</button>}
-                                    <button onClick={() => setViewBooking(null)} className="w-full py-2 bg-gray-200 rounded">ปิดหน้าต่าง</button>
+                                    <button onClick={() => { setViewBooking(null); setRescheduleData(null); }} className="w-full py-2 bg-gray-200 rounded">ปิดหน้าต่าง</button>
                                 </div>
                             </div>
                         </div>
