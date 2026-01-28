@@ -120,6 +120,7 @@
             const [selectedRoomId, setSelectedRoomId] = React.useState(null);
             const [guestCount, setGuestCount] = React.useState(1);
             const [closedModal, setClosedModal] = React.useState(null); 
+            const [searchError, setSearchError] = React.useState(null); // เพิ่ม State สำหรับแจ้งเตือนการค้นหา
 
             // --- FUNCTIONS ---
             const getTommorow = () => {
@@ -227,8 +228,14 @@
 
             // --- HANDLERS ---
             const handleSearch = () => {
-                if (!dates.checkIn || !dates.checkOut) return alert('กรุณาเลือกวันเข้าพัก');
-                if (dates.checkIn >= dates.checkOut) return alert('วันเช็คเอาท์ต้องหลังวันเช็คอิน');
+                if (!dates.checkIn || !dates.checkOut) {
+                    setSearchError('กรุณาเลือกวันเข้าพักและวันที่ออกให้ครบถ้วนครับ');
+                    return;
+                }
+                if (dates.checkIn >= dates.checkOut) {
+                    setSearchError('วันเช็คเอาท์ต้องอยู่หลังจากวันเช็คอินครับ');
+                    return;
+                }
                 
                 const closedFound = getClosedDateOverlap(dates.checkIn, dates.checkOut);
                 if (closedFound) {
@@ -325,7 +332,7 @@
                                      <div className="absolute inset-0 bg-black bg-opacity-10"></div>
                                 </div>
                                 <div className="p-6 -mt-24 relative z-10">
-                                    <img src="https://lh3.googleusercontent.com/pw/AP1GczPi_rYAbsNGi4X96mW5koYl0JJ3BN9ipRf6UgsXAOQgkyhrs2ChGcZlbsuQ3OLJOYnYhSTYJhWUuu2hwWtPqlt4MUfdUDSS3s4RdRLeD36gPLiK-8OhYLXWmqxVLh2eOtkLIx7pQxrQA6ZnqBYHOftH=w913-h913-s-no-gm?authuser=0" referrerPolicy="no-referrer" className="w-48 h-48 mx-auto rounded-full border-4 border-white dark:border-gray-800 object-cover bg-white shadow-lg mb-4"/>
+                                    <img src="https://lh3.googleusercontent.com/pw/AP1GczPi_rYAbsNGi4X96mW5koYl0JJ3BN9ipRf6UgsXAOQgkyhrs2ChGcZlbsuQ3OLJOYnYhSTYJhWUuu2hwWtPqlt4MUfdUDSS3s4RdRLeD36gPLiK-8OhYLXWmqxVLh2eOtkLIx7pQxrQA6ZnqBYHOftH=w913-h913-s-no-gm?authuser=0" referrerPolicy="no-referrer" className="w-32 h-32 mx-auto rounded-full border-4 border-white dark:border-gray-800 object-cover bg-white shadow-lg mb-4"/>
                                     
                                     <h1 className="text-xl text-center mb-2 text-green-800 dark:text-green-400 font-bold">ขนำลุงดำ - Khanamlungdam</h1>
                                     <label className="block text-center mb-2 text-gray-700 dark:text-gray-300 text-sm">🏡 ขนำลุงดำ ดั้งเดิมมาจากหนำปู่ หรือที่พักตอนปู่มาอยู่ช่วงทำสวนนั้นเอง และค่อยๆ พัฒนาขึ้น แต่ยังคงความอบอุ่น ความรัก เสมือนทุกคนมาเที่ยวบ้านตากอากาศของเพื่อน มีโอกาสเจอสัตว์ แมลงเล็กๆ </label>
@@ -340,7 +347,7 @@
                                             <label className="block text-gray-700 dark:text-red-300 font-bold mb-1">วันที่ออก</label>
                                             <input type="date" min={dates.checkIn || getTommorow()} className="w-full border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" onChange={e => setDates({...dates, checkOut: e.target.value})} />
                                         </div>
-                                        <button onClick={handleSearch} disabled={loading} className="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition font-bold shadow-lg mt-2">{loading ? 'กำลังโหลด...' : 'ค้นหาที่พักว่าง'}</button>
+                                        <button onClick={handleSearch} disabled={loading} className="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition font-bold shadow-lg mt-2">{loading ? 'กำลังกางเต็นท์...รอแปบ...' : 'ค้นหาที่พักว่าง'}</button>
                                     </div>
                                 </div>
 
@@ -360,6 +367,22 @@
                                         </div>
                                     </div>
                                 )}
+
+                                {/* Search Warning Modal */}
+                                {searchError && (
+                                    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-6">
+                                        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center relative animate-pop">
+                                            <div className="w-16 h-16 bg-yellow-100 dark:bg-yellow-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                                                <i className="fas fa-exclamation-triangle text-3xl text-yellow-500 dark:text-yellow-300"></i>
+                                            </div>
+                                            <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">แจ้งเตือน</h3>
+                                            <p className="text-gray-600 dark:text-gray-300 mb-6">{searchError}</p>
+                                            <button onClick={() => setSearchError(null)} className="w-full bg-gray-800 dark:bg-gray-600 text-white py-3 rounded-xl font-bold hover:bg-gray-700 transition">
+                                                ตกลง
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
 
@@ -373,7 +396,7 @@
                                     </div>
                                 </div>
                                 <div className="map-container bg-blue-100 dark:bg-gray-700 mb-6" style={{paddingBottom: '100%'}}>
-                                    <img src="https://img5.pic.in.th/file/secure-sv1/3d539b84-44ce-4336-ad90-bd2f84b13eca.jpg" referrerpolicy="no-referrer" className="absolute top-0 left-0 w-full h-full object-cover" />
+                                    <img src="https://img5.pic.in.th/file/secure-sv1/Gemini_Generated_Image_68av0x68av0x68av.png" referrerpolicy="no-referrer" className="absolute top-0 left-0 w-full h-full object-cover" />
                                     {Object.keys(pinPos).map(key => {
                                         if (!ROOM_DATA[key]) return null;
                                         const isBooked = availability.bookedRooms.includes(key);
@@ -382,7 +405,7 @@
                                         const inCart = cart.find(c => c.id === key);
                                         
                                         // Update to Smaller Circles (w-10 h-10)
-                                        let circleClasses = "w-10 h-10 rounded-full flex items-center justify-center text-center text-[6px] font-bold border-2 shadow-lg p-1 leading-tight transition-all duration-300";
+                                        let circleClasses = "w-10 h-10 rounded-full flex items-center justify-center text-center text-[8px] font-bold border-2 shadow-lg p-1 leading-tight transition-all duration-300";
                                         if (disable) circleClasses += " bg-gray-400 text-white border-gray-500 cursor-not-allowed opacity-80 grayscale";
                                         else if (inCart) circleClasses += " bg-yellow-400 text-black border-yellow-600 scale-110 shadow-xl z-20";
                                         else circleClasses += " bg-white dark:bg-gray-800 text-green-800 dark:text-green-400 border-green-600 hover:scale-110 z-10";
@@ -496,18 +519,18 @@
                                         <div className="flex flex-col items-center">
                                             <img src={qrUrl} className="mx-auto border-2 border-gray-200 dark:border-gray-600 rounded-lg mb-3 shadow-sm p-1 bg-white" alt="QR Code" width="200" height="200" />
                                             <div className="flex gap-2">
-                                                <a href={qrUrl} download="payment-001-qr.png" className="bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-xs font-bold hover:bg-blue-200 transition flex items-center">
+                                                <a href={qrUrl} download="payment-050-qr.png" className="bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-xs font-bold hover:bg-blue-200 transition flex items-center">
                                                     <i className="fas fa-download mr-2"></i> บันทึกรูป
                                                 </a>
                                             </div>
-                                            <p className="text-xs text-gray-400 mt-2">(กดค้างที่รูปเพื่อบันทึกได้เช่นกัน)</p>
+                                            <p className="text-xs text-gray-400 mt-2">(บันทึกรูปไม่ได้ ให้บันทึกหน้าจอ)</p>
                                         </div>
                                     ) : (
                                         <div className="h-[200px] flex items-center justify-center text-gray-400">กำลังสร้าง QR Code...</div>
                                     )}
                                     <div className="mt-4 bg-gray-50 dark:bg-gray-700 p-2 rounded">
-                                        <p className="text-sm font-bold text-gray-800 dark:text-white">{PROMPTPAY_NAME}</p>
                                         <p className="text-xs text-gray-500 dark:text-gray-400 font-mono tracking-wider">{PROMPTPAY_PHONE}</p>
+                                        <p className="text-sm font-bold text-gray-800 dark:text-white">{PROMPTPAY_NAME}</p>
                                     </div>
                                 </div>
 
@@ -518,7 +541,7 @@
 
                                 <div className="flex items-start gap-2 mb-4 text-xs text-gray-600 dark:text-gray-400">
                                     <input type="checkbox" className="mt-1" checked={agreed} onChange={e => setAgreed(e.target.checked)} />
-                                    <p>ฉันอ่านกฎระเบียบและยอมรับเงื่อนไขของ ขนำลุงดำ แคมป์ปิ้ง ทุกประการ </p>
+                                    <p>ฉันอ่านระเบียบและยอมรับเงื่อนไขของ ขนำลุงดำ แคมป์ปิ้ง ทุกประการ </p>
                                 </div>
 
                                 <button onClick={handleSubmit} disabled={loading || !canSubmit} className={`w-full p-3 rounded-lg font-bold text-white transition ${loading || !canSubmit ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}>{loading ? 'กำลังบันทึก...' : 'ยืนยันการจอง'}</button>
@@ -531,11 +554,11 @@
                                 <div className="text-6xl mb-4">🎉</div>
                                 <h2 className="text-2xl font-bold text-green-700 dark:text-green-400 mb-2">จองสำเร็จ!</h2>
                                 <p className="text-gray-600 dark:text-gray-300 mb-4">รหัส: <strong>{bookingResult}</strong></p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">ระบบส่งใบจองให้ทาง LINE แล้วครับ</p>
+                                <p className="text-sm text-gray-500 mb-4">ระบบส่งใบจองให้ทาง LINE แล้วครับ</p>
                                 <p className="text-sm text-gray-600 mb-4">เงื่อนไข : ไม่สามารถคืนมัดจำได้</p>
                                 <p className="text-sm text-gray-600 mb-4">เลื่อนที่พักก่อนเข้าพักไม่น้อยกว่า 7 วัน</p>
                                 <p className="text-sm text-gray-600 mb-4">ยกเว้นโรคระบาดและภัยพิบัติเลื่อนที่พักได้</p>
-                                <button onClick={() => liff.closeWindow()} className="mt-8 bg-gray-800 dark:bg-gray-600 text-white px-6 py-2 rounded-full">ปิดหน้าต่าง</button>
+                                <button onClick={() => liff.closeWindow()} className="mt-8 bg-gray-800 dark:bg-gray-600 text-white px-6 py-2 rounded-full">กดปิดเบาๆหน่อยนะ</button>
                             </div>
                         )}
                     </div>
