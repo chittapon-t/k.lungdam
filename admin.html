@@ -28,7 +28,7 @@
             const [isLoggedIn, setIsLoggedIn] = React.useState(false);
             const [password, setPassword] = React.useState('');
             const [loading, setLoading] = React.useState(false);
-            const [activeTab, setActiveTab] = React.useState('dashboard'); 
+            const [activeTab, setActiveTab] = React.useState('dashboard'); // Default to Dashboard
             
             const [bookings, setBookings] = React.useState([]);
             const [settings, setSettings] = React.useState({ discounts: [], closed: [], special: [] });
@@ -52,6 +52,47 @@
                 const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
                 return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear() + 543}`;
             };
+
+            // Statistics Calculation
+            const stats = React.useMemo(() => {
+                const now = new Date();
+                const currentMonth = now.getMonth();
+                const currentYear = now.getFullYear();
+
+                const totalRevenue = bookings
+                    .filter(b => b.status === 'ยืนยัน')
+                    .reduce((sum, b) => sum + parseInt(b.deposit || 0), 0);
+
+                const monthlyRevenue = bookings
+                    .filter(b => {
+                        const d = new Date(b.checkIn);
+                        return b.status === 'ยืนยัน' && d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+                    })
+                    .reduce((sum, b) => sum + parseInt(b.deposit || 0), 0);
+
+                const pendingCount = bookings.filter(b => b.status === 'รอตรวจสอบ').length;
+                
+                // Monthly Booking Counts for Chart
+                const monthlyCounts = Array(12).fill(0);
+                bookings.forEach(b => {
+                    if (b.status !== 'ยกเลิก' && b.status !== 'Cancelled') {
+                        const d = new Date(b.checkIn);
+                        if (d.getFullYear() === currentYear) {
+                            monthlyCounts[d.getMonth()]++;
+                        }
+                    }
+                });
+
+                // Upcoming Check-ins (Next 3 days)
+                const upcoming = bookings.filter(b => {
+                    const checkIn = new Date(b.checkIn);
+                    const diffTime = checkIn - now;
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+                    return b.status === 'ยืนยัน' && diffDays >= 0 && diffDays <= 3;
+                }).sort((a,b) => new Date(a.checkIn) - new Date(b.checkIn));
+
+                return { totalRevenue, monthlyRevenue, pendingCount, monthlyCounts, upcoming };
+            }, [bookings]);
 
             const handleLogin = (e) => {
                 e.preventDefault();
@@ -149,28 +190,12 @@
             };
 
             const handleExport = () => {
-                // Header CSV
                 const header = ["BookingID", "Date", "Customer", "Phone", "CheckIn", "CheckOut", "Rooms", "Total", "Deposit", "Status"];
-                
-                // Map Data
                 const rows = bookings.map(b => [
-                    b.id,
-                    b.timestamp,
-                    `"${b.name}"`, // Quote strings to handle commas
-                    `'${b.phone}`, // Force string for excel phone numbers
-                    b.checkIn,
-                    b.checkOut,
-                    `"${b.rooms.replace(/"/g, '""')}"`, // Escape quotes inside string
-                    b.price,
-                    b.deposit,
-                    b.status
+                    b.id, b.timestamp, `"${b.name}"`, `'${b.phone}`, b.checkIn, b.checkOut, `"${b.rooms.replace(/"/g, '""')}"`, b.price, b.deposit, b.status
                 ]);
-
-                // Combine
                 const csvContent = [header.join(","), ...rows.map(r => r.join(","))].join("\n");
-                
-                // Create Blob & Download
-                const blob = new Blob(["\uFEFF"+csvContent], { type: 'text/csv;charset=utf-8;' }); // Add BOM for Excel UTF-8
+                const blob = new Blob(["\uFEFF"+csvContent], { type: 'text/csv;charset=utf-8;' });
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement("a");
                 link.setAttribute("href", url);
@@ -187,6 +212,69 @@
                 if (status.includes('ยกเลิก')) color = 'bg-red-100 text-red-800';
                 return <span className={`px-2 py-1 rounded text-xs font-bold border ${color}`}>{status}</span>;
             };
+
+            // --- Views ---
+
+            const DashboardView = () => (
+                <div className="space-y-6 animate-fade-in">
+                    {/* Stat Cards */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-green-500">
+                            <div className="text-gray-500 text-xs">รายได้รวม (มัดจำ)</div>
+                            <div className="text-2xl font-bold text-green-700">{stats.totalRevenue.toLocaleString()} ฿</div>
+                        </div>
+                        <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-blue-500">
+                            <div className="text-gray-500 text-xs">รายได้เดือนนี้</div>
+                            <div className="text-2xl font-bold text-blue-700">{stats.monthlyRevenue.toLocaleString()} ฿</div>
+                        </div>
+                        <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-yellow-500">
+                            <div className="text-gray-500 text-xs">รอตรวจสอบ</div>
+                            <div className="text-2xl font-bold text-yellow-600">{stats.pendingCount} รายการ</div>
+                        </div>
+                        <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-gray-500">
+                            <div className="text-gray-500 text-xs">การจองทั้งหมด</div>
+                            <div className="text-2xl font-bold text-gray-700">{bookings.length}</div>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Simple Bar Chart */}
+                        <div className="bg-white p-6 rounded-xl shadow-sm">
+                            <h3 className="font-bold text-gray-700 mb-4">ยอดจองรายเดือน (ปีนี้)</h3>
+                            <div className="flex items-end gap-2 h-40">
+                                {stats.monthlyCounts.map((count, i) => (
+                                    <div key={i} className="flex-1 flex flex-col items-center group">
+                                        <div 
+                                            className="w-full bg-green-200 rounded-t hover:bg-green-400 transition-all relative" 
+                                            style={{ height: `${count > 0 ? (count / Math.max(...stats.monthlyCounts)) * 100 : 2}%` }}
+                                        >
+                                            <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs bg-gray-800 text-white px-1 rounded opacity-0 group-hover:opacity-100 transition">{count}</span>
+                                        </div>
+                                        <div className="text-[10px] text-gray-400 mt-1">{["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."][i]}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Upcoming Check-ins */}
+                        <div className="bg-white p-6 rounded-xl shadow-sm">
+                            <h3 className="font-bold text-gray-700 mb-4">เข้าพักเร็วๆ นี้ (3 วัน)</h3>
+                            <div className="space-y-3 overflow-y-auto max-h-40">
+                                {stats.upcoming.length === 0 && <p className="text-gray-400 text-sm text-center py-4">ไม่มีรายการเร็วๆ นี้</p>}
+                                {stats.upcoming.map(b => (
+                                    <div key={b.id} onClick={()=>setViewBooking(b)} className="flex justify-between items-center p-2 bg-green-50 rounded cursor-pointer hover:bg-green-100">
+                                        <div>
+                                            <div className="font-bold text-sm text-gray-800">{b.name}</div>
+                                            <div className="text-xs text-green-700">{formatThaiDate(b.checkIn)}</div>
+                                        </div>
+                                        <div className="text-xs bg-white px-2 py-1 rounded border border-green-200">{b.rooms.split(',')[0].substring(0, 15)}...</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
 
             const CalendarView = () => {
                 const [currentDate, setCurrentDate] = React.useState(new Date());
@@ -306,12 +394,17 @@
 
                     <div className="max-w-7xl mx-auto p-3 md:p-6">
                         <div className="flex gap-2 mb-4 overflow-x-auto">
-                            <button onClick={() => setActiveTab('dashboard')} className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap ${activeTab==='dashboard'?'bg-green-600 text-white':'bg-white text-gray-600 shadow'}`}>📋 รายการจอง</button>
+                            <button onClick={() => setActiveTab('dashboard')} className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap ${activeTab==='dashboard'?'bg-green-600 text-white':'bg-white text-gray-600 shadow'}`}>📊 ภาพรวม</button>
+                            <button onClick={() => setActiveTab('bookings')} className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap ${activeTab==='bookings'?'bg-green-600 text-white':'bg-white text-gray-600 shadow'}`}>📋 รายการจอง</button>
                             <button onClick={() => setActiveTab('calendar')} className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap ${activeTab==='calendar'?'bg-green-600 text-white':'bg-white text-gray-600 shadow'}`}>📅 ปฏิทิน</button>
                             <button onClick={() => setActiveTab('settings')} className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap ${activeTab==='settings'?'bg-green-600 text-white':'bg-white text-gray-600 shadow'}`}>⚙️ ตั้งค่าระบบ</button>
                         </div>
 
-                        {activeTab === 'dashboard' && (
+                        {/* --- DASHBOARD TAB --- */}
+                        {activeTab === 'dashboard' && <DashboardView />}
+
+                        {/* --- BOOKINGS TAB --- */}
+                        {activeTab === 'bookings' && (
                             <div>
                                 <div className="flex gap-2 mb-4 overflow-x-auto pb-1 items-center justify-between">
                                     <div className="flex gap-2">
@@ -369,6 +462,7 @@
                         {activeTab === 'settings' && <SettingsView />}
                     </div>
 
+                    {/* Modals */}
                     {viewSlip && (
                         <div className="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50 p-4" onClick={() => setViewSlip(null)}>
                             <div className="relative max-w-full">
@@ -379,6 +473,7 @@
                         </div>
                     )}
 
+                    {/* Booking Details Modal with Reschedule */}
                     {viewBooking && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => { setViewBooking(null); setRescheduleData(null); }}>
                             <div className="bg-white p-6 rounded-lg w-full max-w-sm shadow-xl overflow-y-auto max-h-[90vh]" onClick={e => e.stopPropagation()}>
