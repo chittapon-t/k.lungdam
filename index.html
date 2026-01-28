@@ -71,23 +71,36 @@
         const PROMPTPAY_PHONE = "0615924262";
         const PROMPTPAY_NAME = "อลงกต ทวีผ่อง";
 
-        const ROOM_DATA = {
-            'R1': { name: 'โฮมสเตย์หนำโป', tiers: [{max: 5, price: 1600}, {max: 8, price: 2200}], bf: false, type: 'room', desc: 'บ้านหลังใหญ่ อบอุ่น', min: 1, maxCap: 8 },
-            'R2': { name: 'บ้านพักริมน้ำ 1', tiers: [{max: 2, price: 1400}, {max: 3, price: 1750}], bf: true, type: 'room', desc: 'วิวริมน้ำ บรรยากาศดี', min: 1, maxCap: 3 },
-            'R3': { name: 'บ้านพักริมน้ำ 2', tiers: [{max: 2, price: 1400}, {max: 3, price: 1750}], bf: true, type: 'room', desc: 'วิวริมน้ำ ส่วนตัว', min: 1, maxCap: 3 },
-            'T1': { name: 'เต็นท์กระโจม 1', tiers: [{max: 2, price: 1200}, {max: 4, price: 1550}], bf: true, type: 'tent', desc: 'กระโจมสุดฮิป', min: 1, maxCap: 4 },
-            'T2': { name: 'เต็นท์กระโจม 2', tiers: [{max: 2, price: 1200}, {max: 4, price: 1550}], bf: true, type: 'tent', desc: 'กระโจมถ่ายรูปสวย', min: 1, maxCap: 4 },
-            'K1': { name: 'เช่าเต็นท์สนาม K1', tiers: [{max: 2, price: 700}], bf: true, type: 'tent_rent', desc: 'เต็นท์พร้อมเครื่องนอน', min: 1, maxCap: 2 },
-            'K2': { name: 'เช่าเต็นท์สนาม K2', tiers: [{max: 2, price: 700}], bf: true, type: 'tent_rent', desc: 'เต็นท์พร้อมเครื่องนอน', min: 1, maxCap: 2 },
-            'Z8': { name: 'ลานกางเต็นท์', priceHead: 150, max: 20, bf: false, type: 'ground', desc: 'นำเต็นท์มาเอง วิวสวน', min: 1, maxCap: 20 }
+        // รูปภาพแยกตามห้องพัก
+        const ROOM_IMGS = {
+            'R1': [ "https://images.unsplash.com/photo-1518780664697-55e3ad937233?auto=format&fit=crop&w=600&q=80", "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=600&q=80" ],
+            'R2': [ "https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?auto=format&fit=crop&w=600&q=80", "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&w=600&q=80" ],
+            'R3': [ "https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?auto=format&fit=crop&w=600&q=80", "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&w=600&q=80" ],
+            'T1': [ "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?auto=format&fit=crop&w=600&q=80", "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?auto=format&fit=crop&w=600&q=80" ],
+            'T2': [ "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?auto=format&fit=crop&w=600&q=80", "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?auto=format&fit=crop&w=600&q=80" ],
+            'K1': [ "https://images.unsplash.com/photo-1537905569824-f89f14cceb68?auto=format&fit=crop&w=600&q=80", "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=600&q=80" ],
+            'K2': [ "https://images.unsplash.com/photo-1537905569824-f89f14cceb68?auto=format&fit=crop&w=600&q=80", "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=600&q=80" ],
+            'Z8': [ "https://images.unsplash.com/photo-1532339142463-fd0a8979791a?auto=format&fit=crop&w=600&q=80", "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?auto=format&fit=crop&w=600&q=80" ]
         };
 
+        const ROOM_DATA = {
+            'R1': { name: 'โฮมสเตย์หนำโป', tiers: [{max: 5, price: 1600}, {max: 8, price: 2200}], bf: false, type: 'room', desc: 'บ้านหลังใหญ่ อบอุ่น', min: 1, maxCap: 8, images: ROOM_IMGS['R1'] },
+            'R2': { name: 'บ้านพักริมน้ำ 1', tiers: [{max: 2, price: 1400}, {max: 3, price: 1750}], bf: true, type: 'room', desc: 'วิวริมน้ำ บรรยากาศดี', min: 1, maxCap: 3, images: ROOM_IMGS['R2'] },
+            'R3': { name: 'บ้านพักริมน้ำ 2', tiers: [{max: 2, price: 1400}, {max: 3, price: 1750}], bf: true, type: 'room', desc: 'วิวริมน้ำ ส่วนตัว', min: 1, maxCap: 3, images: ROOM_IMGS['R3'] },
+            'T1': { name: 'เต็นท์กระโจม 1', tiers: [{max: 2, price: 1200}, {max: 4, price: 1550}], bf: true, type: 'tent', desc: 'กระโจมสุดฮิป', min: 1, maxCap: 4, images: ROOM_IMGS['T1'] },
+            'T2': { name: 'เต็นท์กระโจม 2', tiers: [{max: 2, price: 1200}, {max: 4, price: 1550}], bf: true, type: 'tent', desc: 'กระโจมถ่ายรูปสวย', min: 1, maxCap: 4, images: ROOM_IMGS['T2'] },
+            'K1': { name: 'เช่าเต็นท์สนาม K1', tiers: [{max: 2, price: 700}], bf: true, type: 'tent_rent', desc: 'เต็นท์พร้อมเครื่องนอน', min: 1, maxCap: 2, images: ROOM_IMGS['K1'] },
+            'K2': { name: 'เช่าเต็นท์สนาม K2', tiers: [{max: 2, price: 700}], bf: true, type: 'tent_rent', desc: 'เต็นท์พร้อมเครื่องนอน', min: 1, maxCap: 2, images: ROOM_IMGS['K2'] },
+            'Z8': { name: 'ลานกางเต็นท์', priceHead: 150, max: 20, bf: false, type: 'ground', desc: 'นำเต็นท์มาเอง วิวสวน', min: 1, maxCap: 20, images: ROOM_IMGS['Z8'] }
+        };
+
+        // เพิ่มรูปอาหาร
         const FOOD_MENU = [
-            { id: 'F1', name: 'ชุดหมูกระทะลุงดำ', price: 390 },
-            { id: 'F2', name: 'ชุดไก่กระทะลุงดำ', price: 390 },
-            { id: 'F3', name: 'ชุดชาบูหมูลุงดำ', price: 390 },
-            { id: 'F4', name: 'ชุดชาบูไก่ลุงดำ', price: 390 },
-            { id: 'F5', name: 'เซ็ตอาหารพื้นบ้าน', price: 390 }
+            { id: 'F1', name: 'ชุดหมูกระทะลุงดำ', price: 390, img: 'https://images.unsplash.com/photo-1595295333158-4742f28fbd85?auto=format&fit=crop&w=400&q=80' },
+            { id: 'F2', name: 'ชุดไก่กระทะลุงดำ', price: 390, img: 'https://images.unsplash.com/photo-1626302591605-e970a2525143?auto=format&fit=crop&w=400&q=80' },
+            { id: 'F3', name: 'ชุดชาบูหมูลุงดำ', price: 390, img: 'https://images.unsplash.com/photo-1549473448-547177a387d3?auto=format&fit=crop&w=400&q=80' },
+            { id: 'F4', name: 'ชุดชาบูไก่ลุงดำ', price: 390, img: 'https://images.unsplash.com/photo-1555126634-323283e090fa?auto=format&fit=crop&w=400&q=80' },
+            { id: 'F5', name: 'เซ็ตอาหารพื้นบ้าน', price: 390, img: 'https://images.unsplash.com/photo-1563897539633-73a8e68572e0?auto=format&fit=crop&w=400&q=80' }
         ];
 
         const DEFAULT_POSITIONS = {
@@ -97,9 +110,7 @@
         };
 
         const App = () => {
-            // Dark Mode State (เริ่มต้นเป็น true)
             const [isDark, setIsDark] = React.useState(true);
-
             const [step, setStep] = React.useState(1);
             const [dates, setDates] = React.useState({ checkIn: '', checkOut: '' });
             const [availability, setAvailability] = React.useState(null);
@@ -116,11 +127,17 @@
             const [agreed, setAgreed] = React.useState(false);
             const [qrUrl, setQrUrl] = React.useState(null);
             
-            // UI States
+            // Modal States
             const [selectedRoomId, setSelectedRoomId] = React.useState(null);
             const [guestCount, setGuestCount] = React.useState(1);
+            
+            // Food Modal States
+            const [selectedFood, setSelectedFood] = React.useState(null);
+            const [foodCount, setFoodCount] = React.useState(1);
+
             const [closedModal, setClosedModal] = React.useState(null); 
-            const [searchError, setSearchError] = React.useState(null); // เพิ่ม State สำหรับแจ้งเตือนการค้นหา
+            const [searchError, setSearchError] = React.useState(null);
+            const [currentImgIdx, setCurrentImgIdx] = React.useState(0);
 
             // --- FUNCTIONS ---
             const getTommorow = () => {
@@ -253,7 +270,35 @@
                 const room = ROOM_DATA[roomId];
                 if(roomId === 'Z8') setGuestCount(1);
                 else setGuestCount(room.min || 1);
+                setCurrentImgIdx(0); 
                 setSelectedRoomId(roomId);
+            };
+
+            const openFoodModal = (food) => {
+                setSelectedFood(food);
+                setFoodCount(1);
+            };
+
+            const confirmFoodSelection = () => {
+                const exist = cart.find(c => c.id === selectedFood.id);
+                if (exist) {
+                    setCart(cart.map(c => c.id === selectedFood.id ? { ...c, qty: c.qty + foodCount } : c));
+                } else {
+                    setCart([...cart, { ...selectedFood, type: 'food', qty: foodCount }]);
+                }
+                setSelectedFood(null);
+            };
+
+            const nextImage = () => {
+                if(!selectedRoomId) return;
+                const images = ROOM_DATA[selectedRoomId].images || [];
+                setCurrentImgIdx((prev) => (prev + 1) % images.length);
+            };
+
+            const prevImage = () => {
+                if(!selectedRoomId) return;
+                const images = ROOM_DATA[selectedRoomId].images || [];
+                setCurrentImgIdx((prev) => (prev - 1 + images.length) % images.length);
             };
 
             const confirmRoomSelection = () => {
@@ -326,13 +371,12 @@
                         {/* --- STEP 1: Search --- */}
                         {step === 1 && (
                             <div className="max-w-md mx-auto bg-white dark:bg-gray-800 shadow-xl rounded-xl mt-4 border dark:border-gray-700 overflow-hidden">
-                                {/* Header Background with Logo Overlay */}
                                 <div className="h-48 relative">
                                      <img src="https://img5.pic.in.th/file/secure-sv1/LINE_ALBUM__240916_14dd72f9bd7de4facf.jpg" referrerpolicy="no-referrer" className="w-full h-full object-cover" />
                                      <div className="absolute inset-0 bg-black bg-opacity-10"></div>
                                 </div>
                                 <div className="p-6 -mt-24 relative z-10">
-                                    <img src="https://lh3.googleusercontent.com/pw/AP1GczPi_rYAbsNGi4X96mW5koYl0JJ3BN9ipRf6UgsXAOQgkyhrs2ChGcZlbsuQ3OLJOYnYhSTYJhWUuu2hwWtPqlt4MUfdUDSS3s4RdRLeD36gPLiK-8OhYLXWmqxVLh2eOtkLIx7pQxrQA6ZnqBYHOftH=w913-h913-s-no-gm?authuser=0" referrerPolicy="no-referrer" className="w-32 h-32 mx-auto rounded-full border-4 border-white dark:border-gray-800 object-cover bg-white shadow-lg mb-4"/>
+                                    <img src="https://lh3.googleusercontent.com/pw/AP1GczPi_rYAbsNGi4X96mW5koYl0JJ3BN9ipRf6UgsXAOQgkyhrs2ChGcZlbsuQ3OLJOYnYhSTYJhWUuu2hwWtPqlt4MUfdUDSS3s4RdRLeD36gPLiK-8OhYLXWmqxVLh2eOtkLIx7pQxrQA6ZnqBYHOftH=w913-h913-s-no-gm?authuser=0" referrerPolicy="no-referrer" className="w-48 h-48 mx-auto rounded-full border-4 border-white dark:border-gray-800 object-cover bg-white shadow-lg mb-4"/>
                                     
                                     <h1 className="text-xl text-center mb-2 text-green-800 dark:text-green-400 font-bold">ขนำลุงดำ - Khanamlungdam</h1>
                                     <label className="block text-center mb-2 text-gray-700 dark:text-gray-300 text-sm">🏡 ขนำลุงดำ ดั้งเดิมมาจากหนำปู่ หรือที่พักตอนปู่มาอยู่ช่วงทำสวนนั้นเอง และค่อยๆ พัฒนาขึ้น แต่ยังคงความอบอุ่น ความรัก เสมือนทุกคนมาเที่ยวบ้านตากอากาศของเพื่อน มีโอกาสเจอสัตว์ แมลงเล็กๆ </label>
@@ -347,11 +391,10 @@
                                             <label className="block text-gray-700 dark:text-red-300 font-bold mb-1">วันที่ออก</label>
                                             <input type="date" min={dates.checkIn || getTommorow()} className="w-full border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" onChange={e => setDates({...dates, checkOut: e.target.value})} />
                                         </div>
-                                        <button onClick={handleSearch} disabled={loading} className="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition font-bold shadow-lg mt-2">{loading ? 'กำลังกางเต็นท์...รอแปบ...' : 'ค้นหาที่พักว่าง'}</button>
+                                        <button onClick={handleSearch} disabled={loading} className="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition font-bold shadow-lg mt-2">{loading ? 'กำลังโหลด...' : 'ค้นหาที่พักว่าง'}</button>
                                     </div>
                                 </div>
 
-                                {/* Closed Date Modal */}
                                 {closedModal && (
                                     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-6">
                                         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center relative animate-pop">
@@ -361,14 +404,10 @@
                                             <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">วันปิดให้บริการ</h3>
                                             <p className="text-gray-600 dark:text-gray-300 mb-1">วันที่ <strong>{formatThaiDate(closedModal.date)}</strong></p>
                                             <p className="text-red-500 dark:text-red-400 font-medium mb-6">"{closedModal.reason}"</p>
-                                            <button onClick={() => setClosedModal(null)} className="w-full bg-gray-800 dark:bg-gray-600 text-white py-3 rounded-xl font-bold hover:bg-gray-700 transition">
-                                                เลือกวันใหม่
-                                            </button>
+                                            <button onClick={() => setClosedModal(null)} className="w-full bg-gray-800 dark:bg-gray-600 text-white py-3 rounded-xl font-bold hover:bg-gray-700 transition">เลือกวันใหม่</button>
                                         </div>
                                     </div>
                                 )}
-
-                                {/* Search Warning Modal */}
                                 {searchError && (
                                     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-6">
                                         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center relative animate-pop">
@@ -377,16 +416,14 @@
                                             </div>
                                             <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">แจ้งเตือน</h3>
                                             <p className="text-gray-600 dark:text-gray-300 mb-6">{searchError}</p>
-                                            <button onClick={() => setSearchError(null)} className="w-full bg-gray-800 dark:bg-gray-600 text-white py-3 rounded-xl font-bold hover:bg-gray-700 transition">
-                                                ตกลง
-                                            </button>
+                                            <button onClick={() => setSearchError(null)} className="w-full bg-gray-800 dark:bg-gray-600 text-white py-3 rounded-xl font-bold hover:bg-gray-700 transition">ตกลง</button>
                                         </div>
                                     </div>
                                 )}
                             </div>
                         )}
 
-                        {/* --- STEP 2: Selection (Updated to Smaller Circles) --- */}
+                        {/* --- STEP 2: Selection --- */}
                         {step === 2 && (
                             <div className="max-w-4xl mx-auto p-4 relative">
                                 <div className="flex justify-between items-center mb-4">
@@ -404,7 +441,6 @@
                                         const disable = isBooked || isZ8Full;
                                         const inCart = cart.find(c => c.id === key);
                                         
-                                        // Update to Smaller Circles (w-10 h-10)
                                         let circleClasses = "w-10 h-10 rounded-full flex items-center justify-center text-center text-[8px] font-bold border-2 shadow-lg p-1 leading-tight transition-all duration-300";
                                         if (disable) circleClasses += " bg-gray-400 text-white border-gray-500 cursor-not-allowed opacity-80 grayscale";
                                         else if (inCart) circleClasses += " bg-yellow-400 text-black border-yellow-600 scale-110 shadow-xl z-20";
@@ -430,9 +466,15 @@
                                     })}
                                 </div>
 
+                                {/* Room Modal */}
                                 {selectedRoomId && (
                                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                                         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-sm relative">
+                                            <div className="relative w-full h-48 mb-4 rounded-lg overflow-hidden bg-gray-200">
+                                                <img src={ROOM_DATA[selectedRoomId].images[currentImgIdx]} className="w-full h-full object-cover transition-opacity duration-300" />
+                                                <button onClick={prevImage} className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-1 rounded-full hover:bg-opacity-70"><i className="fas fa-chevron-left"></i></button>
+                                                <button onClick={nextImage} className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-1 rounded-full hover:bg-opacity-70"><i className="fas fa-chevron-right"></i></button>
+                                            </div>
                                             <h3 className="text-xl font-bold mb-2 text-green-800 dark:text-green-400">{ROOM_DATA[selectedRoomId].name}</h3>
                                             <p className="text-gray-500 dark:text-gray-300 text-sm mb-4">{ROOM_DATA[selectedRoomId].desc}</p>
                                             <div className="flex items-center justify-between mb-6 bg-gray-100 dark:bg-gray-700 p-3 rounded-lg">
@@ -454,25 +496,61 @@
                                         </div>
                                     </div>
                                 )}
+
+                                {/* Food Grid */}
+                                <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow mb-4">
+                                    <h3 className="font-bold mb-4 dark:text-white text-lg">🍽️ สั่งอาหารล่วงหน้า</h3>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {FOOD_MENU.map(f => {
+                                            const inCart = cart.find(c => c.id === f.id);
+                                            return (
+                                                <div key={f.id} 
+                                                    onClick={() => {
+                                                        if(inCart) setCart(cart.filter(c => c.id !== f.id));
+                                                        else openFoodModal(f);
+                                                    }}
+                                                    className={`cursor-pointer rounded-lg overflow-hidden border-2 transition-all shadow-sm relative ${inCart ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900 dark:border-yellow-500' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 hover:border-green-400'}`}
+                                                >
+                                                    <img src={f.img} className="w-full h-24 object-cover" />
+                                                    <div className="p-2">
+                                                        <h4 className="font-bold text-sm text-gray-800 dark:text-white line-clamp-1">{f.name}</h4>
+                                                        <div className="flex justify-between items-center mt-1">
+                                                            <span className="text-green-600 dark:text-green-400 text-sm font-bold">{f.price}.-</span>
+                                                            {inCart && <span className="bg-yellow-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">x{inCart.qty}</span>}
+                                                        </div>
+                                                    </div>
+                                                    {inCart && <div className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs shadow"><i className="fas fa-times"></i></div>}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                {/* Food Modal */}
+                                {selectedFood && (
+                                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-sm relative animate-pop">
+                                            <img src={selectedFood.img} className="w-full h-40 object-cover rounded-lg mb-4 shadow-md" />
+                                            <h3 className="text-xl font-bold mb-1 text-green-800 dark:text-green-400">{selectedFood.name}</h3>
+                                            <p className="text-gray-500 dark:text-gray-300 text-sm mb-4">ราคาชุดละ {selectedFood.price} บาท</p>
+                                            
+                                            <div className="flex items-center justify-center gap-4 mb-6">
+                                                <button onClick={() => setFoodCount(Math.max(1, foodCount - 1))} className="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-full text-xl font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-200">-</button>
+                                                <span className="text-2xl font-bold w-10 text-center dark:text-white">{foodCount}</span>
+                                                <button onClick={() => setFoodCount(foodCount + 1)} className="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-full text-xl font-bold text-green-600 hover:bg-green-100">+</button>
+                                            </div>
+
+                                            <div className="flex gap-2">
+                                                <button onClick={() => setSelectedFood(null)} className="flex-1 py-3 text-gray-500 bg-gray-200 dark:bg-gray-600 dark:text-gray-300 rounded-lg font-bold">ยกเลิก</button>
+                                                <button onClick={confirmFoodSelection} className="flex-1 py-3 text-white bg-green-600 hover:bg-green-700 rounded-lg font-bold shadow-lg">ยืนยัน ({selectedFood.price * foodCount}.-)</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded mb-4"><h3 className="font-bold dark:text-white">🛒 ตะกร้า ({cart.length})</h3>
                                     {cart.map((c,i)=><div key={i} className="flex justify-between text-sm mt-1 dark:text-gray-200"><span>{c.name} {c.type==='food'?`x${c.qty}`:`(${c.guests} คน)`}</span><button onClick={()=>setCart(cart.filter((_,idx)=>idx!==i))} className="text-red-500">ลบ</button></div>)}
                                 </div>
-
-                                <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow mb-4">
-                                    <h3 className="font-bold mb-2 dark:text-white">🍽️ สั่งอาหาร</h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                    {FOOD_MENU.map(f => (
-                                        <div key={f.id} className="flex justify-between border dark:border-gray-600 p-2 rounded">
-                                            <span className="dark:text-gray-200">{f.name} ({f.price})</span><button onClick={()=>{
-                                                const exist = cart.find(c=>c.id===f.id);
-                                                if(exist) setCart(cart.map(c=>c.id===f.id?{...c,qty:c.qty+1}:c));
-                                                else setCart([...cart,{...f,type:'food',qty:1}]);
-                                            }} className="bg-orange-500 text-white px-2 rounded">+</button>
-                                        </div>
-                                    ))}
-                                    </div>
-                                </div>
-                                
                                 <button onClick={() => cart.length > 0 ? setStep(3) : alert('เลือกรายการก่อนครับ')} className="w-full bg-green-600 text-white p-3 rounded-lg font-bold">ดำเนินการต่อ</button>
                             </div>
                         )}
@@ -519,18 +597,18 @@
                                         <div className="flex flex-col items-center">
                                             <img src={qrUrl} className="mx-auto border-2 border-gray-200 dark:border-gray-600 rounded-lg mb-3 shadow-sm p-1 bg-white" alt="QR Code" width="200" height="200" />
                                             <div className="flex gap-2">
-                                                <a href={qrUrl} download="payment-050-qr.png" className="bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-xs font-bold hover:bg-blue-200 transition flex items-center">
+                                                <a href={qrUrl} download="payment-qr.png" className="bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-xs font-bold hover:bg-blue-200 transition flex items-center">
                                                     <i className="fas fa-download mr-2"></i> บันทึกรูป
                                                 </a>
                                             </div>
-                                            <p className="text-xs text-gray-400 mt-2">(บันทึกรูปไม่ได้ ให้บันทึกหน้าจอ)</p>
+                                            <p className="text-xs text-gray-400 mt-2">(กดค้างที่รูปเพื่อบันทึกได้เช่นกัน)</p>
                                         </div>
                                     ) : (
                                         <div className="h-[200px] flex items-center justify-center text-gray-400">กำลังสร้าง QR Code...</div>
                                     )}
                                     <div className="mt-4 bg-gray-50 dark:bg-gray-700 p-2 rounded">
-                                        <p className="text-xs text-gray-500 dark:text-gray-400 font-mono tracking-wider">{PROMPTPAY_PHONE}</p>
                                         <p className="text-sm font-bold text-gray-800 dark:text-white">{PROMPTPAY_NAME}</p>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 font-mono tracking-wider">{PROMPTPAY_PHONE}</p>
                                     </div>
                                 </div>
 
@@ -554,11 +632,11 @@
                                 <div className="text-6xl mb-4">🎉</div>
                                 <h2 className="text-2xl font-bold text-green-700 dark:text-green-400 mb-2">จองสำเร็จ!</h2>
                                 <p className="text-gray-600 dark:text-gray-300 mb-4">รหัส: <strong>{bookingResult}</strong></p>
-                                <p className="text-sm text-gray-500 mb-4">ระบบส่งใบจองให้ทาง LINE แล้วครับ</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">ระบบส่งใบจองให้ทาง LINE แล้วครับ</p>
                                 <p className="text-sm text-gray-600 mb-4">เงื่อนไข : ไม่สามารถคืนมัดจำได้</p>
                                 <p className="text-sm text-gray-600 mb-4">เลื่อนที่พักก่อนเข้าพักไม่น้อยกว่า 7 วัน</p>
                                 <p className="text-sm text-gray-600 mb-4">ยกเว้นโรคระบาดและภัยพิบัติเลื่อนที่พักได้</p>
-                                <button onClick={() => liff.closeWindow()} className="mt-8 bg-gray-800 dark:bg-gray-600 text-white px-6 py-2 rounded-full">กดปิดเบาๆหน่อยนะ</button>
+                                <button onClick={() => liff.closeWindow()} className="mt-8 bg-gray-800 dark:bg-gray-600 text-white px-6 py-2 rounded-full">ปิดหน้าต่าง</button>
                             </div>
                         )}
                     </div>
