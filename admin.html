@@ -21,10 +21,8 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        // ** ใส่ URL ของ Apps Script ตัวเดียวกับหน้า index.html **
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwQjaz5oaVekrtSlw_kGqt9gLOg0uQeXphG4H2Q5cqrv4ZSEiJnzO63lctvaaYTRr9HNQ/exec"; 
 
-        // ฟังก์ชันย่อรูปภาพ (Client-side Resize)
         const resizeImage = (file, maxWidth = 800) => {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -35,23 +33,14 @@
                         const ctx = canvas.getContext('2d');
                         let width = img.width;
                         let height = img.height;
-
-                        if (width > maxWidth) {
-                            height *= maxWidth / width;
-                            width = maxWidth;
-                        }
-
-                        canvas.width = width;
-                        canvas.height = height;
+                        if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; }
+                        canvas.width = width; canvas.height = height;
                         ctx.drawImage(img, 0, 0, width, height);
-                        
                         resolve(canvas.toDataURL('image/jpeg', 0.7));
                     };
-                    img.onerror = reject;
-                    img.src = e.target.result;
+                    img.onerror = reject; img.src = e.target.result;
                 };
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
+                reader.onerror = reject; reader.readAsDataURL(file);
             });
         };
 
@@ -63,27 +52,21 @@
             
             const [bookings, setBookings] = React.useState([]);
             const [settings, setSettings] = React.useState({ discounts: [], closed: [], special: [] });
-            
-            // CMS Data
-            const [cmsData, setCmsData] = React.useState({ foodMenu: [], roomImages: {} });
+            const [cmsData, setCmsData] = React.useState({ foodMenu: [], roomImages: {}, siteConfig: { banner: '', logo: '' } });
 
             const [viewSlip, setViewSlip] = React.useState(null); 
             const [viewBooking, setViewBooking] = React.useState(null); 
             const [filter, setFilter] = React.useState('all'); 
             const [rescheduleData, setRescheduleData] = React.useState(null);
 
-            // States for Forms
             const [editMode, setEditMode] = React.useState(null); 
             const [formDiscount, setFormDiscount] = React.useState({ code: '', type: 'FIXED', value: '' });
             const [formClosed, setFormClosed] = React.useState({ date: '', reason: '' });
             const [formSpecial, setFormSpecial] = React.useState({ date: '', desc: '' });
 
-            // CMS Forms
             const [formFood, setFormFood] = React.useState({ name: '', price: '', imgBase64: null });
-            
-            // ปรับปรุง Form รูปห้องพัก ให้รองรับหลายรูป
             const [formRoomImg, setFormRoomImg] = React.useState({ roomId: 'R1', imgBase64s: [] });
-            const [uploadStatus, setUploadStatus] = React.useState(''); // แสดงสถานะการอัปโหลด
+            const [uploadStatus, setUploadStatus] = React.useState(''); 
 
             const formatThaiDate = (dateStr) => {
                 if(!dateStr || dateStr === '-') return "-";
@@ -101,9 +84,7 @@
                     setLoading(false);
                     if (res.status === 'success') {
                         setIsLoggedIn(true);
-                        fetchData();
-                        fetchSettings();
-                        fetchCmsData();
+                        fetchData(); fetchSettings(); fetchCmsData();
                     } else alert('รหัสผ่านไม่ถูกต้อง');
                 })
                 .catch(err => { setLoading(false); alert('เชื่อมต่อระบบไม่ได้: ' + err.message); });
@@ -111,15 +92,14 @@
 
             const fetchData = () => fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'getAdminData', password: password }) }).then(r=>r.json()).then(res=>{ if(res.status==='success') setBookings(res.data); }).catch(e=>console.error(e));
             const fetchSettings = () => fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'getSettings', password: password }) }).then(r=>r.json()).then(res=>{ if(res.status==='success') setSettings(res); }).catch(e=>console.error(e));
-            
             const fetchCmsData = () => {
                 fetch(`${GOOGLE_SCRIPT_URL}?action=getPublicData`)
                 .then(r=>r.json()).then(res => {
-                    if (res.status === 'success') setCmsData({ foodMenu: res.foodMenu, roomImages: res.roomImages });
+                    if (res.status === 'success') setCmsData({ foodMenu: res.foodMenu, roomImages: res.roomImages, siteConfig: res.siteConfig });
                 }).catch(e=>console.error(e));
             }
 
-            // --- Stats Calculation ---
+            // Stats Calculation
             const stats = React.useMemo(() => {
                 const now = new Date();
                 const totalRevenue = bookings.filter(b => b.status === 'ยืนยัน').reduce((sum, b) => sum + parseInt(b.deposit || 0), 0);
@@ -137,7 +117,7 @@
                 return { totalRevenue, monthlyRevenue, pendingCount, upcoming };
             }, [bookings]);
 
-            // --- Action Handlers ---
+            // Actions
             const handleExport = () => {
                 const header = ["BookingID", "Date", "Customer", "Phone", "CheckIn", "CheckOut", "Rooms", "Total", "Deposit", "Status"];
                 const rows = bookings.map(b => [b.id, b.timestamp, `"${b.name}"`, `'${b.phone}`, b.checkIn, b.checkOut, `"${b.rooms.replace(/"/g, '""')}"`, b.price, b.deposit, b.status]);
@@ -162,7 +142,6 @@
                 .catch(e => alert('Error: ' + e.message));
             };
 
-            // Generic Save/Delete Settings
             const handleSaveSetting = (type, payload) => {
                 const action = editMode ? 'editSetting' : 'addSetting'; const id = editMode ? editMode.id : null;
                 if(!confirm('บันทึก?')) return;
@@ -172,7 +151,24 @@
             };
             const handleDeleteSetting = (type, id) => { if(confirm('ลบ?')) fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'deleteSetting', type, id, password: password }) }).then(r=>r.json()).then(res=>fetchSettings()); };
 
-            // CMS Handlers with RESIZE and ERROR HANDLING
+            // CMS Handlers
+            const handleSiteConfig = async (e, key) => {
+                const file = e.target.files[0];
+                if(file) {
+                    if(!confirm(`ยืนยันอัปโหลด ${key}?`)) return;
+                    try {
+                        setLoading(true);
+                        const base64 = await resizeImage(file, 1200); // 1200px for banner
+                        const res = await fetch(GOOGLE_SCRIPT_URL, { 
+                            method: 'POST', 
+                            body: JSON.stringify({ action: 'saveSiteConfig', payload: { key, imgBase64: base64 }, password: password }) 
+                        }).then(r=>r.json());
+                        setLoading(false);
+                        if(res.status==='success') { alert('อัปโหลดสำเร็จ'); fetchCmsData(); } else alert('Error: ' + res.message);
+                    } catch(err) { alert('Upload Failed'); setLoading(false); }
+                }
+            };
+
             const handleFoodFile = async (e) => {
                 const file = e.target.files[0];
                 if (file) {
@@ -226,9 +222,6 @@
                 
                 setLoading(true);
                 let successCount = 0;
-                let errorMsgs = [];
-                
-                // Upload Sequentially to prevent timeouts
                 for (let i = 0; i < formRoomImg.imgBase64s.length; i++) {
                     setUploadStatus(`กำลังอัปโหลดรูปที่ ${i + 1}/${formRoomImg.imgBase64s.length}...`);
                     try {
@@ -240,17 +233,8 @@
                                  password: password 
                              }) 
                          }).then(r => r.json());
-                         
-                         if (res.status === 'success') {
-                             successCount++;
-                         } else {
-                             console.error("Server error:", res.message);
-                             errorMsgs.push(res.message);
-                         }
-                    } catch (e) {
-                        console.error("Upload failed", e);
-                        errorMsgs.push(e.message);
-                    }
+                         if (res.status === 'success') successCount++;
+                    } catch (e) { console.error("Upload failed", e); }
                 }
                 
                 setLoading(false);
@@ -258,12 +242,7 @@
                 fetchCmsData();
                 setFormRoomImg({ ...formRoomImg, imgBase64s: [] });
                 document.getElementById('roomFileInput').value = "";
-                
-                if (successCount > 0) {
-                    alert(`อัปโหลดเสร็จสิ้น ${successCount} รูป`);
-                } else {
-                    alert(`อัปโหลดล้มเหลวทั้งหมด:\n${errorMsgs.join('\n')}`);
-                }
+                alert(`อัปโหลดเสร็จสิ้น ${successCount} รูป`);
             };
             
             const deleteRoomImg = (url) => {
@@ -271,7 +250,6 @@
             };
 
 
-            // --- VIEWS ---
             if (!isLoggedIn) return (
                 <div className="min-h-screen flex items-center justify-center bg-gray-900 px-4">
                     <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-sm">
@@ -306,15 +284,9 @@
                         {activeTab === 'dashboard' && (
                             <div className="space-y-4">
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                    <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-green-500">
-                                        <div className="text-gray-500 text-xs">รายได้รวม</div><div className="text-xl font-bold text-green-700">{stats.totalRevenue.toLocaleString()}</div>
-                                    </div>
-                                    <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-blue-500">
-                                        <div className="text-gray-500 text-xs">รายได้เดือนนี้</div><div className="text-xl font-bold text-blue-700">{stats.monthlyRevenue.toLocaleString()}</div>
-                                    </div>
-                                    <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-yellow-500">
-                                        <div className="text-gray-500 text-xs">รอตรวจสอบ</div><div className="text-xl font-bold text-yellow-600">{stats.pendingCount}</div>
-                                    </div>
+                                    <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-green-500"><div className="text-gray-500 text-xs">รายได้รวม</div><div className="text-xl font-bold text-green-700">{stats.totalRevenue.toLocaleString()}</div></div>
+                                    <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-blue-500"><div className="text-gray-500 text-xs">รายได้เดือนนี้</div><div className="text-xl font-bold text-blue-700">{stats.monthlyRevenue.toLocaleString()}</div></div>
+                                    <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-yellow-500"><div className="text-gray-500 text-xs">รอตรวจสอบ</div><div className="text-xl font-bold text-yellow-600">{stats.pendingCount}</div></div>
                                 </div>
                                 <div className="bg-white p-4 rounded-xl shadow-sm">
                                     <h3 className="font-bold text-gray-700 mb-2">เข้าพักเร็วๆ นี้</h3>
@@ -375,13 +347,30 @@
 
                         {activeTab === 'cms' && (
                             <div className="space-y-6">
+                                {/* Site Config: Banner & Logo */}
+                                <div className="bg-white p-4 rounded-lg shadow border border-gray-200">
+                                    <h3 className="font-bold text-lg mb-4 text-gray-800">จัดการโลโก้และแบนเนอร์</h3>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="p-3 border rounded bg-gray-50">
+                                            <label className="block text-xs font-bold text-gray-500 mb-2">LOGO (สี่เหลี่ยมจัตุรัส)</label>
+                                            {cmsData.siteConfig.logo ? <img src={cmsData.siteConfig.logo} className="w-20 h-20 rounded-full object-cover mb-2 border" /> : <div className="w-20 h-20 bg-gray-200 rounded-full mb-2"></div>}
+                                            <input type="file" accept="image/*" className="text-xs w-full" onChange={(e)=>handleSiteConfig(e, 'Logo')} />
+                                        </div>
+                                        <div className="p-3 border rounded bg-gray-50">
+                                            <label className="block text-xs font-bold text-gray-500 mb-2">BANNER (แนวนอน)</label>
+                                            {cmsData.siteConfig.banner ? <img src={cmsData.siteConfig.banner} className="w-full h-20 object-cover rounded mb-2 border" /> : <div className="w-full h-20 bg-gray-200 rounded mb-2"></div>}
+                                            <input type="file" accept="image/*" className="text-xs w-full" onChange={(e)=>handleSiteConfig(e, 'Banner')} />
+                                        </div>
+                                    </div>
+                                </div>
+
                                 {/* Food Manager */}
                                 <div className="bg-white p-4 rounded-lg shadow">
                                     <h3 className="font-bold text-lg mb-4 text-orange-800">จัดการเมนูอาหาร</h3>
                                     <div className="flex gap-2 mb-4 flex-wrap items-end bg-orange-50 p-2 rounded">
                                         <input placeholder="ชื่ออาหาร" className="border p-2 rounded text-sm flex-1" value={formFood.name} onChange={e=>setFormFood({...formFood, name:e.target.value})} />
                                         <input placeholder="ราคา" type="number" className="border p-2 rounded text-sm w-20" value={formFood.price} onChange={e=>setFormFood({...formFood, price:e.target.value})} />
-                                        <input type="file" id="foodFileInput" accept="image/*" className="text-xs" onChange={e=>handleFoodFile(e)} />
+                                        <input type="file" id="foodFileInput" accept="image/*" className="text-xs" onChange={handleFoodFile} />
                                         <button onClick={saveFood} disabled={loading} className="bg-orange-600 text-white px-3 py-2 rounded text-sm">{loading?'...':'เพิ่ม'}</button>
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
@@ -398,7 +387,7 @@
                                     </div>
                                 </div>
 
-                                {/* Room Image Manager (Multiple Upload) */}
+                                {/* Room Image Manager */}
                                 <div className="bg-white p-4 rounded-lg shadow">
                                     <h3 className="font-bold text-lg mb-4 text-blue-800">จัดการรูปห้องพัก</h3>
                                     <div className="flex gap-2 mb-4 flex-wrap items-end bg-blue-50 p-2 rounded">
@@ -408,7 +397,6 @@
                                             <option value="K2">เต็นท์สนาม K2</option><option value="Z8">ลานกางเต็นท์</option>
                                         </select>
                                         
-                                        {/* Input Multiple */}
                                         <div className="flex flex-col">
                                             <input type="file" id="roomFileInput" multiple accept="image/*" className="text-xs" onChange={handleRoomFiles} />
                                             {uploadStatus && <div className="text-xs text-blue-600 mt-1">{uploadStatus}</div>}
