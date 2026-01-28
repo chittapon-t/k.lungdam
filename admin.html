@@ -21,6 +21,7 @@
     <div id="root"></div>
 
     <script type="text/babel">
+        // ** ใส่ URL ของ Apps Script ตัวเดียวกับหน้า index.html **
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwQjaz5oaVekrtSlw_kGqt9gLOg0uQeXphG4H2Q5cqrv4ZSEiJnzO63lctvaaYTRr9HNQ/exec"; 
 
         const AdminApp = () => {
@@ -37,9 +38,9 @@
             const [filter, setFilter] = React.useState('all'); 
 
             // States for Reschedule
-            const [rescheduleData, setRescheduleData] = React.useState(null); // { id, checkIn, checkOut }
+            const [rescheduleData, setRescheduleData] = React.useState(null);
 
-            // States for Settings
+            // States for Editing/Adding
             const [editMode, setEditMode] = React.useState(null); 
             const [formDiscount, setFormDiscount] = React.useState({ code: '', type: 'FIXED', value: '' });
             const [formClosed, setFormClosed] = React.useState({ date: '', reason: '' });
@@ -145,6 +146,38 @@
                 .then(r => r.json()).then(res => {
                     if (res.status === 'success') fetchSettings();
                 });
+            };
+
+            const handleExport = () => {
+                // Header CSV
+                const header = ["BookingID", "Date", "Customer", "Phone", "CheckIn", "CheckOut", "Rooms", "Total", "Deposit", "Status"];
+                
+                // Map Data
+                const rows = bookings.map(b => [
+                    b.id,
+                    b.timestamp,
+                    `"${b.name}"`, // Quote strings to handle commas
+                    `'${b.phone}`, // Force string for excel phone numbers
+                    b.checkIn,
+                    b.checkOut,
+                    `"${b.rooms.replace(/"/g, '""')}"`, // Escape quotes inside string
+                    b.price,
+                    b.deposit,
+                    b.status
+                ]);
+
+                // Combine
+                const csvContent = [header.join(","), ...rows.map(r => r.join(","))].join("\n");
+                
+                // Create Blob & Download
+                const blob = new Blob(["\uFEFF"+csvContent], { type: 'text/csv;charset=utf-8;' }); // Add BOM for Excel UTF-8
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.setAttribute("href", url);
+                link.setAttribute("download", "bookings_lungdam.csv");
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
             };
 
             const StatusBadge = ({ status }) => {
@@ -280,12 +313,17 @@
 
                         {activeTab === 'dashboard' && (
                             <div>
-                                <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
-                                    {['all', 'pending', 'confirmed'].map(f => (
-                                        <button key={f} onClick={() => setFilter(f)} className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${filter === f ? 'bg-gray-800 text-white' : 'bg-white text-gray-600 border'}`}>
-                                            {f === 'all' ? 'ทั้งหมด' : (f === 'pending' ? 'รอตรวจสอบ' : 'ยืนยันแล้ว')}
-                                        </button>
-                                    ))}
+                                <div className="flex gap-2 mb-4 overflow-x-auto pb-1 items-center justify-between">
+                                    <div className="flex gap-2">
+                                        {['all', 'pending', 'confirmed'].map(f => (
+                                            <button key={f} onClick={() => setFilter(f)} className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${filter === f ? 'bg-gray-800 text-white' : 'bg-white text-gray-600 border'}`}>
+                                                {f === 'all' ? 'ทั้งหมด' : (f === 'pending' ? 'รอตรวจสอบ' : 'ยืนยันแล้ว')}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <button onClick={handleExport} className="px-3 py-1 bg-green-600 text-white rounded-full text-xs font-bold hover:bg-green-700 shadow-md">
+                                        <i className="fas fa-file-excel mr-1"></i> Export
+                                    </button>
                                 </div>
                                 <div className="space-y-3">
                                     {bookings.filter(b => filter==='all' || (filter==='pending' && b.status==='รอตรวจสอบ') || (filter==='confirmed' && b.status==='ยืนยัน')).map(b => (
@@ -312,7 +350,6 @@
                                                 <div className="text-left"><div className="text-xs text-gray-400">มัดจำ</div><div className="font-bold text-red-600 text-lg">{parseInt(b.deposit).toLocaleString()}</div></div>
                                                 <div className="flex gap-2">
                                                     {b.slip.includes('http') && <button onClick={() => setViewSlip(b.slip)} className="bg-blue-50 text-blue-600 p-2 rounded hover:bg-blue-100"><i className="fas fa-image"></i> สลิป</button>}
-                                                    {/* ปุ่มเลื่อนวัน สำหรับรายการใน Dashboard */}
                                                     <button onClick={() => { setViewBooking(b); }} className="bg-orange-50 text-orange-600 p-2 rounded hover:bg-orange-100"><i className="fas fa-calendar-alt"></i></button>
                                                     {b.status === 'รอตรวจสอบ' && (
                                                         <>
@@ -342,7 +379,6 @@
                         </div>
                     )}
 
-                    {/* Booking Details Modal with Reschedule */}
                     {viewBooking && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => { setViewBooking(null); setRescheduleData(null); }}>
                             <div className="bg-white p-6 rounded-lg w-full max-w-sm shadow-xl overflow-y-auto max-h-[90vh]" onClick={e => e.stopPropagation()}>
@@ -360,7 +396,6 @@
                                     <div className="flex justify-between items-center pt-2"><span>ยอดมัดจำ:</span><span className="text-red-600 font-bold text-lg">{parseInt(viewBooking.deposit).toLocaleString()} บ.</span></div>
                                 </div>
                                 <div className="mt-4 flex flex-col gap-2">
-                                    {/* Reschedule Section */}
                                     {!rescheduleData ? (
                                         <button onClick={() => setRescheduleData({ id: viewBooking.id, checkIn: '', checkOut: '' })} className="w-full py-2 bg-orange-100 text-orange-700 rounded hover:bg-orange-200 font-bold"><i className="fas fa-calendar-alt mr-1"></i> เลื่อนวันเข้าพัก</button>
                                     ) : (
@@ -376,7 +411,6 @@
                                             </div>
                                         </div>
                                     )}
-
                                     {viewBooking.slip.includes('http') && <button onClick={() => setViewSlip(viewBooking.slip)} className="w-full py-2 border border-blue-500 text-blue-500 rounded hover:bg-blue-50">ดูสลิปโอนเงิน</button>}
                                     <button onClick={() => { setViewBooking(null); setRescheduleData(null); }} className="w-full py-2 bg-gray-200 rounded">ปิดหน้าต่าง</button>
                                 </div>
