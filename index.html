@@ -166,7 +166,12 @@
             const [pinPos, setPinPos] = React.useState(DEFAULT_POSITIONS);
             
             const [systemSettings, setSystemSettings] = React.useState({ closed: [], special: [] });
-            const [siteConfig, setSiteConfig] = React.useState(DEFAULT_CONFIG); // State สำหรับ Site Settings
+            
+            // Load Site Settings from localStorage if available (Instant Load)
+            const [siteConfig, setSiteConfig] = React.useState(() => {
+                const cached = localStorage.getItem('lungdam_site_config');
+                return cached ? { ...DEFAULT_CONFIG, ...JSON.parse(cached) } : DEFAULT_CONFIG;
+            });
 
             const [discount, setDiscount] = React.useState({ code: '', val: 0, type: '', message: '', status: '' });
             const [slipImg, setSlipImg] = React.useState(null);
@@ -281,11 +286,16 @@
                     })
                     .catch(e => console.error(e));
 
-                // Fetch Site Settings (Dynamic Content)
+                // Fetch Site Settings (Dynamic Content) - Update Cache
                 fetch(`${GOOGLE_SCRIPT_URL}?action=getSiteSettings`)
                     .then(r => r.json()).then(res => { 
                         if (res.status === 'success') {
-                            setSiteConfig(prev => ({...prev, ...res.data}));
+                            setSiteConfig(prev => {
+                                const newConfig = {...prev, ...res.data};
+                                // Save to localStorage for next time instant load
+                                localStorage.setItem('lungdam_site_config', JSON.stringify(newConfig));
+                                return newConfig;
+                            });
                         }
                     })
                     .catch(e => console.error(e));
@@ -411,6 +421,24 @@
                     else { alert('Error: ' + res.message); }
                     setLoading(false);
                 }).catch(e => { alert('Failed: ' + e); setLoading(false); });
+            };
+
+            // ฟังก์ชันดาวน์โหลด QR ที่รองรับมือถือ (ใช้ Blob แทน href Base64)
+            const handleDownloadQr = () => {
+                if(!qrUrl) return;
+                fetch(qrUrl)
+                .then(response => response.blob())
+                .then(blob => {
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = 'payment-qr.png';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    window.URL.revokeObjectURL(url);
+                })
+                .catch(() => alert('ไม่สามารถดาวน์โหลดได้อัตโนมัติ กรุณากดค้างที่รูปเพื่อบันทึก'));
             };
 
             // --- MAIN RENDER WRAPPER ---
@@ -668,9 +696,10 @@
                                         <div className="flex flex-col items-center">
                                             <img src={qrUrl} className="mx-auto border-2 border-gray-200 dark:border-gray-600 rounded-lg mb-3 shadow-sm p-1 bg-white" alt="QR Code" width="200" height="200" />
                                             <div className="flex gap-2">
-                                                <a href={qrUrl} download="payment-qr.png" className="bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-xs font-bold hover:bg-blue-200 transition flex items-center">
+                                                {/* Modified Download Button for Mobile Support */}
+                                                <button onClick={handleDownloadQr} className="bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-xs font-bold hover:bg-blue-200 transition flex items-center">
                                                     <i className="fas fa-download mr-2"></i> บันทึกรูป
-                                                </a>
+                                                </button>
                                             </div>
                                             <p className="text-xs text-gray-400 mt-2">(กดค้างที่รูปเพื่อบันทึกได้เช่นกัน)</p>
                                         </div>
