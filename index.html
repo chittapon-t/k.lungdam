@@ -111,6 +111,19 @@
             });
         };
 
+        // ฟังก์ชันแปลง Base64 เป็น Blob (Helper for Mobile Download)
+        const base64ToBlob = (base64) => {
+            const parts = base64.split(';base64,');
+            const contentType = parts[0].split(':')[1];
+            const raw = window.atob(parts[1]);
+            const rawLength = raw.length;
+            const uInt8Array = new Uint8Array(rawLength);
+            for (let i = 0; i < rawLength; ++i) {
+                uInt8Array[i] = raw.charCodeAt(i);
+            }
+            return new Blob([uInt8Array], { type: contentType });
+        };
+
         // Default Config (ใช้ระหว่างรอโหลด หรือถ้ายังไม่ได้ตั้งค่า)
         const DEFAULT_CONFIG = {
             headerTitle: 'ขนำลุงดำ - Khanamlungdam',
@@ -423,22 +436,28 @@
                 }).catch(e => { alert('Failed: ' + e); setLoading(false); });
             };
 
-            // ฟังก์ชันดาวน์โหลด QR ที่รองรับมือถือ (ใช้ Blob แทน href Base64)
+            // ฟังก์ชันดาวน์โหลด QR ที่รองรับมือถือ (Updated)
             const handleDownloadQr = () => {
                 if(!qrUrl) return;
-                fetch(qrUrl)
-                .then(response => response.blob())
-                .then(blob => {
+                try {
+                    // แปลง Base64 เป็น Blob โดยตรง ไม่ใช้ fetch เพื่อรองรับมือถือได้ดีขึ้น
+                    const blob = base64ToBlob(qrUrl);
                     const url = window.URL.createObjectURL(blob);
                     const link = document.createElement('a');
+                    link.style.display = 'none'; // ซ่อนลิงก์
                     link.href = url;
                     link.download = 'payment-qr.png';
                     document.body.appendChild(link);
                     link.click();
-                    document.body.removeChild(link);
-                    window.URL.revokeObjectURL(url);
-                })
-                .catch(() => alert('ไม่สามารถดาวน์โหลดได้อัตโนมัติ กรุณากดค้างที่รูปเพื่อบันทึก'));
+                    
+                    // หน่วงเวลาเล็กน้อยก่อนลบ เพื่อให้ Browser ประมวลผลทัน
+                    setTimeout(() => {
+                        document.body.removeChild(link);
+                        window.URL.revokeObjectURL(url);
+                    }, 100);
+                } catch (e) {
+                    alert('ไม่สามารถดาวน์โหลดได้อัตโนมัติ กรุณากดค้างที่รูปเพื่อบันทึก');
+                }
             };
 
             // --- MAIN RENDER WRAPPER ---
@@ -478,7 +497,7 @@
                                             <label className="block text-gray-700 dark:text-red-300 font-bold mb-1">วันที่ออก</label>
                                             <input type="date" min={dates.checkIn || getTommorow()} className="w-full border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" onChange={e => setDates({...dates, checkOut: e.target.value})} />
                                         </div>
-                                        <button onClick={handleSearch} disabled={loading} className="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition font-bold shadow-lg mt-2">{loading ? 'กำลังโหลด...' : 'ค้นหาที่พักว่าง'}</button>
+                                        <button onClick={handleSearch} disabled={loading} className="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition font-bold shadow-lg mt-2">{loading ? 'กำลังกางเต็นท์...' : 'ค้นหาที่พักว่าง'}</button>
                                     </div>
                                 </div>
 
