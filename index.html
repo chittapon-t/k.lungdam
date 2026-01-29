@@ -56,7 +56,7 @@
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
         .animate-pop { animation: fadeIn 0.3s ease-out forwards; }
 
-        /* Mobile Pin Scaling - Critical Fix */
+        /* Mobile Pin Scaling */
         .map-pin-responsive { transition: transform 0.2s; }
         @media (max-width: 640px) {
             .map-pin-responsive {
@@ -78,7 +78,7 @@
         const PROMPTPAY_PHONE = "0615924262";
         const PROMPTPAY_NAME = "อลงกต ทวีผ่อง";
 
-        // ฟังก์ชันย่อรูปภาพ (Image Compressor) - Critical Fix
+        // ฟังก์ชันย่อรูปภาพ (Image Compressor)
         const compressImage = async (file) => {
             return new Promise((resolve, reject) => {
                 const maxWidth = 800; // บีบความกว้างเหลือ 800px
@@ -111,42 +111,47 @@
             });
         };
 
-        // รูปภาพแยกตามห้องพัก
-        const ROOM_IMGS = {
-            'R1': [ "https://images.unsplash.com/photo-1518780664697-55e3ad937233?auto=format&fit=crop&w=600&q=80", "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=600&q=80" ],
-            'R2': [ "https://img2.pic.in.th/LINE_ALBUM__260128_6da01e38dfb2957f4.jpg?auto=format&fit=crop&w=600&q=80", "https://img2.pic.in.th/LINE_ALBUM__260128_7.jpg?auto=format&fit=crop&w=600&q=80", "https://img2.pic.in.th/LINE_ALBUM__260128_5.jpg?auto=format&fit=crop&w=600&q=80" ],
-            'R3': [ "https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?auto=format&fit=crop&w=600&q=80", "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&w=600&q=80" ],
-            'T1': [ "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?auto=format&fit=crop&w=600&q=80", "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?auto=format&fit=crop&w=600&q=80" ],
-            'T2': [ "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?auto=format&fit=crop&w=600&q=80", "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?auto=format&fit=crop&w=600&q=80" ],
-            'K1': [ "https://images.unsplash.com/photo-1537905569824-f89f14cceb68?auto=format&fit=crop&w=600&q=80", "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=600&q=80" ],
-            'K2': [ "https://images.unsplash.com/photo-1537905569824-f89f14cceb68?auto=format&fit=crop&w=600&q=80", "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=600&q=80" ],
-            'Z8': [ "https://images.unsplash.com/photo-1532339142463-fd0a8979791a?auto=format&fit=crop&w=600&q=80", "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?auto=format&fit=crop&w=600&q=80" ]
+        // Default Config (ใช้ระหว่างรอโหลด หรือถ้ายังไม่ได้ตั้งค่า)
+        const DEFAULT_CONFIG = {
+            headerTitle: 'ขนำลุงดำ - Khanamlungdam',
+            headerDesc: '🏡 ขนำลุงดำ ดั้งเดิมมาจากหนำปู่ หรือที่พักตอนปู่มาอยู่ช่วงทำสวนนั้นเอง และค่อยๆ พัฒนาขึ้น แต่ยังคงความอบอุ่น ความรัก เสมือนทุกคนมาเที่ยวบ้านตากอากาศของเพื่อน',
+            bannerUrl: 'https://img5.pic.in.th/file/secure-sv1/LINE_ALBUM__240916_14dd72f9bd7de4facf.jpg',
+            logoUrl: 'https://lh3.googleusercontent.com/pw/AP1GczPi_rYAbsNGi4X96mW5koYl0JJ3BN9ipRf6UgsXAOQgkyhrs2ChGcZlbsuQ3OLJOYnYhSTYJhWUuu2hwWtPqlt4MUfdUDSS3s4RdRLeD36gPLiK-8OhYLXWmqxVLh2eOtkLIx7pQxrQA6ZnqBYHOftH=w913-h913-s-no-gm?authuser=0',
+            roomImages: {
+                'R1': [ "https://images.unsplash.com/photo-1518780664697-55e3ad937233?auto=format&fit=crop&w=600&q=80", "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=600&q=80" ],
+                'R2': [ "https://img2.pic.in.th/LINE_ALBUM__260128_6da01e38dfb2957f4.jpg?auto=format&fit=crop&w=600&q=80", "https://img2.pic.in.th/LINE_ALBUM__260128_7.jpg?auto=format&fit=crop&w=600&q=80", "https://img2.pic.in.th/LINE_ALBUM__260128_5.jpg?auto=format&fit=crop&w=600&q=80" ],
+                'R3': [ "https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?auto=format&fit=crop&w=600&q=80", "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&w=600&q=80" ],
+                'T1': [ "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?auto=format&fit=crop&w=600&q=80", "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?auto=format&fit=crop&w=600&q=80" ],
+                'T2': [ "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?auto=format&fit=crop&w=600&q=80", "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?auto=format&fit=crop&w=600&q=80" ],
+                'K1': [ "https://images.unsplash.com/photo-1537905569824-f89f14cceb68?auto=format&fit=crop&w=600&q=80", "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=600&q=80" ],
+                'K2': [ "https://images.unsplash.com/photo-1537905569824-f89f14cceb68?auto=format&fit=crop&w=600&q=80", "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=600&q=80" ],
+                'Z8': [ "https://images.unsplash.com/photo-1532339142463-fd0a8979791a?auto=format&fit=crop&w=600&q=80", "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?auto=format&fit=crop&w=600&q=80" ]
+            },
+            foodMenu: [
+                { id: 'F1', name: 'ชุดหมูกระทะลุงดำ', price: 390, img: 'https://img5.pic.in.th/file/secure-sv1/LINE_ALBUM__260128_4.jpg?auto=format&fit=crop&w=400&q=80' },
+                { id: 'F2', name: 'ชุดไก่กระทะลุงดำ', price: 390, img: 'https://img2.pic.in.th/LINE_ALBUM__260128_3.jpg?auto=format&fit=crop&w=400&q=80' },
+                { id: 'F3', name: 'ชุดชาบูหมูลุงดำ', price: 390, img: 'https://img5.pic.in.th/file/secure-sv1/LINE_ALBUM__260128_2.jpg?auto=format&fit=crop&w=400&q=80' },
+                { id: 'F4', name: 'ชุดชาบูไก่ลุงดำ', price: 390, img: 'https://img5.pic.in.th/file/secure-sv1/LINE_ALBUM__260128_2.jpg?auto=format&fit=crop&w=400&q=80' },
+                { id: 'F5', name: 'เซ็ตอาหารพื้นบ้าน', price: 390, img: 'https://img2.pic.in.th/LINE_ALBUM__260128_1.jpg?auto=format&fit=crop&w=400&q=80' }
+            ]
         };
-
-        const ROOM_DATA = {
-            'R1': { name: 'โฮมสเตย์หนำโป', tiers: [{max: 5, price: 1600}, {max: 8, price: 2200}], bf: false, type: 'room', desc: 'บ้านหลังใหญ่ อบอุ่น', min: 1, maxCap: 8, images: ROOM_IMGS['R1'] },
-            'R2': { name: 'บ้านพักริมน้ำ 1', tiers: [{max: 2, price: 1400}, {max: 3, price: 1750}], bf: true, type: 'room', desc: 'วิวริมน้ำ บรรยากาศดี', min: 1, maxCap: 3, images: ROOM_IMGS['R2'] },
-            'R3': { name: 'บ้านพักริมน้ำ 2', tiers: [{max: 2, price: 1400}, {max: 3, price: 1750}], bf: true, type: 'room', desc: 'วิวริมน้ำ ส่วนตัว', min: 1, maxCap: 3, images: ROOM_IMGS['R3'] },
-            'T1': { name: 'เต็นท์กระโจม 1', tiers: [{max: 2, price: 1200}, {max: 4, price: 1550}], bf: true, type: 'tent', desc: 'กระโจมสุดฮิป', min: 1, maxCap: 4, images: ROOM_IMGS['T1'] },
-            'T2': { name: 'เต็นท์กระโจม 2', tiers: [{max: 2, price: 1200}, {max: 4, price: 1550}], bf: true, type: 'tent', desc: 'กระโจมถ่ายรูปสวย', min: 1, maxCap: 4, images: ROOM_IMGS['T2'] },
-            'K1': { name: 'เช่าเต็นท์สนาม K1', tiers: [{max: 2, price: 700}], bf: true, type: 'tent_rent', desc: 'เต็นท์พร้อมเครื่องนอน', min: 1, maxCap: 2, images: ROOM_IMGS['K1'] },
-            'K2': { name: 'เช่าเต็นท์สนาม K2', tiers: [{max: 2, price: 700}], bf: true, type: 'tent_rent', desc: 'เต็นท์พร้อมเครื่องนอน', min: 1, maxCap: 2, images: ROOM_IMGS['K2'] },
-            'Z8': { name: 'ลานกางเต็นท์', priceHead: 150, max: 20, bf: false, type: 'ground', desc: 'นำเต็นท์มาเอง วิวสวน', min: 1, maxCap: 20, images: ROOM_IMGS['Z8'] }
-        };
-
-        // เพิ่มรูปอาหาร
-        const FOOD_MENU = [
-            { id: 'F1', name: 'ชุดหมูกระทะลุงดำ', price: 390, img: 'https://img5.pic.in.th/file/secure-sv1/LINE_ALBUM__260128_4.jpg?auto=format&fit=crop&w=400&q=80' },
-            { id: 'F2', name: 'ชุดไก่กระทะลุงดำ', price: 390, img: 'https://img2.pic.in.th/LINE_ALBUM__260128_3.jpg?auto=format&fit=crop&w=400&q=80' },
-            { id: 'F3', name: 'ชุดชาบูหมูลุงดำ', price: 390, img: 'https://img5.pic.in.th/file/secure-sv1/LINE_ALBUM__260128_2.jpg?auto=format&fit=crop&w=400&q=80' },
-            { id: 'F4', name: 'ชุดชาบูไก่ลุงดำ', price: 390, img: 'https://img5.pic.in.th/file/secure-sv1/LINE_ALBUM__260128_2.jpg?auto=format&fit=crop&w=400&q=80' },
-            { id: 'F5', name: 'เซ็ตอาหารพื้นบ้าน', price: 390, img: 'https://img2.pic.in.th/LINE_ALBUM__260128_1.jpg?auto=format&fit=crop&w=400&q=80' }
-        ];
 
         const DEFAULT_POSITIONS = {
             'R1': {x: 20, y: 30}, 'R2': {x: 40, y: 50}, 'R3': {x: 60, y: 50},
             'T1': {x: 25, y: 70}, 'T2': {x: 35, y: 75}, 'K1': {x: 70, y: 70},
             'K2': {x: 80, y: 70}, 'Z8': {x: 50, y: 20}
+        };
+        
+        // ข้อมูลห้องพัก (ราคา/เงื่อนไข ยังคง Static ไว้ก่อนตามโครงสร้างเดิม แต่รูปจะดึงจาก Config)
+        const ROOM_INFO_BASE = {
+            'R1': { name: 'โฮมสเตย์หนำโป', tiers: [{max: 5, price: 1600}, {max: 8, price: 2200}], bf: false, type: 'room', desc: 'บ้านหลังใหญ่ อบอุ่น', min: 1, maxCap: 8 },
+            'R2': { name: 'บ้านพักริมน้ำ 1', tiers: [{max: 2, price: 1400}, {max: 3, price: 1750}], bf: true, type: 'room', desc: 'วิวริมน้ำ บรรยากาศดี', min: 1, maxCap: 3 },
+            'R3': { name: 'บ้านพักริมน้ำ 2', tiers: [{max: 2, price: 1400}, {max: 3, price: 1750}], bf: true, type: 'room', desc: 'วิวริมน้ำ ส่วนตัว', min: 1, maxCap: 3 },
+            'T1': { name: 'เต็นท์กระโจม 1', tiers: [{max: 2, price: 1200}, {max: 4, price: 1550}], bf: true, type: 'tent', desc: 'กระโจมสุดฮิป', min: 1, maxCap: 4 },
+            'T2': { name: 'เต็นท์กระโจม 2', tiers: [{max: 2, price: 1200}, {max: 4, price: 1550}], bf: true, type: 'tent', desc: 'กระโจมถ่ายรูปสวย', min: 1, maxCap: 4 },
+            'K1': { name: 'เช่าเต็นท์สนาม K1', tiers: [{max: 2, price: 700}], bf: true, type: 'tent_rent', desc: 'เต็นท์พร้อมเครื่องนอน', min: 1, maxCap: 2 },
+            'K2': { name: 'เช่าเต็นท์สนาม K2', tiers: [{max: 2, price: 700}], bf: true, type: 'tent_rent', desc: 'เต็นท์พร้อมเครื่องนอน', min: 1, maxCap: 2 },
+            'Z8': { name: 'ลานกางเต็นท์', priceHead: 150, max: 20, bf: false, type: 'ground', desc: 'นำเต็นท์มาเอง วิวสวน', min: 1, maxCap: 20 }
         };
 
         const App = () => {
@@ -160,6 +165,7 @@
             const [pinPos, setPinPos] = React.useState(DEFAULT_POSITIONS);
             
             const [systemSettings, setSystemSettings] = React.useState({ closed: [], special: [] });
+            const [siteConfig, setSiteConfig] = React.useState(DEFAULT_CONFIG); // State สำหรับ Site Settings
 
             const [discount, setDiscount] = React.useState({ code: '', val: 0, type: '', message: '', status: '' });
             const [slipImg, setSlipImg] = React.useState(null);
@@ -273,6 +279,16 @@
                         }
                     })
                     .catch(e => console.error(e));
+
+                // Fetch Site Settings (Dynamic Content)
+                fetch(`${GOOGLE_SCRIPT_URL}?action=getSiteSettings`)
+                    .then(r => r.json()).then(res => { 
+                        if (res.status === 'success') {
+                            setSiteConfig(prev => ({...prev, ...res.data}));
+                        }
+                    })
+                    .catch(e => console.error(e));
+
             }, []);
 
             React.useEffect(() => {
@@ -307,7 +323,7 @@
             };
 
             const openRoomModal = (roomId) => {
-                const room = ROOM_DATA[roomId];
+                const room = ROOM_INFO_BASE[roomId];
                 if(roomId === 'Z8') setGuestCount(1);
                 else setGuestCount(room.min || 1);
                 setCurrentImgIdx(0); 
@@ -331,20 +347,20 @@
 
             const nextImage = () => {
                 if(!selectedRoomId) return;
-                const images = ROOM_DATA[selectedRoomId].images || [];
+                const images = siteConfig.roomImages[selectedRoomId] || []; // Use Dynamic Images
                 setCurrentImgIdx((prev) => (prev + 1) % images.length);
             };
 
             const prevImage = () => {
                 if(!selectedRoomId) return;
-                const images = ROOM_DATA[selectedRoomId].images || [];
+                const images = siteConfig.roomImages[selectedRoomId] || []; // Use Dynamic Images
                 setCurrentImgIdx((prev) => (prev - 1 + images.length) % images.length);
             };
 
             const confirmRoomSelection = () => {
                 const roomId = selectedRoomId;
                 const guests = guestCount;
-                const roomInfo = ROOM_DATA[roomId];
+                const roomInfo = ROOM_INFO_BASE[roomId];
                 
                 if (roomId === 'Z8') {
                     const currentZ8 = cart.filter(c => c.id === 'Z8').reduce((sum, c) => sum + c.guests, 0);
@@ -412,15 +428,17 @@
                         {step === 1 && (
                             <div className="max-w-md mx-auto bg-white dark:bg-gray-800 shadow-xl rounded-xl mt-4 border dark:border-gray-700 overflow-hidden">
                                 <div className="h-48 relative">
-                                     <img src="https://img5.pic.in.th/file/secure-sv1/LINE_ALBUM__240916_14dd72f9bd7de4facf.jpg" referrerpolicy="no-referrer" className="w-full h-full object-cover" />
+                                     {/* Dynamic Banner */}
+                                     <img src={siteConfig.bannerUrl} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                                      <div className="absolute inset-0 bg-black bg-opacity-10"></div>
                                 </div>
                                 <div className="p-6 -mt-24 relative z-10">
-                                    <img src="https://lh3.googleusercontent.com/pw/AP1GczPi_rYAbsNGi4X96mW5koYl0JJ3BN9ipRf6UgsXAOQgkyhrs2ChGcZlbsuQ3OLJOYnYhSTYJhWUuu2hwWtPqlt4MUfdUDSS3s4RdRLeD36gPLiK-8OhYLXWmqxVLh2eOtkLIx7pQxrQA6ZnqBYHOftH=w913-h913-s-no-gm?authuser=0" referrerPolicy="no-referrer" className="w-48 h-48 mx-auto rounded-full border-4 border-white dark:border-gray-800 object-cover bg-white shadow-lg mb-4"/>
+                                    {/* Dynamic Logo */}
+                                    <img src={siteConfig.logoUrl} referrerPolicy="no-referrer" className="w-48 h-48 mx-auto rounded-full border-4 border-white dark:border-gray-800 object-cover bg-white shadow-lg mb-4"/>
                                     
-                                    <h1 className="text-xl text-center mb-2 text-green-800 dark:text-green-400 font-bold">ขนำลุงดำ - Khanamlungdam</h1>
-                                    <label className="block text-center mb-2 text-gray-700 dark:text-gray-300 text-sm">🏡 ขนำลุงดำ ดั้งเดิมมาจากหนำปู่ หรือที่พักตอนปู่มาอยู่ช่วงทำสวนนั้นเอง และค่อยๆ พัฒนาขึ้น แต่ยังคงความอบอุ่น ความรัก เสมือนทุกคนมาเที่ยวบ้านตากอากาศของเพื่อน มีโอกาสเจอสัตว์ แมลงเล็กๆ </label>
-                                    <label className="block text-center mb-4 text-gray-700 dark:text-gray-300 text-sm">พื้นที่เป็นสวนผสม ตามเศรษฐกิจพอเพียง ป่า 3 อย่าง ประโยชน์ 4 อย่าง เงียบสงบ มีลานรอบกองไฟ มีผลไม้ให้กินตามฤดู มีระบบน้ำกรอง ใช้ไฟฟ้าโซลาร์เซลล์ทั้งหมด มีไวไฟ สัญญาณไม่ได้แรงมาก และอาจจะไม่มีสิ่งอำนวยความสะดวกครบครัน แคมป์ปิ้งสไตล์บ้านสวน มีครัวไทยด้วยฟืน มีที่พักหลากหลายแบบ</label>
+                                    {/* Dynamic Title & Desc */}
+                                    <h1 className="text-xl text-center mb-2 text-green-800 dark:text-green-400 font-bold">{siteConfig.headerTitle}</h1>
+                                    <p className="block text-center mb-4 text-gray-700 dark:text-gray-300 text-sm whitespace-pre-line">{siteConfig.headerDesc}</p>
                                     
                                     <div className="space-y-4">
                                         <div>
@@ -475,7 +493,7 @@
                                 <div className="map-container bg-blue-100 dark:bg-gray-700 mb-6" style={{paddingBottom: '100%'}}>
                                     <img src="https://img2.pic.in.th/3d539b84-44ce-4336-ad90-bd2f84b13eca.jpg" referrerpolicy="no-referrer" className="absolute top-0 left-0 w-full h-full object-cover" />
                                     {Object.keys(pinPos).map(key => {
-                                        if (!ROOM_DATA[key]) return null;
+                                        if (!ROOM_INFO_BASE[key]) return null;
                                         const isBooked = availability.bookedRooms.includes(key);
                                         const isZ8Full = key === 'Z8' && availability.zone8Available <= 0;
                                         const disable = isBooked || isZ8Full;
@@ -497,7 +515,7 @@
                                                 }}>
                                                 <div className={circleClasses}>
                                                     <div>
-                                                        {ROOM_DATA[key].name}
+                                                        {ROOM_INFO_BASE[key].name}
                                                         {key==='Z8' && <div className="text-[9px] font-normal">({availability.zone8Available})</div>}
                                                     </div>
                                                 </div>
@@ -510,21 +528,26 @@
                                 {selectedRoomId && (
                                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                                         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-sm relative">
+                                            {/* Dynamic Room Images */}
                                             <div className="relative w-full h-48 mb-4 rounded-lg overflow-hidden bg-gray-200">
-                                                <img src={ROOM_DATA[selectedRoomId].images[currentImgIdx]} className="w-full h-full object-cover transition-opacity duration-300" />
-                                                <button onClick={prevImage} className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-1 rounded-full hover:bg-opacity-70"><i className="fas fa-chevron-left"></i></button>
-                                                <button onClick={nextImage} className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-1 rounded-full hover:bg-opacity-70"><i className="fas fa-chevron-right"></i></button>
+                                                <img src={(siteConfig.roomImages[selectedRoomId]||[])[currentImgIdx] || "https://via.placeholder.com/600x400?text=No+Image"} className="w-full h-full object-cover transition-opacity duration-300" />
+                                                {(siteConfig.roomImages[selectedRoomId]||[]).length > 1 && (
+                                                <>
+                                                    <button onClick={prevImage} className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-1 rounded-full hover:bg-opacity-70"><i className="fas fa-chevron-left"></i></button>
+                                                    <button onClick={nextImage} className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-1 rounded-full hover:bg-opacity-70"><i className="fas fa-chevron-right"></i></button>
+                                                </>
+                                                )}
                                             </div>
-                                            <h3 className="text-xl font-bold mb-2 text-green-800 dark:text-green-400">{ROOM_DATA[selectedRoomId].name}</h3>
-                                            <p className="text-gray-500 dark:text-gray-300 text-sm mb-4">{ROOM_DATA[selectedRoomId].desc}</p>
+                                            <h3 className="text-xl font-bold mb-2 text-green-800 dark:text-green-400">{ROOM_INFO_BASE[selectedRoomId].name}</h3>
+                                            <p className="text-gray-500 dark:text-gray-300 text-sm mb-4">{ROOM_INFO_BASE[selectedRoomId].desc}</p>
                                             <div className="flex items-center justify-between mb-6 bg-gray-100 dark:bg-gray-700 p-3 rounded-lg">
-                                                <button onClick={() => setGuestCount(Math.max((ROOM_DATA[selectedRoomId].min||1), guestCount - 1))} className="w-10 h-10 bg-white dark:bg-gray-600 rounded shadow text-xl font-bold text-green-600 dark:text-green-400">-</button>
+                                                <button onClick={() => setGuestCount(Math.max((ROOM_INFO_BASE[selectedRoomId].min||1), guestCount - 1))} className="w-10 h-10 bg-white dark:bg-gray-600 rounded shadow text-xl font-bold text-green-600 dark:text-green-400">-</button>
                                                 <div className="text-center">
                                                     <div className="text-2xl font-bold dark:text-white">{guestCount}</div>
                                                     <div className="text-xs text-gray-500 dark:text-gray-400">คน</div>
                                                 </div>
                                                 <button onClick={() => {
-                                                    let limit = ROOM_DATA[selectedRoomId].maxCap;
+                                                    let limit = ROOM_INFO_BASE[selectedRoomId].maxCap;
                                                     if(selectedRoomId === 'Z8') limit = availability.zone8Available; 
                                                     setGuestCount(Math.min(limit, guestCount + 1));
                                                 }} className="w-10 h-10 bg-white dark:bg-gray-600 rounded shadow text-xl font-bold text-green-600 dark:text-green-400">+</button>
@@ -537,11 +560,11 @@
                                     </div>
                                 )}
 
-                                {/* Food Grid */}
+                                {/* Food Grid (Dynamic) */}
                                 <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow mb-4">
                                     <h3 className="font-bold mb-4 dark:text-white text-lg">🍽️ สั่งอาหารล่วงหน้า</h3>
                                     <div className="grid grid-cols-2 gap-3">
-                                        {FOOD_MENU.map(f => {
+                                        {siteConfig.foodMenu.map(f => {
                                             const inCart = cart.find(c => c.id === f.id);
                                             return (
                                                 <div key={f.id} 
