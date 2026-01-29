@@ -219,7 +219,7 @@
                 }).then(r => r.json()).then(res => {
                     setLoading(false);
                     if(res.status === 'success') {
-                        alert('เพิ่มรายการอาหารเรียบร้อย');
+                        alert('เพิ่มรายการอาหารเรียบร้อย และแจ้งเตือนลูกค้าแล้ว');
                         fetchData(); // Refresh Data
                         setViewBooking(null); // Close Modal to Refresh View
                     } else {
