@@ -111,6 +111,19 @@
             });
         };
 
+        // ฟังก์ชันแปลง Base64 เป็น Blob (Helper for Mobile Download)
+        const base64ToBlob = (base64) => {
+            const parts = base64.split(';base64,');
+            const contentType = parts[0].split(':')[1];
+            const raw = window.atob(parts[1]);
+            const rawLength = raw.length;
+            const uInt8Array = new Uint8Array(rawLength);
+            for (let i = 0; i < rawLength; ++i) {
+                uInt8Array[i] = raw.charCodeAt(i);
+            }
+            return new Blob([uInt8Array], { type: contentType });
+        };
+
         // Default Config (ใช้ระหว่างรอโหลด หรือถ้ายังไม่ได้ตั้งค่า)
         const DEFAULT_CONFIG = {
             headerTitle: 'ขนำลุงดำ - Khanamlungdam',
@@ -190,6 +203,9 @@
             const [closedModal, setClosedModal] = React.useState(null); 
             const [searchError, setSearchError] = React.useState(null);
             const [currentImgIdx, setCurrentImgIdx] = React.useState(0);
+            
+            // --- NEW: Warning Modal for Room Selection ---
+            const [showRoomRequiredModal, setShowRoomRequiredModal] = React.useState(false);
 
             // --- FUNCTIONS ---
             const getTommorow = () => {
@@ -423,6 +439,30 @@
                 }).catch(e => { alert('Failed: ' + e); setLoading(false); });
             };
 
+            // ฟังก์ชันดาวน์โหลด QR ที่รองรับมือถือ (Updated)
+            const handleDownloadQr = () => {
+                if(!qrUrl) return;
+                try {
+                    // แปลง Base64 เป็น Blob โดยตรง ไม่ใช้ fetch เพื่อรองรับมือถือได้ดีขึ้น
+                    const blob = base64ToBlob(qrUrl);
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.style.display = 'none'; // ซ่อนลิงก์
+                    link.href = url;
+                    link.download = 'payment-qr.png';
+                    document.body.appendChild(link);
+                    link.click();
+                    
+                    // หน่วงเวลาเล็กน้อยก่อนลบ เพื่อให้ Browser ประมวลผลทัน
+                    setTimeout(() => {
+                        document.body.removeChild(link);
+                        window.URL.revokeObjectURL(url);
+                    }, 100);
+                } catch (e) {
+                    alert('ไม่สามารถดาวน์โหลดได้อัตโนมัติ กรุณากดค้างที่รูปเพื่อบันทึก');
+                }
+            };
+
             // --- MAIN RENDER WRAPPER ---
             return (
                 <div className={isDark ? "dark" : ""}>
@@ -460,7 +500,7 @@
                                             <label className="block text-gray-700 dark:text-red-300 font-bold mb-1">วันที่ออก</label>
                                             <input type="date" min={dates.checkIn || getTommorow()} className="w-full border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" onChange={e => setDates({...dates, checkOut: e.target.value})} />
                                         </div>
-                                        <button onClick={handleSearch} disabled={loading} className="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition font-bold shadow-lg mt-2">{loading ? 'กำลังโหลดเต็นท์...' : 'ค้นหาที่พักว่าง'}</button>
+                                        <button onClick={handleSearch} disabled={loading} className="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition font-bold shadow-lg mt-2">{loading ? 'กำลังโหลด...' : 'ค้นหาที่พักว่าง'}</button>
                                     </div>
                                 </div>
 
@@ -486,6 +526,29 @@
                                             <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">แจ้งเตือน</h3>
                                             <p className="text-gray-600 dark:text-gray-300 mb-6">{searchError}</p>
                                             <button onClick={() => setSearchError(null)} className="w-full bg-gray-800 dark:bg-gray-600 text-white py-3 rounded-xl font-bold hover:bg-gray-700 transition">ตกลง</button>
+                                        </div>
+                                    </div>
+                                )}
+                                
+                                {/* --- NEW: Room Required Warning Modal --- */}
+                                {showRoomRequiredModal && (
+                                    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-6">
+                                        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center relative animate-pop transform scale-100 transition-all">
+                                            <div className="w-20 h-20 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-white dark:border-gray-700 shadow-lg">
+                                                <i className="fas fa-bed text-4xl text-red-500 dark:text-red-300"></i>
+                                            </div>
+                                            <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">กรุณาเลือกที่พัก</h3>
+                                            <p className="text-gray-600 dark:text-gray-300 mb-6 text-sm leading-relaxed">
+                                                อาหารเป็นเพียงบริการเสริม <br/>
+                                                <span className="text-red-500 font-bold">ท่านจำเป็นต้องจองที่พักก่อน</span><br/>
+                                                จึงจะสามารถทำรายการต่อไปได้ครับ
+                                            </p>
+                                            <button 
+                                                onClick={() => setShowRoomRequiredModal(false)} 
+                                                className="w-full bg-gray-800 dark:bg-gray-600 text-white py-3 rounded-xl font-bold hover:bg-gray-700 transition shadow-lg"
+                                            >
+                                                รับทราบ
+                                            </button>
                                         </div>
                                     </div>
                                 )}
@@ -637,7 +700,7 @@
                                         // CHECK: ต้องเลือกที่พักก่อน (type !== 'food')
                                         const hasRoom = cart.some(c => c.type !== 'food');
                                         if (!hasRoom) {
-                                            alert('กรุณาเลือกที่พักก่อนครับ อาหารเป็นส่วนเสริม');
+                                            setShowRoomRequiredModal(true); // Show Modal Instead of Alert
                                             return;
                                         }
                                         setStep(3);
