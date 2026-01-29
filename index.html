@@ -133,7 +133,8 @@
                 { id: 'F3', name: 'ชุดชาบูหมูลุงดำ', price: 390, img: 'https://img5.pic.in.th/file/secure-sv1/LINE_ALBUM__260128_2.jpg?auto=format&fit=crop&w=400&q=80' },
                 { id: 'F4', name: 'ชุดชาบูไก่ลุงดำ', price: 390, img: 'https://img5.pic.in.th/file/secure-sv1/LINE_ALBUM__260128_2.jpg?auto=format&fit=crop&w=400&q=80' },
                 { id: 'F5', name: 'เซ็ตอาหารพื้นบ้าน', price: 390, img: 'https://img2.pic.in.th/LINE_ALBUM__260128_1.jpg?auto=format&fit=crop&w=400&q=80' }
-            ]
+            ],
+            roomDescriptions: {} // Default empty
         };
 
         const DEFAULT_POSITIONS = {
@@ -539,7 +540,12 @@
                                                 )}
                                             </div>
                                             <h3 className="text-xl font-bold mb-2 text-green-800 dark:text-green-400">{ROOM_INFO_BASE[selectedRoomId].name}</h3>
-                                            <p className="text-gray-500 dark:text-gray-300 text-sm mb-4">{ROOM_INFO_BASE[selectedRoomId].desc}</p>
+                                            
+                                            {/* Dynamic Description or Fallback */}
+                                            <p className="text-gray-500 dark:text-gray-300 text-sm mb-4">
+                                                {siteConfig.roomDescriptions?.[selectedRoomId] || ROOM_INFO_BASE[selectedRoomId].desc}
+                                            </p>
+
                                             <div className="flex items-center justify-between mb-6 bg-gray-100 dark:bg-gray-700 p-3 rounded-lg">
                                                 <button onClick={() => setGuestCount(Math.max((ROOM_INFO_BASE[selectedRoomId].min||1), guestCount - 1))} className="w-10 h-10 bg-white dark:bg-gray-600 rounded shadow text-xl font-bold text-green-600 dark:text-green-400">-</button>
                                                 <div className="text-center">
