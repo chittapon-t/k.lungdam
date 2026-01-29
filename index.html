@@ -128,11 +128,11 @@
                 'Z8': [ "https://images.unsplash.com/photo-1532339142463-fd0a8979791a?auto=format&fit=crop&w=600&q=80", "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?auto=format&fit=crop&w=600&q=80" ]
             },
             foodMenu: [
-                { id: 'F1', name: 'ชุดหมูกระทะลุงดำ', price: 390, img: 'https://img5.pic.in.th/file/secure-sv1/LINE_ALBUM__260128_4.jpg?auto=format&fit=crop&w=400&q=80' },
-                { id: 'F2', name: 'ชุดไก่กระทะลุงดำ', price: 390, img: 'https://img2.pic.in.th/LINE_ALBUM__260128_3.jpg?auto=format&fit=crop&w=400&q=80' },
-                { id: 'F3', name: 'ชุดชาบูหมูลุงดำ', price: 390, img: 'https://img5.pic.in.th/file/secure-sv1/LINE_ALBUM__260128_2.jpg?auto=format&fit=crop&w=400&q=80' },
-                { id: 'F4', name: 'ชุดชาบูไก่ลุงดำ', price: 390, img: 'https://img5.pic.in.th/file/secure-sv1/LINE_ALBUM__260128_2.jpg?auto=format&fit=crop&w=400&q=80' },
-                { id: 'F5', name: 'เซ็ตอาหารพื้นบ้าน', price: 390, img: 'https://img2.pic.in.th/LINE_ALBUM__260128_1.jpg?auto=format&fit=crop&w=400&q=80' }
+                { id: 'F1', name: 'ชุดหมูกระทะลุงดำ', price: 390, img: 'https://img5.pic.in.th/file/secure-sv1/LINE_ALBUM__260128_4.jpg?auto=format&fit=crop&w=400&q=80', desc: 'หมูหมักนุ่มๆ พร้อมผักสด' },
+                { id: 'F2', name: 'ชุดไก่กระทะลุงดำ', price: 390, img: 'https://img2.pic.in.th/LINE_ALBUM__260128_3.jpg?auto=format&fit=crop&w=400&q=80', desc: 'ไก่หมักสูตรพิเศษ' },
+                { id: 'F3', name: 'ชุดชาบูหมูลุงดำ', price: 390, img: 'https://img5.pic.in.th/file/secure-sv1/LINE_ALBUM__260128_2.jpg?auto=format&fit=crop&w=400&q=80', desc: 'น้ำซุปหอมหวาน' },
+                { id: 'F4', name: 'ชุดชาบูไก่ลุงดำ', price: 390, img: 'https://img5.pic.in.th/file/secure-sv1/LINE_ALBUM__260128_2.jpg?auto=format&fit=crop&w=400&q=80', desc: 'น้ำซุปหอมหวาน' },
+                { id: 'F5', name: 'เซ็ตอาหารพื้นบ้าน', price: 390, img: 'https://img2.pic.in.th/LINE_ALBUM__260128_1.jpg?auto=format&fit=crop&w=400&q=80', desc: 'แกงส้ม ปลาทอด ผักเหนาะ' }
             ],
             roomDescriptions: {} // Default empty
         };
@@ -583,6 +583,7 @@
                                                     <img src={f.img} className="w-full h-24 object-cover" />
                                                     <div className="p-2">
                                                         <h4 className="font-bold text-sm text-gray-800 dark:text-white line-clamp-1">{f.name}</h4>
+                                                        {f.desc && <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1 my-1">{f.desc}</p>}
                                                         <div className="flex justify-between items-center mt-1">
                                                             <span className="text-green-600 dark:text-green-400 text-sm font-bold">{f.price}.-</span>
                                                             {inCart && <span className="bg-yellow-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">x{inCart.qty}</span>}
@@ -601,7 +602,8 @@
                                         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-sm relative animate-pop">
                                             <img src={selectedFood.img} className="w-full h-40 object-cover rounded-lg mb-4 shadow-md" />
                                             <h3 className="text-xl font-bold mb-1 text-green-800 dark:text-green-400">{selectedFood.name}</h3>
-                                            <p className="text-gray-500 dark:text-gray-300 text-sm mb-4">ราคาชุดละ {selectedFood.price} บาท</p>
+                                            {selectedFood.desc && <p className="text-gray-600 dark:text-gray-300 text-sm mb-2">{selectedFood.desc}</p>}
+                                            <p className="text-gray-500 dark:text-gray-400 text-sm mb-4 font-bold">ราคาชุดละ {selectedFood.price} บาท</p>
                                             
                                             <div className="flex items-center justify-center gap-4 mb-6">
                                                 <button onClick={() => setFoodCount(Math.max(1, foodCount - 1))} className="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-full text-xl font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-200">-</button>
