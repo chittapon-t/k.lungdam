@@ -79,6 +79,10 @@
             const [filter, setFilter] = React.useState('all'); 
 
             const [rescheduleData, setRescheduleData] = React.useState(null);
+            
+            // Add Food States
+            const [selectedAddFood, setSelectedAddFood] = React.useState('');
+            const [addFoodQty, setAddFoodQty] = React.useState(1);
 
             const [editMode, setEditMode] = React.useState(null); 
             const [formDiscount, setFormDiscount] = React.useState({ code: '', type: 'FIXED', value: '' });
@@ -191,6 +195,36 @@
                         setViewBooking(null);
                         fetchData(); 
                     } else alert('ไม่สำเร็จ: ' + res.message);
+                });
+            };
+
+            const handleAddFood = () => {
+                if(!selectedAddFood) return alert('กรุณาเลือกเมนูอาหาร');
+                if(addFoodQty <= 0) return alert('จำนวนต้องมากกว่า 0');
+                
+                const foodItem = siteSettings.foodMenu.find(f => f.id === selectedAddFood);
+                if(!foodItem) return;
+
+                if(!confirm(`ยืนยันเพิ่ม ${foodItem.name} จำนวน ${addFoodQty} ชุด?`)) return;
+
+                setLoading(true);
+                fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        action: 'addFoodToBooking',
+                        bookingId: viewBooking.id,
+                        foodItem: { id: foodItem.id, name: foodItem.name, price: foodItem.price, qty: parseInt(addFoodQty) },
+                        password: password
+                    })
+                }).then(r => r.json()).then(res => {
+                    setLoading(false);
+                    if(res.status === 'success') {
+                        alert('เพิ่มรายการอาหารเรียบร้อย');
+                        fetchData(); // Refresh Data
+                        setViewBooking(null); // Close Modal to Refresh View
+                    } else {
+                        alert('Error: ' + res.message);
+                    }
                 });
             };
 
@@ -687,7 +721,46 @@
                                     </div>
                                     <div className="flex justify-between items-center pt-2"><span>ยอดมัดจำ:</span><span className="text-red-600 font-bold text-lg">{parseInt(viewBooking.deposit).toLocaleString()} บ.</span></div>
                                 </div>
-                                <div className="mt-4 flex flex-col gap-2">
+                                
+                                {/* Add Food Section */}
+                                <div className="mt-4 border-t pt-4">
+                                    <h4 className="font-bold text-sm mb-2 text-blue-700">เพิ่มรายการอาหาร</h4>
+                                    <div className="flex gap-2 mb-2">
+                                        <select 
+                                            className="border p-1 rounded text-sm flex-1" 
+                                            value={selectedAddFood} 
+                                            onChange={e => setSelectedAddFood(e.target.value)}
+                                        >
+                                            <option value="">เลือกเมนู...</option>
+                                            {siteSettings && siteSettings.foodMenu.map(f => (
+                                                <option key={f.id} value={f.id}>{f.name} ({f.price}.-)</option>
+                                            ))}
+                                        </select>
+                                        <input 
+                                            type="number" 
+                                            className="border p-1 rounded text-sm w-16" 
+                                            min="1" 
+                                            value={addFoodQty} 
+                                            onChange={e => setAddFoodQty(e.target.value)} 
+                                        />
+                                    </div>
+                                    
+                                    {/* Warning for < 1 day */}
+                                    {(() => {
+                                        const checkInDate = new Date(viewBooking.checkIn);
+                                        const now = new Date();
+                                        const diffTime = checkInDate - now;
+                                        const diffDays = diffTime / (1000 * 60 * 60 * 24);
+                                        if (diffDays < 1) {
+                                            return <div className="text-red-500 text-xs mb-2">* ใกล้วันเข้าพักแล้ว (เหลือ {diffDays.toFixed(1)} วัน)</div>;
+                                        }
+                                        return null;
+                                    })()}
+
+                                    <button onClick={handleAddFood} className="w-full py-2 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 text-sm font-bold">บันทึกเพิ่มรายการอาหาร</button>
+                                </div>
+
+                                <div className="mt-4 flex flex-col gap-2 border-t pt-4">
                                     {!rescheduleData ? (
                                         <button onClick={() => setRescheduleData({ id: viewBooking.id, checkIn: '', checkOut: '' })} className="w-full py-2 bg-orange-100 text-orange-700 rounded hover:bg-orange-200 font-bold"><i className="fas fa-calendar-alt mr-1"></i> เลื่อนวันเข้าพัก</button>
                                     ) : (
