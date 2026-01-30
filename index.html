@@ -157,6 +157,10 @@
             const [manageForm, setManageForm] = React.useState({ bookingId: '', phone: '' });
             const [manageData, setManageData] = React.useState(null);
             const [rescheduleDates, setRescheduleDates] = React.useState({ checkIn: '', checkOut: '' });
+            const [manageTab, setManageTab] = React.useState('info'); // 'info', 'reschedule', 'food'
+            const [addOnCart, setAddOnCart] = React.useState([]); // For adding food
+            const [addOnSlip, setAddOnSlip] = React.useState(null);
+            const [addOnQr, setAddOnQr] = React.useState(null);
 
             // --- NEW: BEAUTIFUL POPUP STATES ---
             const [modalAlert, setModalAlert] = React.useState({ show: false, type: 'info', title: '', text: '' }); // type: success, error, warning, info
@@ -285,6 +289,20 @@
                 }
             }, [step, pricing.deposit]);
 
+            // Add-on Payment Effect
+            React.useEffect(() => {
+                if (mode === 'manage' && manageTab === 'food') {
+                    const total = addOnCart.reduce((sum,c)=>sum+(c.price*c.qty),0);
+                    if (total > 0) {
+                         const payload = generatePromptPayPayload(PROMPTPAY_PHONE, total);
+                         const qr = new QRious({ value: payload, size: 200 });
+                         setAddOnQr(qr.toDataURL());
+                    } else {
+                         setAddOnQr(null);
+                    }
+                }
+            }, [addOnCart, mode, manageTab]);
+
             const handleSearch = () => {
                 if (!dates.checkIn || !dates.checkOut) { setSearchError('กรุณาเลือกวันเข้าพักและวันที่ออกให้ครบถ้วนครับ'); return; }
                 if (dates.checkIn >= dates.checkOut) { setSearchError('วันเช็คเอาท์ต้องอยู่หลังจากวันเช็คอินครับ'); return; }
@@ -308,8 +326,15 @@
             const openFoodModal = (food) => { setSelectedFood(food); setFoodCount(1); };
 
             const confirmFoodSelection = () => {
-                const exist = cart.find(c => c.id === selectedFood.id);
-                if (exist) { setCart(cart.map(c => c.id === selectedFood.id ? { ...c, qty: c.qty + foodCount } : c)); } else { setCart([...cart, { ...selectedFood, type: 'food', qty: foodCount }]); }
+                const targetCart = mode === 'manage' ? addOnCart : cart;
+                const setTargetCart = mode === 'manage' ? setAddOnCart : setCart;
+
+                const exist = targetCart.find(c => c.id === selectedFood.id);
+                if (exist) {
+                    setTargetCart(targetCart.map(c => c.id === selectedFood.id ? { ...c, qty: c.qty + foodCount } : c));
+                } else {
+                    setTargetCart([...targetCart, { ...selectedFood, type: 'food', qty: foodCount }]);
+                }
                 setSelectedFood(null);
             };
 
@@ -366,6 +391,7 @@
                     setLoading(false);
                     if(res.status === 'success') {
                         setManageData(res.booking);
+                        setManageTab('info');
                     } else {
                         setModalAlert({ show: true, type: 'error', title: 'ไม่พบข้อมูล', text: res.message });
                     }
@@ -429,6 +455,59 @@
                 });
             };
 
+            const handleCustomerAddFood = () => {
+                if(addOnCart.length === 0) {
+                    setModalAlert({ show: true, type: 'warning', title: 'แจ้งเตือน', text: 'กรุณาเลือกรายการอาหารก่อนครับ' });
+                    return;
+                }
+                if(!addOnSlip) {
+                    setModalAlert({ show: true, type: 'warning', title: 'แจ้งเตือน', text: 'กรุณาแนบสลิปโอนเงินก่อนยืนยันครับ' });
+                    return;
+                }
+                
+                setModalConfirm({
+                    show: true,
+                    title: 'ยืนยันการสั่งอาหาร',
+                    text: `รายการ:\n${addOnCart.map(i => '- ' + i.name + ' x' + i.qty).join('\n')}\n\nระบบจะส่งรายการให้แอดมินตรวจสอบทันที`,
+                    onConfirm: () => {
+                        setModalConfirm({ ...modalConfirm, show: false });
+                        executeAddFood();
+                    }
+                });
+            };
+
+            const executeAddFood = () => {
+                setLoading(true);
+                fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        action: 'customerAddFood',
+                        bookingId: manageData.id,
+                        phone: manageForm.phone,
+                        newFoodItems: addOnCart,
+                        slipImage: addOnSlip // Send slip
+                    })
+                })
+                .then(r => r.json())
+                .then(res => {
+                    setLoading(false);
+                    if(res.status === 'success') {
+                        setModalAlert({ show: true, type: 'success', title: 'สั่งอาหารสำเร็จ!', text: 'ระบบได้บันทึกและส่งรายการทาง LINE เรียบร้อยแล้วครับ' });
+                        setManageData(null);
+                        setManageForm({bookingId: '', phone: ''});
+                        setAddOnCart([]);
+                        setAddOnSlip(null);
+                        setMode('booking');
+                    } else {
+                        setModalAlert({ show: true, type: 'error', title: 'ไม่สามารถทำรายการได้', text: res.message });
+                    }
+                })
+                .catch(e => { 
+                    setLoading(false); 
+                    setModalAlert({ show: true, type: 'error', title: 'Error', text: 'เกิดข้อผิดพลาด: ' + e });
+                });
+            };
+
             return (
                 <div className={isDark ? "dark" : ""}>
                     <div className="min-h-screen bg-[#f3f4f6] dark:bg-gray-900 text-gray-800 dark:text-gray-100 transition-colors duration-300">
@@ -439,10 +518,13 @@
                                     setMode(mode === 'booking' ? 'manage' : 'booking');
                                     setStep(1);
                                     setManageData(null);
+                                    setManageTab('info');
+                                    setAddOnCart([]);
+                                    setAddOnSlip(null);
                                 }}
                                 className="bg-white dark:bg-gray-700 text-gray-800 dark:text-white px-4 py-2 rounded-full shadow border text-sm font-bold flex items-center gap-2"
                             >
-                                {mode === 'booking' ? <><i className="fas fa-search"></i> จัดการการจอง/เลื่อนวัน</> : <><i className="fas fa-home"></i> กลับหน้าจองที่พัก</>}
+                                {mode === 'booking' ? <><i className="fas fa-search"></i> จัดการการจอง/สั่งอาหาร</> : <><i className="fas fa-home"></i> กลับหน้าจองที่พัก</>}
                             </button>
                             <button onClick={() => setIsDark(!isDark)} className="bg-white dark:bg-gray-700 p-2 rounded-full shadow border w-10 h-10 flex items-center justify-center">
                                 {isDark ? '☀️' : '🌙'}
@@ -453,7 +535,7 @@
                         {mode === 'manage' && (
                             <div className="max-w-md mx-auto p-4">
                                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-                                    <h2 className="text-xl font-bold mb-4 text-center text-blue-600 dark:text-blue-400">จัดการการจอง / เลื่อนวัน</h2>
+                                    <h2 className="text-xl font-bold mb-4 text-center text-blue-600 dark:text-blue-400">จัดการการจอง / สั่งอาหาร</h2>
                                     
                                     {!manageData ? (
                                         <div className="space-y-4">
@@ -471,37 +553,92 @@
                                         </div>
                                     ) : (
                                         <div className="animate-pop">
-                                            <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 p-4 rounded-lg mb-6">
-                                                <div className="text-center mb-2"><span className="bg-green-600 text-white px-2 py-1 rounded text-xs">{manageData.status}</span></div>
-                                                <h3 className="text-lg font-bold text-center mb-4">{manageData.name}</h3>
-                                                <div className="text-sm space-y-2">
-                                                    <div className="flex justify-between"><span>เข้าพักเดิม:</span> <b>{formatThaiDate(manageData.checkIn)}</b></div>
-                                                    <div className="flex justify-between"><span>ออกเดิม:</span> <b>{formatThaiDate(manageData.checkOut)}</b></div>
-                                                    <div className="flex justify-between"><span>ห้องพัก:</span> <span>{manageData.rooms}</span></div>
-                                                </div>
+                                            {/* TAB NAVIGATION */}
+                                            <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4">
+                                                <button onClick={() => setManageTab('info')} className={`flex-1 py-2 text-sm font-bold ${manageTab === 'info' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}>ข้อมูล</button>
+                                                <button onClick={() => setManageTab('reschedule')} className={`flex-1 py-2 text-sm font-bold ${manageTab === 'reschedule' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-gray-500'}`}>เลื่อนวัน</button>
+                                                <button onClick={() => setManageTab('food')} className={`flex-1 py-2 text-sm font-bold ${manageTab === 'food' ? 'text-green-600 border-b-2 border-green-600' : 'text-gray-500'}`}>สั่งอาหาร</button>
                                             </div>
 
-                                            <h3 className="font-bold mb-3 border-b pb-2">เลือกวันเข้าพักใหม่</h3>
-                                            <div className="bg-yellow-50 dark:bg-yellow-900/20 text-xs p-2 rounded mb-4 text-yellow-800 dark:text-yellow-200">
-                                                ⚠️ เงื่อนไข: ต้องเลื่อนล่วงหน้าอย่างน้อย 7 วัน และห้องพักต้องว่างในวันที่เลือกใหม่
-                                            </div>
-                                            <div className="space-y-3 mb-6">
-                                                <div>
-                                                    <label className="block text-xs font-bold mb-1">เช็คอินใหม่</label>
-                                                    <input type="date" min={getTommorow()} className="w-full border p-2 rounded dark:bg-gray-700" onChange={e => setRescheduleDates({...rescheduleDates, checkIn: e.target.value})} />
+                                            {manageTab === 'info' && (
+                                                <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 p-4 rounded-lg mb-6">
+                                                    <div className="text-center mb-2"><span className="bg-blue-600 text-white px-2 py-1 rounded text-xs">{manageData.status}</span></div>
+                                                    <h3 className="text-lg font-bold text-center mb-4">{manageData.name}</h3>
+                                                    <div className="text-sm space-y-2">
+                                                        <div className="flex justify-between"><span>เข้าพัก:</span> <b>{formatThaiDate(manageData.checkIn)}</b></div>
+                                                        <div className="flex justify-between"><span>ออก:</span> <b>{formatThaiDate(manageData.checkOut)}</b></div>
+                                                        <div className="flex justify-between"><span>ห้องพัก:</span> <span>{manageData.rooms}</span></div>
+                                                    </div>
+                                                    <button onClick={() => setManageData(null)} className="w-full bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 py-2 rounded-lg font-bold mt-4 text-sm">ปิด</button>
                                                 </div>
-                                                <div>
-                                                    <label className="block text-xs font-bold mb-1">เช็คเอาท์ใหม่</label>
-                                                    <input type="date" min={rescheduleDates.checkIn || getTommorow()} className="w-full border p-2 rounded dark:bg-gray-700" onChange={e => setRescheduleDates({...rescheduleDates, checkOut: e.target.value})} />
-                                                </div>
-                                            </div>
+                                            )}
 
-                                            <div className="flex gap-2">
-                                                <button onClick={() => setManageData(null)} className="flex-1 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 py-3 rounded-lg font-bold">ยกเลิก</button>
-                                                <button onClick={handleCustomerReschedule} disabled={loading} className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-bold shadow hover:bg-blue-700">
-                                                    {loading ? 'ประมวลผล...' : 'ยืนยันการเลื่อน'}
-                                                </button>
-                                            </div>
+                                            {manageTab === 'reschedule' && (
+                                                <div>
+                                                    <div className="bg-yellow-50 dark:bg-yellow-900/20 text-xs p-2 rounded mb-4 text-yellow-800 dark:text-yellow-200">
+                                                        ⚠️ เงื่อนไข: ต้องเลื่อนล่วงหน้าอย่างน้อย 7 วัน และห้องพักต้องว่างในวันที่เลือกใหม่
+                                                    </div>
+                                                    <div className="space-y-3 mb-6">
+                                                        <div>
+                                                            <label className="block text-xs font-bold mb-1">เช็คอินใหม่</label>
+                                                            <input type="date" min={getTommorow()} className="w-full border p-2 rounded dark:bg-gray-700" onChange={e => setRescheduleDates({...rescheduleDates, checkIn: e.target.value})} />
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-xs font-bold mb-1">เช็คเอาท์ใหม่</label>
+                                                            <input type="date" min={rescheduleDates.checkIn || getTommorow()} className="w-full border p-2 rounded dark:bg-gray-700" onChange={e => setRescheduleDates({...rescheduleDates, checkOut: e.target.value})} />
+                                                        </div>
+                                                    </div>
+                                                    <button onClick={handleCustomerReschedule} disabled={loading} className="w-full bg-orange-600 text-white py-3 rounded-lg font-bold shadow hover:bg-orange-700">
+                                                        {loading ? 'ประมวลผล...' : 'ยืนยันการเลื่อน'}
+                                                    </button>
+                                                </div>
+                                            )}
+
+                                            {manageTab === 'food' && (
+                                                <div>
+                                                    <div className="bg-green-50 dark:bg-green-900/20 text-xs p-2 rounded mb-4 text-green-800 dark:text-green-200">
+                                                        🍽️ เงื่อนไข: สั่งล่วงหน้าอย่างน้อย 1 วันก่อนเข้าพัก
+                                                    </div>
+                                                    <div className="grid grid-cols-2 gap-2 mb-4 max-h-60 overflow-y-auto custom-scrollbar">
+                                                        {siteConfig.foodMenu.map(f => {
+                                                            const inCart = addOnCart.find(c => c.id === f.id);
+                                                            return (
+                                                                <div key={f.id} onClick={() => openFoodModal(f)} className={`cursor-pointer rounded-lg overflow-hidden border-2 transition-all shadow-sm relative ${inCart ? 'border-green-500 bg-green-50 dark:bg-green-900 dark:border-green-500' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700'}`}>
+                                                                    <img src={f.img} className="w-full h-20 object-cover" />
+                                                                    <div className="p-1">
+                                                                        <h4 className="font-bold text-xs line-clamp-1">{f.name}</h4>
+                                                                        <div className="flex justify-between items-center mt-1">
+                                                                            <span className="text-green-600 text-xs font-bold">{f.price}.-</span>
+                                                                            {inCart && <span className="bg-green-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">x{inCart.qty}</span>}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                    
+                                                    {addOnCart.length > 0 && (
+                                                        <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded mb-4">
+                                                            <h4 className="font-bold text-xs mb-2">รายการที่เลือก ({addOnCart.length})</h4>
+                                                            {addOnCart.map((c,i)=><div key={i} className="flex justify-between text-xs mt-1"><span>{c.name} x{c.qty}</span><button onClick={()=>setAddOnCart(addOnCart.filter((_,idx)=>idx!==i))} className="text-red-500">ลบ</button></div>)}
+                                                            <div className="mt-2 pt-2 border-t text-right font-bold text-sm text-green-600 mb-2">รวม {addOnCart.reduce((sum,c)=>sum+(c.price*c.qty),0).toLocaleString()} บ.</div>
+                                                            
+                                                            {/* PAYMENT SECTION */}
+                                                            <div className="bg-white dark:bg-gray-800 p-3 rounded border border-gray-200 dark:border-gray-600">
+                                                                <p className="text-xs font-bold mb-2 text-center">สแกนจ่ายเพื่อยืนยันออเดอร์</p>
+                                                                {addOnQr && <img src={addOnQr} className="mx-auto w-32 h-32 mb-2 border p-1" />}
+                                                                <div className="text-[10px] text-center mb-2 text-gray-500">{PROMPTPAY_NAME} - {PROMPTPAY_PHONE}</div>
+                                                                <input type="file" accept="image/*" onChange={async (e) => { const f = e.target.files[0]; if (f) { try { const resizedBase64 = await compressImage(f); setAddOnSlip(resizedBase64); } catch (err) { alert('Upload Error'); } } }} className="text-xs w-full mb-1" />
+                                                                {!addOnSlip && <div className="text-red-500 text-[10px] text-center">* กรุณาแนบสลิปโอนเงิน</div>}
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    <button onClick={handleCustomerAddFood} disabled={loading || (addOnCart.length > 0 && !addOnSlip)} className={`w-full py-3 rounded-lg font-bold shadow transition ${loading || (addOnCart.length > 0 && !addOnSlip) ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'}`}>
+                                                        {loading ? 'กำลังส่งข้อมูล...' : 'ยืนยันการสั่งอาหาร'}
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>
