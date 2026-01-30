@@ -529,29 +529,6 @@
                                         </div>
                                     </div>
                                 )}
-                                
-                                {/* --- NEW: Room Required Warning Modal --- */}
-                                {showRoomRequiredModal && (
-                                    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-6">
-                                        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center relative animate-pop transform scale-100 transition-all">
-                                            <div className="w-20 h-20 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-white dark:border-gray-700 shadow-lg">
-                                                <i className="fas fa-bed text-4xl text-red-500 dark:text-red-300"></i>
-                                            </div>
-                                            <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">กรุณาเลือกที่พัก</h3>
-                                            <p className="text-gray-600 dark:text-gray-300 mb-6 text-sm leading-relaxed">
-                                                อาหารเป็นเพียงบริการเสริม <br/>
-                                                <span className="text-red-500 font-bold">ท่านจำเป็นต้องจองที่พักก่อน</span><br/>
-                                                จึงจะสามารถทำรายการต่อไปได้ครับ
-                                            </p>
-                                            <button 
-                                                onClick={() => setShowRoomRequiredModal(false)} 
-                                                className="w-full bg-gray-800 dark:bg-gray-600 text-white py-3 rounded-xl font-bold hover:bg-gray-700 transition shadow-lg"
-                                            >
-                                                รับทราบ
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
                             </div>
                         )}
 
@@ -803,6 +780,29 @@
                                 <p className="text-sm text-gray-600 mb-4">เลื่อนที่พักก่อนเข้าพักไม่น้อยกว่า 7 วัน</p>
                                 <p className="text-sm text-gray-600 mb-4">ยกเว้นโรคระบาดและภัยพิบัติเลื่อนที่พักได้</p>
                                 <button onClick={() => liff.closeWindow()} className="mt-8 bg-gray-800 dark:bg-gray-600 text-white px-6 py-2 rounded-full">ปิดหน้าต่าง</button>
+                            </div>
+                        )}
+                        
+                        {/* --- NEW: Room Required Warning Modal (Moved to ROOT LEVEL) --- */}
+                        {showRoomRequiredModal && (
+                            <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-6">
+                                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center relative animate-pop transform scale-100 transition-all">
+                                    <div className="w-20 h-20 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-white dark:border-gray-700 shadow-lg">
+                                        <i className="fas fa-bed text-4xl text-red-500 dark:text-red-300"></i>
+                                    </div>
+                                    <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">กรุณาเลือกที่พัก</h3>
+                                    <p className="text-gray-600 dark:text-gray-300 mb-6 text-sm leading-relaxed">
+                                        อาหารเป็นเพียงบริการเสริม <br/>
+                                        <span className="text-red-500 font-bold">ท่านจำเป็นต้องจองที่พักก่อน</span><br/>
+                                        จึงจะสามารถทำรายการต่อไปได้ครับ
+                                    </p>
+                                    <button 
+                                        onClick={() => setShowRoomRequiredModal(false)} 
+                                        className="w-full bg-gray-800 dark:bg-gray-600 text-white py-3 rounded-xl font-bold hover:bg-gray-700 transition shadow-lg"
+                                    >
+                                        รับทราบ
+                                    </button>
+                                </div>
                             </div>
                         )}
                     </div>
