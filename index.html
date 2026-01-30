@@ -567,8 +567,16 @@
                                                     <div className="text-sm space-y-2">
                                                         <div className="flex justify-between"><span>เข้าพัก:</span> <b>{formatThaiDate(manageData.checkIn)}</b></div>
                                                         <div className="flex justify-between"><span>ออก:</span> <b>{formatThaiDate(manageData.checkOut)}</b></div>
+                                                        <div className="flex justify-between"><span>จำนวนผู้เข้าพัก:</span> <b>{manageData.guests} คน</b></div>
                                                         <div className="flex justify-between"><span>ห้องพัก:</span> <span>{manageData.rooms}</span></div>
                                                     </div>
+                                                    
+                                                    {/* แสดงรายการอาหารที่สั่งไปแล้ว */}
+                                                    <div className="mt-4 pt-4 border-t border-blue-200 dark:border-blue-700">
+                                                        <h4 className="font-bold text-sm text-blue-800 dark:text-blue-300 mb-2">รายการอาหารที่สั่งแล้ว</h4>
+                                                        <p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-line">{manageData.food}</p>
+                                                    </div>
+
                                                     <button onClick={() => setManageData(null)} className="w-full bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 py-2 rounded-lg font-bold mt-4 text-sm">ปิด</button>
                                                 </div>
                                             )}
@@ -599,7 +607,7 @@
                                                     <div className="bg-green-50 dark:bg-green-900/20 text-xs p-2 rounded mb-4 text-green-800 dark:text-green-200">
                                                         🍽️ เงื่อนไข: สั่งล่วงหน้าอย่างน้อย 1 วันก่อนเข้าพัก
                                                     </div>
-                                                    <div className="grid grid-cols-2 gap-2 mb-4 max-h-60 overflow-y-auto custom-scrollbar">
+                                                    <div className="grid grid-cols-2 gap-2 mb-4">
                                                         {siteConfig.foodMenu.map(f => {
                                                             const inCart = addOnCart.find(c => c.id === f.id);
                                                             return (
@@ -724,6 +732,7 @@
                                         })}
                                     </div>
                                 </div>
+                                {selectedFood && ( <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"> <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-sm relative animate-pop"> <img src={selectedFood.img} className="w-full h-40 object-cover rounded-lg mb-4 shadow-md" /> <h3 className="text-xl font-bold mb-1 text-green-800 dark:text-green-400">{selectedFood.name}</h3> {selectedFood.desc && <p className="text-gray-600 dark:text-gray-300 text-sm mb-2">{selectedFood.desc}</p>} <p className="text-gray-500 dark:text-gray-400 text-sm mb-4 font-bold">ราคาชุดละ {selectedFood.price} บาท</p> <div className="flex items-center justify-center gap-4 mb-6"> <button onClick={() => setFoodCount(Math.max(1, foodCount - 1))} className="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-full text-xl font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-200">-</button> <span className="text-2xl font-bold w-10 text-center dark:text-white">{foodCount}</span> <button onClick={() => setFoodCount(foodCount + 1)} className="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-full text-xl font-bold text-green-600 hover:bg-green-100">+</button> </div> <div className="flex gap-2"> <button onClick={() => setSelectedFood(null)} className="flex-1 py-3 text-gray-500 bg-gray-200 dark:bg-gray-600 dark:text-gray-300 rounded-lg font-bold">ยกเลิก</button> <button onClick={confirmFoodSelection} className="flex-1 py-3 text-white bg-green-600 hover:bg-green-700 rounded-lg font-bold shadow-lg">ยืนยัน ({selectedFood.price * foodCount}.-)</button> </div> </div> </div> )}
                                 <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded mb-4"><h3 className="font-bold dark:text-white">🛒 ตะกร้า ({cart.length})</h3> {cart.map((c,i)=><div key={i} className="flex justify-between text-sm mt-1 dark:text-gray-200"><span>{c.name} {c.type==='food'?`x${c.qty}`:`(${c.guests} คน)`}</span><button onClick={()=>setCart(cart.filter((_,idx)=>idx!==i))} className="text-red-500">ลบ</button></div>)} </div>
                                 <button onClick={() => { const hasRoom = cart.some(c => c.type !== 'food'); if (!hasRoom) { setShowRoomRequiredModal(true); return; } setStep(3); }} className="w-full bg-green-600 text-white p-3 rounded-lg font-bold"> ดำเนินการต่อ </button>
                             </div>
