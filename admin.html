@@ -15,7 +15,12 @@
         body { font-family: 'Kanit', sans-serif; background-color: #f3f4f6; }
         .calendar-day { min-height: 80px; }
         @media(max-width: 640px){ .calendar-day { min-height: 50px; } }
-        @keyframes popIn { 0% { opacity: 0; transform: scale(0.95); } 100% { opacity: 1; transform: scale(1); } }
+        
+        /* Animation for Modal */
+        @keyframes popIn {
+            0% { opacity: 0; transform: scale(0.95); }
+            100% { opacity: 1; transform: scale(1); }
+        }
         .animate-modal { animation: popIn 0.2s ease-out forwards; }
     </style>
 </head>
@@ -23,6 +28,7 @@
     <div id="root"></div>
 
     <script type="text/babel">
+        // ** อย่าลืมเปลี่ยน URL เป็นของ Script คุณเอง **
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwQjaz5oaVekrtSlw_kGqt9gLOg0uQeXphG4H2Q5cqrv4ZSEiJnzO63lctvaaYTRr9HNQ/exec"; 
         const ROOM_IDS = ['R1','R2','R3','T1','T2','K1','K2','Z8'];
 
@@ -69,7 +75,11 @@
             const [activeTab, setActiveTab] = React.useState('dashboard');
             
             const [bookings, setBookings] = React.useState([]);
+            
+            // System Settings
             const [settings, setSettings] = React.useState({ discounts: [], closed: [], special: [], roomClosures: [] });
+            
+            // Site Settings
             const [siteSettings, setSiteSettings] = React.useState(null);
             const [savingSiteSettings, setSavingSiteSettings] = React.useState(false);
             
@@ -78,6 +88,8 @@
             const [filter, setFilter] = React.useState('all'); 
 
             const [rescheduleData, setRescheduleData] = React.useState(null);
+            
+            // Add Food States
             const [selectedAddFood, setSelectedAddFood] = React.useState('');
             const [addFoodQty, setAddFoodQty] = React.useState(1);
 
@@ -86,15 +98,27 @@
             const [formClosed, setFormClosed] = React.useState({ date: '', reason: '' });
             const [formSpecial, setFormSpecial] = React.useState({ date: '', desc: '' });
             
-            // New States for Room Maintenance & Admin Booking
+            // Room Closure & Admin Booking
             const [formRoomClosure, setFormRoomClosure] = React.useState({ date: '', roomId: 'R1', reason: '' });
             const [showAdminBooking, setShowAdminBooking] = React.useState(false);
             const [adminBookingForm, setAdminBookingForm] = React.useState({ name: '', phone: '', checkIn: '', checkOut: '', rooms: [], price: '', deposit: '' });
 
+            // Calendar State
             const [calendarDate, setCalendarDate] = React.useState(new Date());
 
-            const [modal, setModal] = React.useState({ isOpen: false, type: 'alert', title: '', message: '', onConfirm: null });
-            const showModal = (title, message, type = 'alert', onConfirm = null) => { setModal({ isOpen: true, title, message, type, onConfirm }); };
+            // --- Custom Modal State ---
+            const [modal, setModal] = React.useState({
+                isOpen: false,
+                type: 'alert',
+                title: '',
+                message: '',
+                onConfirm: null
+            });
+
+            const showModal = (title, message, type = 'alert', onConfirm = null) => {
+                setModal({ isOpen: true, title, message, type, onConfirm });
+            };
+
             const closeModal = () => setModal(prev => ({ ...prev, isOpen: false }));
             const alertMsg = (message, title = 'แจ้งเตือน', type = 'warning') => showModal(title, message, type, closeModal);
             const successMsg = (message) => alertMsg(message, 'สำเร็จ', 'success');
@@ -112,12 +136,20 @@
                 const now = new Date();
                 const currentMonth = now.getMonth();
                 const currentYear = now.getFullYear();
-                const totalRevenue = bookings.filter(b => b.status === 'ยืนยัน').reduce((sum, b) => sum + parseInt(b.deposit || 0), 0);
-                const monthlyRevenue = bookings.filter(b => {
+
+                const totalRevenue = bookings
+                    .filter(b => b.status === 'ยืนยัน')
+                    .reduce((sum, b) => sum + parseInt(b.deposit || 0), 0);
+
+                const monthlyRevenue = bookings
+                    .filter(b => {
                         const d = new Date(b.checkIn);
                         return b.status === 'ยืนยัน' && d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-                    }).reduce((sum, b) => sum + parseInt(b.deposit || 0), 0);
+                    })
+                    .reduce((sum, b) => sum + parseInt(b.deposit || 0), 0);
+
                 const pendingCount = bookings.filter(b => b.status === 'รอตรวจสอบ').length;
+                
                 const monthlyCounts = Array(12).fill(0);
                 bookings.forEach(b => {
                     if (b.status !== 'ยกเลิก' && b.status !== 'Cancelled') {
@@ -127,12 +159,14 @@
                         }
                     }
                 });
+
                 const upcoming = bookings.filter(b => {
                     const checkIn = new Date(b.checkIn);
                     const diffTime = checkIn - now;
                     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
                     return b.status === 'ยืนยัน' && diffDays >= 0 && diffDays <= 3;
                 }).sort((a,b) => new Date(a.checkIn) - new Date(b.checkIn));
+
                 return { totalRevenue, monthlyRevenue, pendingCount, monthlyCounts, upcoming };
             }, [bookings]);
 
@@ -142,19 +176,27 @@
                 fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'adminLogin', password: password }) })
                 .then(r => r.json()).then(res => {
                     setLoading(false);
-                    if (res.status === 'success') { setIsLoggedIn(true); fetchData(); fetchSettings(); } else errorMsg('รหัสผ่านไม่ถูกต้อง');
+                    if (res.status === 'success') {
+                        setIsLoggedIn(true);
+                        fetchData();
+                        fetchSettings();
+                    } else errorMsg('รหัสผ่านไม่ถูกต้อง');
                 }).catch(err => { setLoading(false); errorMsg('Connection Error: ' + err); });
             };
 
             const fetchData = () => {
                 setLoading(true);
                 fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'getAdminData', password: password }) })
-                .then(r => r.json()).then(res => { setLoading(false); if (res.status === 'success') setBookings(res.data); });
+                .then(r => r.json()).then(res => {
+                    setLoading(false);
+                    if (res.status === 'success') setBookings(res.data);
+                });
             };
 
             const fetchSettings = () => {
                 fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'getSettings', password: password }) })
                 .then(r => r.json()).then(res => { if (res.status === 'success') setSettings(res); });
+                
                 fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'getSiteSettings', password: password }) })
                 .then(r => r.json()).then(res => { if (res.status === 'success') setSiteSettings(res.data); });
             };
@@ -169,9 +211,11 @@
             const handleCreateAdminBooking = () => {
                 const { name, phone, checkIn, checkOut, rooms, price, deposit } = adminBookingForm;
                 if(!name || !phone || !checkIn || !checkOut || rooms.length === 0 || !price) return alertMsg('กรุณากรอกข้อมูลให้ครบถ้วน');
+                
                 confirmMsg('ยืนยันสร้างรายการจอง?', () => {
                     setLoading(true);
                     const cart = rooms.map(rid => ({ id: rid, name: rid, type: (rid==='Z8'?'ground':(rid.startsWith('K')?'tent_rent':(rid.startsWith('T')?'tent':'room'))), guests: 2, qty: 1 }));
+                    
                     fetch(GOOGLE_SCRIPT_URL, {
                         method: 'POST',
                         body: JSON.stringify({
@@ -179,14 +223,19 @@
                             password: password,
                             customer: { name, phone },
                             checkIn, checkOut,
-                            totalGuests: 2, // Default
+                            totalGuests: 2, 
                             cart: cart,
                             price: parseFloat(price),
                             deposit: parseFloat(deposit || price)
                         })
                     }).then(r => r.json()).then(res => {
                         setLoading(false);
-                        if(res.status === 'success') { successMsg('สร้างรายการจองสำเร็จ'); fetchData(); setShowAdminBooking(false); setAdminBookingForm({ name: '', phone: '', checkIn: '', checkOut: '', rooms: [], price: '', deposit: '' }); }
+                        if(res.status === 'success') { 
+                            successMsg('สร้างรายการจองสำเร็จ'); 
+                            fetchData(); 
+                            setShowAdminBooking(false); 
+                            setAdminBookingForm({ name: '', phone: '', checkIn: '', checkOut: '', rooms: [], price: '', deposit: '' });
+                        }
                         else errorMsg('ไม่สำเร็จ: ' + res.message);
                     });
                 });
@@ -195,9 +244,24 @@
             const handleReschedule = () => {
                 if(!rescheduleData.checkIn || !rescheduleData.checkOut) return alertMsg('กรุณาเลือกวันที่ให้ครบถ้วน');
                 if(rescheduleData.checkIn >= rescheduleData.checkOut) return alertMsg('วันที่ออกต้องอยู่หลังวันที่เข้าพัก');
+                
                 confirmMsg('ยืนยันการเลื่อนวันเข้าพัก?', () => {
-                    fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'rescheduleBooking', bookingId: rescheduleData.id, newCheckIn: rescheduleData.checkIn, newCheckOut: rescheduleData.checkOut, password: password }) }).then(r => r.json()).then(res => {
-                        if (res.status === 'success') { successMsg('เลื่อนวันสำเร็จเรียบร้อย'); setRescheduleData(null); setViewBooking(null); fetchData(); } else errorMsg('ไม่สำเร็จ: ' + res.message);
+                    fetch(GOOGLE_SCRIPT_URL, { 
+                        method: 'POST', 
+                        body: JSON.stringify({ 
+                            action: 'rescheduleBooking', 
+                            bookingId: rescheduleData.id, 
+                            newCheckIn: rescheduleData.checkIn, 
+                            newCheckOut: rescheduleData.checkOut, 
+                            password: password 
+                        }) 
+                    }).then(r => r.json()).then(res => {
+                        if (res.status === 'success') { 
+                            successMsg('เลื่อนวันสำเร็จเรียบร้อย'); 
+                            setRescheduleData(null); 
+                            setViewBooking(null);
+                            fetchData(); 
+                        } else errorMsg('ไม่สำเร็จ: ' + res.message);
                     });
                 });
             };
@@ -205,13 +269,29 @@
             const handleAddFood = () => {
                 if(!selectedAddFood) return alertMsg('กรุณาเลือกเมนูอาหาร');
                 if(addFoodQty <= 0) return alertMsg('จำนวนต้องมากกว่า 0');
+                
                 const foodItem = siteSettings.foodMenu.find(f => f.id === selectedAddFood);
                 if(!foodItem) return;
+
                 confirmMsg(`ยืนยันเพิ่ม ${foodItem.name} จำนวน ${addFoodQty} ชุด?`, () => {
                     setLoading(true);
-                    fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'addFoodToBooking', bookingId: viewBooking.id, foodItem: { id: foodItem.id, name: foodItem.name, price: foodItem.price, qty: parseInt(addFoodQty) }, password: password }) }).then(r => r.json()).then(res => {
+                    fetch(GOOGLE_SCRIPT_URL, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            action: 'addFoodToBooking',
+                            bookingId: viewBooking.id,
+                            foodItem: { id: foodItem.id, name: foodItem.name, price: foodItem.price, qty: parseInt(addFoodQty) },
+                            password: password
+                        })
+                    }).then(r => r.json()).then(res => {
                         setLoading(false);
-                        if(res.status === 'success') { successMsg('เพิ่มรายการอาหารเรียบร้อย และแจ้งเตือนลูกค้าแล้ว'); fetchData(); setViewBooking(null); } else { errorMsg('Error: ' + res.message); }
+                        if(res.status === 'success') {
+                            successMsg('เพิ่มรายการอาหารเรียบร้อย และแจ้งเตือนลูกค้าแล้ว');
+                            fetchData(); 
+                            setViewBooking(null); 
+                        } else {
+                            errorMsg('Error: ' + res.message);
+                        }
                     });
                 });
             };
@@ -220,8 +300,17 @@
                 const action = editMode ? 'editSetting' : 'addSetting';
                 const id = editMode ? editMode.id : null;
                 confirmMsg('ยืนยันการบันทึกข้อมูล?', () => {
-                    fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action, type, id, payload, password: password }) }).then(r => r.json()).then(res => {
-                        if (res.status === 'success') { successMsg('บันทึกสำเร็จ'); fetchSettings(); setEditMode(null); setFormDiscount({ code: '', type: 'FIXED', value: '' }); setFormClosed({ date: '', reason: '' }); setFormSpecial({ date: '', desc: '' }); setFormRoomClosure({ date: '', roomId: 'R1', reason: '' }); } else errorMsg('บันทึกไม่สำเร็จ');
+                    fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action, type, id, payload, password: password }) })
+                    .then(r => r.json()).then(res => {
+                        if (res.status === 'success') { 
+                            successMsg('บันทึกสำเร็จ'); 
+                            fetchSettings(); 
+                            setEditMode(null);
+                            setFormDiscount({ code: '', type: 'FIXED', value: '' });
+                            setFormClosed({ date: '', reason: '' });
+                            setFormSpecial({ date: '', desc: '' });
+                            setFormRoomClosure({ date: '', roomId: 'R1', reason: '' });
+                        } else errorMsg('บันทึกไม่สำเร็จ');
                     });
                 });
             };
@@ -235,32 +324,48 @@
 
             const handleDeleteSetting = (type, id) => {
                 confirmMsg('ยืนยันการลบรายการนี้?', () => {
-                    fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'deleteSetting', type, id, password: password }) }).then(r => r.json()).then(res => { if (res.status === 'success') fetchSettings(); });
+                    fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'deleteSetting', type, id, password: password }) })
+                    .then(r => r.json()).then(res => { if (res.status === 'success') fetchSettings(); });
                 });
             };
 
             const handleSaveSiteSettings = () => {
                 confirmMsg('ยืนยันบันทึกการตั้งค่าร้านค้า?', () => {
                     setSavingSiteSettings(true);
-                    fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'saveSiteSettings', password: password, settings: siteSettings }) }).then(r => r.json()).then(res => {
+                    fetch(GOOGLE_SCRIPT_URL, {
+                        method: 'POST',
+                        body: JSON.stringify({ action: 'saveSiteSettings', password: password, settings: siteSettings })
+                    }).then(r => r.json()).then(res => {
                         setSavingSiteSettings(false);
-                        if(res.status === 'success') { successMsg('บันทึกเรียบร้อย'); fetchSettings(); } else errorMsg('บันทึกไม่สำเร็จ');
+                        if(res.status === 'success') { successMsg('บันทึกเรียบร้อย'); fetchSettings(); } 
+                        else errorMsg('บันทึกไม่สำเร็จ');
                     });
                 });
             };
 
             const handleImageUpload = async (file, callback) => {
-                if(file) { try { const base64 = await compressImage(file); callback(base64); } catch(e) { errorMsg('Upload Failed'); } }
+                if(file) {
+                    try {
+                        const base64 = await compressImage(file);
+                        callback(base64);
+                    } catch(e) { errorMsg('Upload Failed'); }
+                }
             };
 
             const handleMultipleImageUpload = async (files, callback) => {
                 if (!files || files.length === 0) return;
-                try { const promises = Array.from(files).map(file => compressImage(file)); const base64List = await Promise.all(promises); callback(base64List); } catch(e) { errorMsg('Upload Failed'); }
+                try {
+                    const promises = Array.from(files).map(file => compressImage(file));
+                    const base64List = await Promise.all(promises);
+                    callback(base64List);
+                } catch(e) { errorMsg('Upload Failed'); }
             };
 
             const handleExport = () => {
                 const header = ["BookingID", "Date", "Customer", "Phone", "CheckIn", "CheckOut", "Rooms", "Total", "Deposit", "Status"];
-                const rows = bookings.map(b => [b.id, b.timestamp, `"${b.name}"`, `'${b.phone}`, b.checkIn, b.checkOut, `"${b.rooms.replace(/"/g, '""')}"`, b.price, b.deposit, b.status]);
+                const rows = bookings.map(b => [
+                    b.id, b.timestamp, `"${b.name}"`, `'${b.phone}`, b.checkIn, b.checkOut, `"${b.rooms.replace(/"/g, '""')}"`, b.price, b.deposit, b.status
+                ]);
                 const csvContent = [header.join(","), ...rows.map(r => r.join(","))].join("\n");
                 const blob = new Blob(["\uFEFF"+csvContent], { type: 'text/csv;charset=utf-8;' });
                 const url = URL.createObjectURL(blob);
@@ -272,6 +377,7 @@
                 document.body.removeChild(link);
             };
 
+            // Calendar Helper
             const getDaysInMonth = (date) => new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
             const firstDayOfMonth = new Date(calendarDate.getFullYear(), calendarDate.getMonth(), 1).getDay();
             const days = [];
@@ -292,15 +398,20 @@
                             <button disabled={loading} className="w-full bg-gray-800 text-white p-3 rounded-lg hover:bg-gray-700 transition font-bold shadow-lg">{loading ? 'กำลังตรวจสอบ...' : 'เข้าสู่ระบบ'}</button>
                         </form>
                     </div>
+                    {/* Render Modal if needed (Login Error) */}
                     {modal.isOpen && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60 backdrop-blur-sm transition-opacity">
                             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xs overflow-hidden animate-modal">
                                 <div className={`p-6 text-center ${modal.type==='error'?'bg-red-50':''}`}>
-                                    <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${modal.type==='error'?'bg-red-100 text-red-500':'bg-gray-100 text-gray-500'}`}><i className={`fas ${modal.type==='error'?'fa-times':'fa-info'} text-2xl`}></i></div>
+                                    <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${modal.type==='error'?'bg-red-100 text-red-500':'bg-gray-100 text-gray-500'}`}>
+                                        <i className={`fas ${modal.type==='error'?'fa-times':'fa-info'} text-2xl`}></i>
+                                    </div>
                                     <h3 className="text-xl font-bold text-gray-800 mb-2">{modal.title}</h3>
                                     <p className="text-gray-600 text-sm">{modal.message}</p>
                                 </div>
-                                <div className="p-4 bg-gray-50"><button onClick={closeModal} className="w-full py-2.5 bg-gray-800 text-white rounded-xl font-bold hover:bg-gray-700 transition">ตกลง</button></div>
+                                <div className="p-4 bg-gray-50">
+                                    <button onClick={closeModal} className="w-full py-2.5 bg-gray-800 text-white rounded-xl font-bold hover:bg-gray-700 transition">ตกลง</button>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -791,6 +902,7 @@
                                             />
                                         </div>
                                         
+                                        {/* Warning for < 1 day */}
                                         {(() => {
                                             const checkInDate = new Date(viewBooking.checkIn);
                                             const now = new Date();
