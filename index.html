@@ -159,13 +159,19 @@
         // ข้อมูลห้องพัก (ราคา/เงื่อนไข ยังคง Static ไว้ก่อนตามโครงสร้างเดิม แต่รูปจะดึงจาก Config)
         const ROOM_INFO_BASE = {
             'R1': { name: 'โฮมสเตย์หนำโป', tiers: [{max: 5, price: 1600}, {max: 8, price: 2200}], bf: false, type: 'room', desc: 'บ้านหลังใหญ่ อบอุ่น', min: 1, maxCap: 8 },
-            'R2': { name: 'บ้านพักริมน้ำ 1', tiers: [{max: 2, price: 1400}, {max: 3, price: 1750}], bf: true, type: 'room', desc: 'วิวริมน้ำ บรรยากาศดี', min: 1, maxCap: 3 },
-            'R3': { name: 'บ้านพักริมน้ำ 2', tiers: [{max: 2, price: 1400}, {max: 3, price: 1750}], bf: true, type: 'room', desc: 'วิวริมน้ำ ส่วนตัว', min: 1, maxCap: 3 },
-            'T1': { name: 'เต็นท์กระโจม 1', tiers: [{max: 2, price: 1200}, {max: 4, price: 1550}], bf: true, type: 'tent', desc: 'กระโจมสุดฮิป', min: 1, maxCap: 4 },
-            'T2': { name: 'เต็นท์กระโจม 2', tiers: [{max: 2, price: 1200}, {max: 4, price: 1550}], bf: true, type: 'tent', desc: 'กระโจมถ่ายรูปสวย', min: 1, maxCap: 4 },
-            'K1': { name: 'เช่าเต็นท์สนาม K1', tiers: [{max: 2, price: 700}], bf: true, type: 'tent_rent', desc: 'เต็นท์พร้อมเครื่องนอน', min: 1, maxCap: 2 },
-            'K2': { name: 'เช่าเต็นท์สนาม K2', tiers: [{max: 2, price: 700}], bf: true, type: 'tent_rent', desc: 'เต็นท์พร้อมเครื่องนอน', min: 1, maxCap: 2 },
-            'Z8': { name: 'ลานกางเต็นท์', priceHead: 150, max: 20, bf: false, type: 'ground', desc: 'นำเต็นท์มาเอง วิวสวน', min: 1, maxCap: 20 }
+            // ... (ห้องอื่นๆ) ...
+            'Z8': { name: 'ลานกางเต็นท์', priceHead: 150, max: 20, bf: false, type: 'ground', desc: 'นำเต็นท์มาเอง วิวสวน', min: 1, maxCap: 20 },
+            
+            // เพิ่มห้องใหม่ตรงนี้
+            'R4': { 
+                name: 'บ้านพักริมน้ำ 3', // ชื่อห้อง
+                tiers: [{max: 2, price: 1500}, {max: 4, price: 1800}], // ขั้นบันไดราคา (ไม่เกิน 2 คน 1500, ไม่เกิน 4 คน 1800)
+                bf: true, // มีอาหารเช้าไหม (true/false)
+                type: 'room', // ประเภท: room, tent, tent_rent, ground
+                desc: 'วิวสวยมาก', // คำอธิบายสั้นๆ
+                min: 1, // จองขั้นต่ำกี่คน
+                maxCap: 4 // รับได้สูงสุดกี่คน
+            }
         };
 
         const App = () => {
@@ -500,7 +506,7 @@
                                             <label className="block text-gray-700 dark:text-red-300 font-bold mb-1">วันที่ออก</label>
                                             <input type="date" min={dates.checkIn || getTommorow()} className="w-full border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" onChange={e => setDates({...dates, checkOut: e.target.value})} />
                                         </div>
-                                        <button onClick={handleSearch} disabled={loading} className="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition font-bold shadow-lg mt-2">{loading ? 'กำลังเตรียมห้องพัก...' : 'ค้นหาที่พักว่าง'}</button>
+                                        <button onClick={handleSearch} disabled={loading} className="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition font-bold shadow-lg mt-2">{loading ? 'กำลังโหลด...' : 'ค้นหาที่พักว่าง'}</button>
                                     </div>
                                 </div>
 
@@ -550,7 +556,7 @@
                                         const disable = isBooked || isZ8Full;
                                         const inCart = cart.find(c => c.id === key);
                                         
-                                        let circleClasses = "w-12 h-12 rounded-full flex items-center justify-center text-center text-[8px] font-bold border-2 shadow-lg p-1 leading-tight transition-all duration-300";
+                                        let circleClasses = "w-10 h-10 rounded-full flex items-center justify-center text-center text-[8px] font-bold border-2 shadow-lg p-1 leading-tight transition-all duration-300";
                                         if (disable) circleClasses += " bg-gray-400 text-white border-gray-500 cursor-not-allowed opacity-80 grayscale";
                                         else if (inCart) circleClasses += " bg-yellow-400 text-black border-yellow-600 scale-110 shadow-xl z-20";
                                         else circleClasses += " bg-white dark:bg-gray-800 text-green-800 dark:text-green-400 border-green-600 hover:scale-110 z-10";
@@ -732,7 +738,7 @@
                                             <img src={qrUrl} className="mx-auto border-2 border-gray-200 dark:border-gray-600 rounded-lg mb-3 shadow-sm p-1 bg-white" alt="QR Code" width="200" height="200" />
                                             {/* Removed button and replaced with instructions */}
                                             <p className="text-sm text-blue-600 dark:text-blue-400 font-bold mt-2">
-                                                กรุณาบันทึกหน้าจอหรือกดค้างที่รูปเพื่อบันทึก
+                                                กรุณาแคปหน้าจอ (Screenshot) หรือกดค้างที่รูป<br/>เพื่อบันทึก แล้วนำไปสแกนจ่ายในแอปธนาคาร
                                             </p>
                                         </div>
                                     ) : (
@@ -775,11 +781,11 @@
                                 <div className="text-6xl mb-4">🎉</div>
                                 <h2 className="text-2xl font-bold text-green-700 dark:text-green-400 mb-2">จองสำเร็จ!</h2>
                                 <p className="text-gray-600 dark:text-gray-300 mb-4">รหัส: <strong>{bookingResult}</strong></p>
-                                <p className="text-sm text-gray-500 mb-4">ระบบส่งใบจองให้ทาง LINE แล้วครับ</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">ระบบส่งใบจองให้ทาง LINE แล้วครับ</p>
                                 <p className="text-sm text-gray-600 mb-4">เงื่อนไข : ไม่สามารถคืนมัดจำได้</p>
                                 <p className="text-sm text-gray-600 mb-4">เลื่อนที่พักก่อนเข้าพักไม่น้อยกว่า 7 วัน</p>
                                 <p className="text-sm text-gray-600 mb-4">ยกเว้นโรคระบาดและภัยพิบัติเลื่อนที่พักได้</p>
-                                <button onClick={() => liff.closeWindow()} className="mt-8 bg-gray-800 dark:bg-gray-600 text-white px-6 py-2 rounded-full">กดปิดเบาๆนะครับ</button>
+                                <button onClick={() => liff.closeWindow()} className="mt-8 bg-gray-800 dark:bg-gray-600 text-white px-6 py-2 rounded-full">ปิดหน้าต่าง</button>
                             </div>
                         )}
                         
