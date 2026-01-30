@@ -30,7 +30,6 @@
     <script type="text/babel">
         // ** อย่าลืมเปลี่ยน URL เป็นของ Script คุณเอง **
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwQjaz5oaVekrtSlw_kGqt9gLOg0uQeXphG4H2Q5cqrv4ZSEiJnzO63lctvaaYTRr9HNQ/exec"; 
-        
         const ROOM_IDS = ['R1','R2','R3','T1','T2','K1','K2','Z8'];
         const ROOM_NAMES = {
             'R1': 'โฮมสเตย์หนำโป',
@@ -106,14 +105,15 @@
 
             const [editMode, setEditMode] = React.useState(null); 
             const [formDiscount, setFormDiscount] = React.useState({ code: '', type: 'FIXED', value: '' });
-            const [formClosed, setFormClosed] = React.useState({ date: '', reason: '' });
-            const [formSpecial, setFormSpecial] = React.useState({ date: '', desc: '' });
             
-            // Room Closure & Admin Booking
-            const [formRoomClosure, setFormRoomClosure] = React.useState({ date: '', roomId: 'R1', reason: '' });
+            // --- Updated Forms for Range Date ---
+            const [formClosed, setFormClosed] = React.useState({ startDate: '', endDate: '', reason: '' });
+            const [formSpecial, setFormSpecial] = React.useState({ startDate: '', endDate: '', desc: '' });
+            const [formRoomClosure, setFormRoomClosure] = React.useState({ startDate: '', endDate: '', roomId: 'R1', reason: '' });
+
             const [showAdminBooking, setShowAdminBooking] = React.useState(false);
             const [adminBookingForm, setAdminBookingForm] = React.useState({ name: '', phone: '', checkIn: '', checkOut: '', rooms: [], price: '', deposit: '' });
-            const [adminAvailability, setAdminAvailability] = React.useState(null); // เก็บสถานะห้องว่างสำหรับ Walk-in
+            const [adminAvailability, setAdminAvailability] = React.useState(null); 
             const [loadingAvailability, setLoadingAvailability] = React.useState(false);
 
             // Calendar State
@@ -150,9 +150,7 @@
                 if (showAdminBooking && adminBookingForm.checkIn && adminBookingForm.checkOut) {
                     if (adminBookingForm.checkIn < adminBookingForm.checkOut) {
                         setLoadingAvailability(true);
-                        // Reset selected rooms if dates change
                         setAdminBookingForm(prev => ({...prev, rooms: []})); 
-                        
                         fetch(`${GOOGLE_SCRIPT_URL}?action=getAvailability&checkIn=${adminBookingForm.checkIn}&checkOut=${adminBookingForm.checkOut}`)
                             .then(r => r.json())
                             .then(res => {
@@ -337,6 +335,15 @@
             const handleSaveSetting = (type, payload) => {
                 const action = editMode ? 'editSetting' : 'addSetting';
                 const id = editMode ? editMode.id : null;
+                
+                // Validate Dates for range inputs
+                if ((type !== 'discount') && (!payload.startDate || !payload.endDate)) {
+                     return alertMsg('กรุณาระบุวันที่เริ่มต้นและสิ้นสุด');
+                }
+                if ((type !== 'discount') && (payload.startDate > payload.endDate)) {
+                     return alertMsg('วันที่เริ่มต้นต้องมาก่อนวันที่สิ้นสุด');
+                }
+
                 confirmMsg('ยืนยันการบันทึกข้อมูล?', () => {
                     fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action, type, id, payload, password: password }) })
                     .then(r => r.json()).then(res => {
@@ -345,19 +352,17 @@
                             fetchSettings(); 
                             setEditMode(null);
                             setFormDiscount({ code: '', type: 'FIXED', value: '' });
-                            setFormClosed({ date: '', reason: '' });
-                            setFormSpecial({ date: '', desc: '' });
-                            setFormRoomClosure({ date: '', roomId: 'R1', reason: '' });
+                            setFormClosed({ startDate: '', endDate: '', reason: '' });
+                            setFormSpecial({ startDate: '', endDate: '', desc: '' });
+                            setFormRoomClosure({ startDate: '', endDate: '', roomId: 'R1', reason: '' });
                         } else errorMsg('บันทึกไม่สำเร็จ');
                     });
                 });
             };
 
             const startEdit = (type, item) => {
-                setEditMode(item);
-                if(type === 'discount') setFormDiscount({ code: item.code, type: item.type, value: item.value });
-                if(type === 'closed') setFormClosed({ date: item.date, reason: item.reason });
-                if(type === 'special') setFormSpecial({ date: item.date, desc: item.desc });
+                // Editing ranges from single rows is complex, simplifying to delete/re-add for now in this UI.
+                alertMsg('การแก้ไขช่วงวันที่ต้องลบแล้วเพิ่มใหม่ครับ');
             };
 
             const handleDeleteSetting = (type, id) => {
@@ -651,7 +656,7 @@
                                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                                 {ROOM_IDS.map(roomId => (
                                                     <div key={roomId} className="border p-3 rounded bg-gray-50 flex flex-col h-full">
-                                                        <h4 className="font-bold mb-2 text-sm">{ROOM_NAMES[roomId]}</h4>
+                                                        <h4 className="font-bold mb-2 text-sm">{ROOM_NAMES[roomId]} ({roomId})</h4>
                                                         <textarea className="w-full border p-1 rounded text-xs mb-2 resize-none h-16" placeholder="คำอธิบายห้องพัก..." value={siteSettings.roomDescriptions?.[roomId] || ''} onChange={e => {
                                                                 const newDesc = {...(siteSettings.roomDescriptions || {})};
                                                                 newDesc[roomId] = e.target.value;
@@ -749,30 +754,30 @@
                                     <div className="bg-white p-4 rounded-lg shadow border-l-4 border-red-500">
                                         <h3 className="font-bold text-lg mb-4 text-red-800"><i className="fas fa-calendar-times"></i> วันปิดบริการ (ทั้งรีสอร์ท)</h3>
                                         <div className="flex gap-2 mb-4 flex-wrap items-end bg-gray-50 p-2 rounded">
-                                            <input type="date" className="border p-2 rounded text-sm" value={formClosed.date} onChange={e=>setFormClosed({...formClosed, date:e.target.value})} />
-                                            <input placeholder="เหตุผล" className="border p-2 rounded text-sm flex-1" value={formClosed.reason} onChange={e=>setFormClosed({...formClosed, reason:e.target.value})} />
-                                            <button onClick={()=>handleSaveSetting('closed', formClosed)} className={`px-3 py-2 rounded text-sm text-white ${editMode?.reason===formClosed.reason ? 'bg-orange-500':'bg-red-600'}`}>{editMode?'บันทึก':'ปิด'}</button>
+                                            <div><label className="text-xs text-gray-500 block">เริ่ม</label><input type="date" className="border p-2 rounded text-sm" value={formClosed.startDate} onChange={e=>setFormClosed({...formClosed, startDate:e.target.value})} /></div>
+                                            <div><label className="text-xs text-gray-500 block">สิ้นสุด</label><input type="date" className="border p-2 rounded text-sm" value={formClosed.endDate} onChange={e=>setFormClosed({...formClosed, endDate:e.target.value})} /></div>
+                                            <div className="flex-1"><label className="text-xs text-gray-500 block">เหตุผล</label><input placeholder="เหตุผล" className="border p-2 rounded text-sm w-full" value={formClosed.reason} onChange={e=>setFormClosed({...formClosed, reason:e.target.value})} /></div>
+                                            <button onClick={()=>handleSaveSetting('closed', formClosed)} className="px-3 py-2 rounded text-sm text-white bg-red-600 mb-0.5">ปิด</button>
                                         </div>
                                         <ul className="divide-y max-h-40 overflow-y-auto">
                                             {settings.closed.map((c, i) => (
                                                 <li key={i} className="flex justify-between items-center p-2 text-sm text-red-800">
                                                     <span>{formatThaiDate(c.date)} ({c.reason})</span>
-                                                    <div className="flex gap-2"><button onClick={()=>startEdit('closed', c)} className="text-blue-500"><i className="fas fa-edit"></i></button><button onClick={()=>handleDeleteSetting('closed', c.id)} className="text-red-500"><i className="fas fa-trash"></i></button></div>
+                                                    <button onClick={()=>handleDeleteSetting('closed', c.id)} className="text-red-500"><i className="fas fa-trash"></i></button>
                                                 </li>
                                             ))}
                                         </ul>
                                     </div>
                                     
-                                    {/* --- NEW: Room Closure Settings --- */}
+                                    {/* --- NEW: Room Closure Settings (Range) --- */}
                                     <div className="bg-white p-4 rounded-lg shadow border-l-4 border-gray-500">
                                         <h3 className="font-bold text-lg mb-4 text-gray-800"><i className="fas fa-ban"></i> ปิดปรับปรุงห้องพัก (รายห้อง)</h3>
                                         <div className="flex gap-2 mb-4 flex-wrap items-end bg-gray-50 p-2 rounded">
-                                            <input type="date" className="border p-2 rounded text-sm" value={formRoomClosure.date} onChange={e=>setFormRoomClosure({...formRoomClosure, date:e.target.value})} />
-                                            <select className="border p-2 rounded text-sm" value={formRoomClosure.roomId} onChange={e=>setFormRoomClosure({...formRoomClosure, roomId:e.target.value})}>
-                                                {ROOM_IDS.map(r => <option key={r} value={r}>{ROOM_NAMES[r]}</option>)}
-                                            </select>
-                                            <input placeholder="สาเหตุ" className="border p-2 rounded text-sm flex-1" value={formRoomClosure.reason} onChange={e=>setFormRoomClosure({...formRoomClosure, reason:e.target.value})} />
-                                            <button onClick={()=>handleSaveSetting('room_closure', formRoomClosure)} className="px-3 py-2 rounded text-sm text-white bg-gray-600">ปิด</button>
+                                            <div><label className="text-xs text-gray-500 block">เริ่ม</label><input type="date" className="border p-2 rounded text-sm" value={formRoomClosure.startDate} onChange={e=>setFormRoomClosure({...formRoomClosure, startDate:e.target.value})} /></div>
+                                            <div><label className="text-xs text-gray-500 block">สิ้นสุด</label><input type="date" className="border p-2 rounded text-sm" value={formRoomClosure.endDate} onChange={e=>setFormRoomClosure({...formRoomClosure, endDate:e.target.value})} /></div>
+                                            <div><label className="text-xs text-gray-500 block">ห้อง</label><select className="border p-2 rounded text-sm" value={formRoomClosure.roomId} onChange={e=>setFormRoomClosure({...formRoomClosure, roomId:e.target.value})}>{ROOM_IDS.map(r => <option key={r} value={r}>{ROOM_NAMES[r]}</option>)}</select></div>
+                                            <div className="flex-1"><label className="text-xs text-gray-500 block">สาเหตุ</label><input placeholder="สาเหตุ" className="border p-2 rounded text-sm w-full" value={formRoomClosure.reason} onChange={e=>setFormRoomClosure({...formRoomClosure, reason:e.target.value})} /></div>
+                                            <button onClick={()=>handleSaveSetting('room_closure', formRoomClosure)} className="px-3 py-2 rounded text-sm text-white bg-gray-600 mb-0.5">ปิด</button>
                                         </div>
                                         <ul className="divide-y max-h-40 overflow-y-auto">
                                             {(settings.roomClosures || []).map((rc, i) => (
@@ -787,9 +792,10 @@
                                     <div className="bg-white p-4 rounded-lg shadow border-l-4 border-blue-800">
                                         <h3 className="font-bold text-lg mb-4 text-blue-800"><i className="fas fa-star"></i> วันพิเศษ (มัดจำ 100%)</h3>
                                         <div className="flex gap-2 mb-4 flex-wrap items-end bg-gray-50 p-2 rounded">
-                                            <input type="date" className="border p-2 rounded text-sm" value={formSpecial.date} onChange={e=>setFormSpecial({...formSpecial, date:e.target.value})} />
-                                            <input placeholder="รายละเอียด" className="border p-2 rounded text-sm flex-1" value={formSpecial.desc} onChange={e=>setFormSpecial({...formSpecial, desc:e.target.value})} />
-                                            <button onClick={()=>handleSaveSetting('special', formSpecial)} className={`px-3 py-2 rounded text-sm text-white ${editMode?.desc===formSpecial.desc ? 'bg-orange-500':'bg-blue-600'}`}>{editMode?'บันทึก':'เพิ่ม'}</button>
+                                            <div><label className="text-xs text-gray-500 block">เริ่ม</label><input type="date" className="border p-2 rounded text-sm" value={formSpecial.startDate} onChange={e=>setFormSpecial({...formSpecial, startDate:e.target.value})} /></div>
+                                            <div><label className="text-xs text-gray-500 block">สิ้นสุด</label><input type="date" className="border p-2 rounded text-sm" value={formSpecial.endDate} onChange={e=>setFormSpecial({...formSpecial, endDate:e.target.value})} /></div>
+                                            <div className="flex-1"><label className="text-xs text-gray-500 block">รายละเอียด</label><input placeholder="รายละเอียด" className="border p-2 rounded text-sm w-full" value={formSpecial.desc} onChange={e=>setFormSpecial({...formSpecial, desc:e.target.value})} /></div>
+                                            <button onClick={()=>handleSaveSetting('special', formSpecial)} className={`px-3 py-2 rounded text-sm text-white ${editMode?.desc===formSpecial.desc ? 'bg-orange-500':'bg-blue-600'} mb-0.5`}>{editMode?'บันทึก':'เพิ่ม'}</button>
                                         </div>
                                         <ul className="divide-y max-h-40 overflow-y-auto">
                                             {settings.special.map((s, i) => (
@@ -940,7 +946,6 @@
                                             />
                                         </div>
                                         
-                                        {/* Warning for < 1 day */}
                                         {(() => {
                                             const checkInDate = new Date(viewBooking.checkIn);
                                             const now = new Date();
