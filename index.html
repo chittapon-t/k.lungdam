@@ -60,7 +60,6 @@
         .map-pin-responsive { transition: transform 0.2s; }
         @media (max-width: 640px) {
             .map-pin-responsive {
-                /* ย่อหมุดลงเหลือ 80% และจัดให้อยู่กึ่งกลางจุดพิกัด */
                 transform: translate(-50%, -50%) scale(0.8) !important;
             }
         }
@@ -78,10 +77,9 @@
         const PROMPTPAY_PHONE = "0615924262";
         const PROMPTPAY_NAME = "อลงกต ทวีผ่อง";
 
-        // ฟังก์ชันย่อรูปภาพ (Image Compressor)
         const compressImage = async (file) => {
             return new Promise((resolve, reject) => {
-                const maxWidth = 800; // บีบความกว้างเหลือ 800px
+                const maxWidth = 800;
                 const reader = new FileReader();
                 reader.readAsDataURL(file);
                 reader.onload = (event) => {
@@ -91,18 +89,14 @@
                         const canvas = document.createElement('canvas');
                         let width = img.width;
                         let height = img.height;
-
                         if (width > maxWidth) {
                             height *= maxWidth / width;
                             width = maxWidth;
                         }
-
                         canvas.width = width;
                         canvas.height = height;
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, width, height);
-                        
-                        // แปลงกลับเป็น Base64 แบบ JPEG คุณภาพ 0.7
                         resolve(canvas.toDataURL('image/jpeg', 0.7)); 
                     };
                     img.onerror = (err) => reject(err);
@@ -111,7 +105,6 @@
             });
         };
 
-        // ฟังก์ชันแปลง Base64 เป็น Blob (Helper for Mobile Download)
         const base64ToBlob = (base64) => {
             const parts = base64.split(';base64,');
             const contentType = parts[0].split(':')[1];
@@ -124,30 +117,14 @@
             return new Blob([uInt8Array], { type: contentType });
         };
 
-        // Default Config (ใช้ระหว่างรอโหลด หรือถ้ายังไม่ได้ตั้งค่า)
         const DEFAULT_CONFIG = {
             headerTitle: 'ขนำลุงดำ - Khanamlungdam',
             headerDesc: '🏡 ขนำลุงดำ ดั้งเดิมมาจากหนำปู่ หรือที่พักตอนปู่มาอยู่ช่วงทำสวนนั้นเอง และค่อยๆ พัฒนาขึ้น แต่ยังคงความอบอุ่น ความรัก เสมือนทุกคนมาเที่ยวบ้านตากอากาศของเพื่อน',
             bannerUrl: 'https://img5.pic.in.th/file/secure-sv1/LINE_ALBUM__240916_14dd72f9bd7de4facf.jpg',
             logoUrl: 'https://lh3.googleusercontent.com/pw/AP1GczPi_rYAbsNGi4X96mW5koYl0JJ3BN9ipRf6UgsXAOQgkyhrs2ChGcZlbsuQ3OLJOYnYhSTYJhWUuu2hwWtPqlt4MUfdUDSS3s4RdRLeD36gPLiK-8OhYLXWmqxVLh2eOtkLIx7pQxrQA6ZnqBYHOftH=w913-h913-s-no-gm?authuser=0',
-            roomImages: {
-                'R1': [ "https://images.unsplash.com/photo-1518780664697-55e3ad937233?auto=format&fit=crop&w=600&q=80", "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=600&q=80" ],
-                'R2': [ "https://img2.pic.in.th/LINE_ALBUM__260128_6da01e38dfb2957f4.jpg?auto=format&fit=crop&w=600&q=80", "https://img2.pic.in.th/LINE_ALBUM__260128_7.jpg?auto=format&fit=crop&w=600&q=80", "https://img2.pic.in.th/LINE_ALBUM__260128_5.jpg?auto=format&fit=crop&w=600&q=80" ],
-                'R3': [ "https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?auto=format&fit=crop&w=600&q=80", "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&w=600&q=80" ],
-                'T1': [ "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?auto=format&fit=crop&w=600&q=80", "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?auto=format&fit=crop&w=600&q=80" ],
-                'T2': [ "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?auto=format&fit=crop&w=600&q=80", "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?auto=format&fit=crop&w=600&q=80" ],
-                'K1': [ "https://images.unsplash.com/photo-1537905569824-f89f14cceb68?auto=format&fit=crop&w=600&q=80", "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=600&q=80" ],
-                'K2': [ "https://images.unsplash.com/photo-1537905569824-f89f14cceb68?auto=format&fit=crop&w=600&q=80", "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=600&q=80" ],
-                'Z8': [ "https://images.unsplash.com/photo-1532339142463-fd0a8979791a?auto=format&fit=crop&w=600&q=80", "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?auto=format&fit=crop&w=600&q=80" ]
-            },
-            foodMenu: [
-                { id: 'F1', name: 'ชุดหมูกระทะลุงดำ', price: 390, img: 'https://img5.pic.in.th/file/secure-sv1/LINE_ALBUM__260128_4.jpg?auto=format&fit=crop&w=400&q=80', desc: 'หมูหมักนุ่มๆ พร้อมผักสด' },
-                { id: 'F2', name: 'ชุดไก่กระทะลุงดำ', price: 390, img: 'https://img2.pic.in.th/LINE_ALBUM__260128_3.jpg?auto=format&fit=crop&w=400&q=80', desc: 'ไก่หมักสูตรพิเศษ' },
-                { id: 'F3', name: 'ชุดชาบูหมูลุงดำ', price: 390, img: 'https://img5.pic.in.th/file/secure-sv1/LINE_ALBUM__260128_2.jpg?auto=format&fit=crop&w=400&q=80', desc: 'น้ำซุปหอมหวาน' },
-                { id: 'F4', name: 'ชุดชาบูไก่ลุงดำ', price: 390, img: 'https://img5.pic.in.th/file/secure-sv1/LINE_ALBUM__260128_2.jpg?auto=format&fit=crop&w=400&q=80', desc: 'น้ำซุปหอมหวาน' },
-                { id: 'F5', name: 'เซ็ตอาหารพื้นบ้าน', price: 390, img: 'https://img2.pic.in.th/LINE_ALBUM__260128_1.jpg?auto=format&fit=crop&w=400&q=80', desc: 'แกงส้ม ปลาทอด ผักเหนาะ' }
-            ],
-            roomDescriptions: {} // Default empty
+            roomImages: {},
+            foodMenu: [],
+            roomDescriptions: {}
         };
 
         const DEFAULT_POSITIONS = {
@@ -156,24 +133,6 @@
             'K2': {x: 80, y: 70}, 'Z8': {x: 50, y: 20}
         };
         
-        // ข้อมูลห้องพัก (ราคา/เงื่อนไข ยังคง Static ไว้ก่อนตามโครงสร้างเดิม แต่รูปจะดึงจาก Config)
-        const ROOM_INFO_BASE = {
-            'R1': { name: 'โฮมสเตย์หนำโป', tiers: [{max: 5, price: 1600}, {max: 8, price: 2200}], bf: false, type: 'room', desc: 'บ้านหลังใหญ่ อบอุ่น', min: 1, maxCap: 8 },
-            // ... (ห้องอื่นๆ) ...
-            'Z8': { name: 'ลานกางเต็นท์', priceHead: 150, max: 20, bf: false, type: 'ground', desc: 'นำเต็นท์มาเอง วิวสวน', min: 1, maxCap: 20 },
-            
-            // เพิ่มห้องใหม่ตรงนี้
-            'R4': { 
-                name: 'บ้านพักริมน้ำ 3', // ชื่อห้อง
-                tiers: [{max: 2, price: 1500}, {max: 4, price: 1800}], // ขั้นบันไดราคา (ไม่เกิน 2 คน 1500, ไม่เกิน 4 คน 1800)
-                bf: true, // มีอาหารเช้าไหม (true/false)
-                type: 'room', // ประเภท: room, tent, tent_rent, ground
-                desc: 'วิวสวยมาก', // คำอธิบายสั้นๆ
-                min: 1, // จองขั้นต่ำกี่คน
-                maxCap: 4 // รับได้สูงสุดกี่คน
-            }
-        };
-
         const App = () => {
             const [isDark, setIsDark] = React.useState(true);
             const [step, setStep] = React.useState(1);
@@ -184,9 +143,10 @@
             const [customer, setCustomer] = React.useState({ name: '', phone: '', userId: '', lineDisplayName: '' });
             const [pinPos, setPinPos] = React.useState(DEFAULT_POSITIONS);
             
-            const [systemSettings, setSystemSettings] = React.useState({ closed: [], special: [] });
+            // --- NEW: Dynamic Room Config (Replaces ROOM_INFO_BASE) ---
+            const [roomConfig, setRoomConfig] = React.useState({});
             
-            // Load Site Settings from localStorage if available (Instant Load)
+            const [systemSettings, setSystemSettings] = React.useState({ closed: [], special: [] });
             const [siteConfig, setSiteConfig] = React.useState(() => {
                 const cached = localStorage.getItem('lungdam_site_config');
                 return cached ? { ...DEFAULT_CONFIG, ...JSON.parse(cached) } : DEFAULT_CONFIG;
@@ -198,19 +158,15 @@
             const [agreed, setAgreed] = React.useState(false);
             const [qrUrl, setQrUrl] = React.useState(null);
             
-            // Modal States
             const [selectedRoomId, setSelectedRoomId] = React.useState(null);
             const [guestCount, setGuestCount] = React.useState(1);
             
-            // Food Modal States
             const [selectedFood, setSelectedFood] = React.useState(null);
             const [foodCount, setFoodCount] = React.useState(1);
 
             const [closedModal, setClosedModal] = React.useState(null); 
             const [searchError, setSearchError] = React.useState(null);
             const [currentImgIdx, setCurrentImgIdx] = React.useState(0);
-            
-            // --- NEW: Warning Modal for Room Selection ---
             const [showRoomRequiredModal, setShowRoomRequiredModal] = React.useState(false);
 
             // --- FUNCTIONS ---
@@ -259,7 +215,7 @@
                 let roomTotal = 0; let foodTotal = 0; let z8Total = 0;
                 cart.forEach(item => {
                     if (item.type === 'food') foodTotal += item.price * item.qty;
-                    else if (item.id === 'Z8') z8Total += item.pricePerNight * nights;
+                    else if (item.id === 'Z8') z8Total += item.pricePerNight * nights * item.guests; // Fixed logic for camping ground (per head * guests * nights)
                     else roomTotal += item.pricePerNight * nights;
                 });
 
@@ -308,16 +264,23 @@
                     })
                     .catch(e => console.error(e));
 
-                // Fetch Site Settings (Dynamic Content) - Update Cache
                 fetch(`${GOOGLE_SCRIPT_URL}?action=getSiteSettings`)
                     .then(r => r.json()).then(res => { 
                         if (res.status === 'success') {
                             setSiteConfig(prev => {
                                 const newConfig = {...prev, ...res.data};
-                                // Save to localStorage for next time instant load
                                 localStorage.setItem('lungdam_site_config', JSON.stringify(newConfig));
                                 return newConfig;
                             });
+                        }
+                    })
+                    .catch(e => console.error(e));
+
+                // --- NEW: Fetch Room Config from Server ---
+                fetch(`${GOOGLE_SCRIPT_URL}?action=getRoomConfig`)
+                    .then(r => r.json()).then(res => {
+                        if (res.status === 'success') {
+                            setRoomConfig(res.data);
                         }
                     })
                     .catch(e => console.error(e));
@@ -356,7 +319,10 @@
             };
 
             const openRoomModal = (roomId) => {
-                const room = ROOM_INFO_BASE[roomId];
+                // Use Dynamic Config
+                const room = roomConfig[roomId];
+                if (!room) return;
+
                 if(roomId === 'Z8') setGuestCount(1);
                 else setGuestCount(room.min || 1);
                 setCurrentImgIdx(0); 
@@ -380,20 +346,21 @@
 
             const nextImage = () => {
                 if(!selectedRoomId) return;
-                const images = siteConfig.roomImages[selectedRoomId] || []; // Use Dynamic Images
+                const images = siteConfig.roomImages[selectedRoomId] || [];
                 setCurrentImgIdx((prev) => (prev + 1) % images.length);
             };
 
             const prevImage = () => {
                 if(!selectedRoomId) return;
-                const images = siteConfig.roomImages[selectedRoomId] || []; // Use Dynamic Images
+                const images = siteConfig.roomImages[selectedRoomId] || [];
                 setCurrentImgIdx((prev) => (prev - 1 + images.length) % images.length);
             };
 
             const confirmRoomSelection = () => {
                 const roomId = selectedRoomId;
                 const guests = guestCount;
-                const roomInfo = ROOM_INFO_BASE[roomId];
+                // Use Dynamic Config
+                const roomInfo = roomConfig[roomId];
                 
                 if (roomId === 'Z8') {
                     const currentZ8 = cart.filter(c => c.id === 'Z8').reduce((sum, c) => sum + c.guests, 0);
@@ -404,11 +371,17 @@
                 }
 
                 let price = 0;
-                if (roomId === 'Z8') price = roomInfo.priceHead * guests;
-                else {
-                    const tier = roomInfo.tiers.find(t => guests <= t.max);
-                    if (!tier) { alert('จำนวนคนเกินกำหนด'); return; }
-                    price = tier.price;
+                if (roomId === 'Z8') {
+                    price = roomInfo.pricing.priceHead; // For display: Price per head
+                } else {
+                    const tier = roomInfo.pricing.tiers.find(t => guests <= t.max);
+                    if (!tier) { 
+                        // Fallback to max tier if exceeds
+                        const maxTier = roomInfo.pricing.tiers[roomInfo.pricing.tiers.length - 1];
+                        price = maxTier.price;
+                    } else {
+                        price = tier.price;
+                    }
                 }
 
                 setCart([...cart, { id: roomId, name: roomInfo.name, type: roomInfo.type, guests, pricePerNight: price, nights: calculateNights() }]);
@@ -445,21 +418,17 @@
                 }).catch(e => { alert('Failed: ' + e); setLoading(false); });
             };
 
-            // ฟังก์ชันดาวน์โหลด QR ที่รองรับมือถือ (Updated)
             const handleDownloadQr = () => {
                 if(!qrUrl) return;
                 try {
-                    // แปลง Base64 เป็น Blob โดยตรง ไม่ใช้ fetch เพื่อรองรับมือถือได้ดีขึ้น
                     const blob = base64ToBlob(qrUrl);
                     const url = window.URL.createObjectURL(blob);
                     const link = document.createElement('a');
-                    link.style.display = 'none'; // ซ่อนลิงก์
+                    link.style.display = 'none'; 
                     link.href = url;
                     link.download = 'payment-qr.png';
                     document.body.appendChild(link);
                     link.click();
-                    
-                    // หน่วงเวลาเล็กน้อยก่อนลบ เพื่อให้ Browser ประมวลผลทัน
                     setTimeout(() => {
                         document.body.removeChild(link);
                         window.URL.revokeObjectURL(url);
@@ -469,11 +438,9 @@
                 }
             };
 
-            // --- MAIN RENDER WRAPPER ---
             return (
                 <div className={isDark ? "dark" : ""}>
                     <div className="min-h-screen bg-[#f3f4f6] dark:bg-gray-900 text-gray-800 dark:text-gray-100 transition-colors duration-300">
-                        {/* Dark Mode Toggle */}
                         <button 
                             onClick={() => setIsDark(!isDark)} 
                             className="fixed top-4 right-4 z-50 bg-white dark:bg-gray-700 p-2 rounded-full shadow-lg border border-gray-200 dark:border-gray-600"
@@ -481,19 +448,15 @@
                             {isDark ? '☀️' : '🌙'}
                         </button>
 
-                        {/* --- STEP 1: Search --- */}
                         {step === 1 && (
                             <div className="max-w-md mx-auto bg-white dark:bg-gray-800 shadow-xl rounded-xl mt-4 border dark:border-gray-700 overflow-hidden">
                                 <div className="h-48 relative">
-                                     {/* Dynamic Banner */}
                                      <img src={siteConfig.bannerUrl} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                                      <div className="absolute inset-0 bg-black bg-opacity-10"></div>
                                 </div>
                                 <div className="p-6 -mt-24 relative z-10">
-                                    {/* Dynamic Logo */}
                                     <img src={siteConfig.logoUrl} referrerPolicy="no-referrer" className="w-48 h-48 mx-auto rounded-full border-4 border-white dark:border-gray-800 object-cover bg-white shadow-lg mb-4"/>
                                     
-                                    {/* Dynamic Title & Desc */}
                                     <h1 className="text-xl text-center mb-2 text-green-800 dark:text-green-400 font-bold">{siteConfig.headerTitle}</h1>
                                     <p className="block text-center mb-4 text-gray-700 dark:text-gray-300 text-sm whitespace-pre-line">{siteConfig.headerDesc}</p>
                                     
@@ -538,7 +501,6 @@
                             </div>
                         )}
 
-                        {/* --- STEP 2: Selection --- */}
                         {step === 2 && (
                             <div className="max-w-4xl mx-auto p-4 relative">
                                 <div className="flex justify-between items-center mb-4">
@@ -550,7 +512,8 @@
                                 <div className="map-container bg-blue-100 dark:bg-gray-700 mb-6" style={{paddingBottom: '100%'}}>
                                     <img src="https://img2.pic.in.th/3d539b84-44ce-4336-ad90-bd2f84b13eca.jpg" referrerpolicy="no-referrer" className="absolute top-0 left-0 w-full h-full object-cover" />
                                     {Object.keys(pinPos).map(key => {
-                                        if (!ROOM_INFO_BASE[key]) return null;
+                                        // Use Dynamic Config
+                                        if (!roomConfig[key]) return null;
                                         const isBooked = availability.bookedRooms.includes(key);
                                         const isZ8Full = key === 'Z8' && availability.zone8Available <= 0;
                                         const disable = isBooked || isZ8Full;
@@ -572,7 +535,7 @@
                                                 }}>
                                                 <div className={circleClasses}>
                                                     <div>
-                                                        {ROOM_INFO_BASE[key].name}
+                                                        {roomConfig[key].name}
                                                         {key==='Z8' && <div className="text-[9px] font-normal">({availability.zone8Available})</div>}
                                                     </div>
                                                 </div>
@@ -581,11 +544,9 @@
                                     })}
                                 </div>
 
-                                {/* Room Modal */}
-                                {selectedRoomId && (
+                                {selectedRoomId && roomConfig[selectedRoomId] && (
                                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                                         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-sm relative">
-                                            {/* Dynamic Room Images */}
                                             <div className="relative w-full h-48 mb-4 rounded-lg overflow-hidden bg-gray-200">
                                                 <img src={(siteConfig.roomImages[selectedRoomId]||[])[currentImgIdx] || "https://via.placeholder.com/600x400?text=No+Image"} className="w-full h-full object-cover transition-opacity duration-300" />
                                                 {(siteConfig.roomImages[selectedRoomId]||[]).length > 1 && (
@@ -595,21 +556,20 @@
                                                 </>
                                                 )}
                                             </div>
-                                            <h3 className="text-xl font-bold mb-2 text-green-800 dark:text-green-400">{ROOM_INFO_BASE[selectedRoomId].name}</h3>
+                                            <h3 className="text-xl font-bold mb-2 text-green-800 dark:text-green-400">{roomConfig[selectedRoomId].name}</h3>
                                             
-                                            {/* Dynamic Description or Fallback */}
                                             <p className="text-gray-500 dark:text-gray-300 text-sm mb-4">
-                                                {siteConfig.roomDescriptions?.[selectedRoomId] || ROOM_INFO_BASE[selectedRoomId].desc}
+                                                {siteConfig.roomDescriptions?.[selectedRoomId] || "ไม่มีคำอธิบาย"}
                                             </p>
 
                                             <div className="flex items-center justify-between mb-6 bg-gray-100 dark:bg-gray-700 p-3 rounded-lg">
-                                                <button onClick={() => setGuestCount(Math.max((ROOM_INFO_BASE[selectedRoomId].min||1), guestCount - 1))} className="w-10 h-10 bg-white dark:bg-gray-600 rounded shadow text-xl font-bold text-green-600 dark:text-green-400">-</button>
+                                                <button onClick={() => setGuestCount(Math.max((roomConfig[selectedRoomId].min||1), guestCount - 1))} className="w-10 h-10 bg-white dark:bg-gray-600 rounded shadow text-xl font-bold text-green-600 dark:text-green-400">-</button>
                                                 <div className="text-center">
                                                     <div className="text-2xl font-bold dark:text-white">{guestCount}</div>
                                                     <div className="text-xs text-gray-500 dark:text-gray-400">คน</div>
                                                 </div>
                                                 <button onClick={() => {
-                                                    let limit = ROOM_INFO_BASE[selectedRoomId].maxCap;
+                                                    let limit = roomConfig[selectedRoomId].maxCap;
                                                     if(selectedRoomId === 'Z8') limit = availability.zone8Available; 
                                                     setGuestCount(Math.min(limit, guestCount + 1));
                                                 }} className="w-10 h-10 bg-white dark:bg-gray-600 rounded shadow text-xl font-bold text-green-600 dark:text-green-400">+</button>
@@ -622,7 +582,6 @@
                                     </div>
                                 )}
 
-                                {/* Food Grid (Dynamic) */}
                                 <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow mb-4">
                                     <h3 className="font-bold mb-4 dark:text-white text-lg">🍽️ สั่งอาหารล่วงหน้า</h3>
                                     <div className="grid grid-cols-2 gap-3">
@@ -652,7 +611,6 @@
                                     </div>
                                 </div>
 
-                                {/* Food Modal */}
                                 {selectedFood && (
                                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                                         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-sm relative animate-pop">
@@ -680,10 +638,9 @@
                                 </div>
                                 <button 
                                     onClick={() => {
-                                        // CHECK: ต้องเลือกที่พักก่อน (type !== 'food')
                                         const hasRoom = cart.some(c => c.type !== 'food');
                                         if (!hasRoom) {
-                                            setShowRoomRequiredModal(true); // Show Modal Instead of Alert
+                                            setShowRoomRequiredModal(true); 
                                             return;
                                         }
                                         setStep(3);
@@ -695,7 +652,6 @@
                             </div>
                         )}
 
-                        {/* --- STEP 3: Payment --- */}
                         {step === 3 && (
                             <div className="max-w-md mx-auto p-6 bg-white dark:bg-gray-800 shadow-xl rounded-xl">
                                 <div className="flex items-center gap-2 mb-4">
@@ -708,7 +664,7 @@
                                     <p><strong>จำนวน:</strong> {calculateNights()} คืน</p>
                                     {pricing.isHighSeason && <div className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 p-1 rounded">ℹ️ ช่วงเทศกาล/วันพิเศษ คิดมัดจำ 100%</div>}
                                     <hr className="dark:border-gray-600"/>
-                                    {cart.map((c, i) => <div key={i} className="flex justify-between"><span>{c.name}</span><span>{c.type==='food' ? c.price*c.qty : c.pricePerNight*calculateNights()} บ.</span></div>)}
+                                    {cart.map((c, i) => <div key={i} className="flex justify-between"><span>{c.name}</span><span>{c.type==='food' ? c.price*c.qty : (c.id === 'Z8' ? c.pricePerNight * calculateNights() * c.guests : c.pricePerNight*calculateNights())} บ.</span></div>)}
                                     <hr className="dark:border-gray-600"/>
                                     {pricing.discount > 0 && <div className="flex justify-between text-red-500 font-bold"><span>ส่วนลดที่พัก</span><span>-{pricing.discount} บ.</span></div>}
                                     <div className="flex justify-between font-bold text-lg"><span>สุทธิ</span><span>{pricing.netTotal} บ.</span></div>
@@ -736,7 +692,6 @@
                                     {qrUrl ? (
                                         <div className="flex flex-col items-center">
                                             <img src={qrUrl} className="mx-auto border-2 border-gray-200 dark:border-gray-600 rounded-lg mb-3 shadow-sm p-1 bg-white" alt="QR Code" width="200" height="200" />
-                                            {/* Removed button and replaced with instructions */}
                                             <p className="text-sm text-blue-600 dark:text-blue-400 font-bold mt-2">
                                                 กรุณาแคปหน้าจอ (Screenshot) หรือกดค้างที่รูป<br/>เพื่อบันทึก แล้วนำไปสแกนจ่ายในแอปธนาคาร
                                             </p>
@@ -756,7 +711,6 @@
                                         const f = e.target.files[0];
                                         if (f) {
                                             try {
-                                                // เรียกใช้ฟังก์ชันย่อรูปภาพก่อนบันทึก (Critical Fix)
                                                 const resizedBase64 = await compressImage(f); 
                                                 setSlipImg(resizedBase64);
                                             } catch (err) {
@@ -775,7 +729,6 @@
                             </div>
                         )}
 
-                        {/* --- STEP 5: Success --- */}
                         {step === 5 && (
                             <div className="max-w-md mx-auto p-10 text-center bg-white dark:bg-gray-800 shadow-xl rounded-xl mt-10">
                                 <div className="text-6xl mb-4">🎉</div>
@@ -789,7 +742,6 @@
                             </div>
                         )}
                         
-                        {/* --- NEW: Room Required Warning Modal (Moved to ROOT LEVEL) --- */}
                         {showRoomRequiredModal && (
                             <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-6">
                                 <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center relative animate-pop transform scale-100 transition-all">
