@@ -30,7 +30,18 @@
     <script type="text/babel">
         // ** อย่าลืมเปลี่ยน URL เป็นของ Script คุณเอง **
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwQjaz5oaVekrtSlw_kGqt9gLOg0uQeXphG4H2Q5cqrv4ZSEiJnzO63lctvaaYTRr9HNQ/exec"; 
+        
         const ROOM_IDS = ['R1','R2','R3','T1','T2','K1','K2','Z8'];
+        const ROOM_NAMES = {
+            'R1': 'โฮมสเตย์หนำโป',
+            'R2': 'บ้านพักริมน้ำ 1',
+            'R3': 'บ้านพักริมน้ำ 2',
+            'T1': 'เต็นท์กระโจม 1',
+            'T2': 'เต็นท์กระโจม 2',
+            'K1': 'เช่าเต็นท์สนาม K1',
+            'K2': 'เช่าเต็นท์สนาม K2',
+            'Z8': 'ลานกางเต็นท์'
+        };
 
         const compressImage = async (file) => {
             return new Promise((resolve, reject) => {
@@ -102,6 +113,8 @@
             const [formRoomClosure, setFormRoomClosure] = React.useState({ date: '', roomId: 'R1', reason: '' });
             const [showAdminBooking, setShowAdminBooking] = React.useState(false);
             const [adminBookingForm, setAdminBookingForm] = React.useState({ name: '', phone: '', checkIn: '', checkOut: '', rooms: [], price: '', deposit: '' });
+            const [adminAvailability, setAdminAvailability] = React.useState(null); // เก็บสถานะห้องว่างสำหรับ Walk-in
+            const [loadingAvailability, setLoadingAvailability] = React.useState(false);
 
             // Calendar State
             const [calendarDate, setCalendarDate] = React.useState(new Date());
@@ -131,6 +144,30 @@
                 const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
                 return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear() + 543}`;
             };
+
+            // Check Availability when dates change in Admin Booking
+            React.useEffect(() => {
+                if (showAdminBooking && adminBookingForm.checkIn && adminBookingForm.checkOut) {
+                    if (adminBookingForm.checkIn < adminBookingForm.checkOut) {
+                        setLoadingAvailability(true);
+                        // Reset selected rooms if dates change
+                        setAdminBookingForm(prev => ({...prev, rooms: []})); 
+                        
+                        fetch(`${GOOGLE_SCRIPT_URL}?action=getAvailability&checkIn=${adminBookingForm.checkIn}&checkOut=${adminBookingForm.checkOut}`)
+                            .then(r => r.json())
+                            .then(res => {
+                                setLoadingAvailability(false);
+                                if (res.status === 'success') {
+                                    setAdminAvailability(res);
+                                }
+                            })
+                            .catch(e => setLoadingAvailability(false));
+                    }
+                } else {
+                     setAdminAvailability(null);
+                }
+            }, [showAdminBooking, adminBookingForm.checkIn, adminBookingForm.checkOut]);
+
 
             const stats = React.useMemo(() => {
                 const now = new Date();
@@ -214,7 +251,7 @@
                 
                 confirmMsg('ยืนยันสร้างรายการจอง?', () => {
                     setLoading(true);
-                    const cart = rooms.map(rid => ({ id: rid, name: rid, type: (rid==='Z8'?'ground':(rid.startsWith('K')?'tent_rent':(rid.startsWith('T')?'tent':'room'))), guests: 2, qty: 1 }));
+                    const cart = rooms.map(rid => ({ id: rid, name: ROOM_NAMES[rid] || rid, type: (rid==='Z8'?'ground':(rid.startsWith('K')?'tent_rent':(rid.startsWith('T')?'tent':'room'))), guests: 2, qty: 1 }));
                     
                     fetch(GOOGLE_SCRIPT_URL, {
                         method: 'POST',
@@ -235,6 +272,7 @@
                             fetchData(); 
                             setShowAdminBooking(false); 
                             setAdminBookingForm({ name: '', phone: '', checkIn: '', checkOut: '', rooms: [], price: '', deposit: '' });
+                            setAdminAvailability(null);
                         }
                         else errorMsg('ไม่สำเร็จ: ' + res.message);
                     });
@@ -309,7 +347,6 @@
                             setFormDiscount({ code: '', type: 'FIXED', value: '' });
                             setFormClosed({ date: '', reason: '' });
                             setFormSpecial({ date: '', desc: '' });
-                            setFormRoomClosure({ date: '', roomId: 'R1', reason: '' });
                         } else errorMsg('บันทึกไม่สำเร็จ');
                     });
                 });
@@ -902,7 +939,6 @@
                                             />
                                         </div>
                                         
-                                        {/* Warning for < 1 day */}
                                         {(() => {
                                             const checkInDate = new Date(viewBooking.checkIn);
                                             const now = new Date();
@@ -976,22 +1012,39 @@
                                         </div>
                                         
                                         <div>
-                                            <label className="block text-sm font-bold text-gray-700 mb-2">เลือกห้องพัก</label>
-                                            <div className="grid grid-cols-4 gap-2">
-                                                {ROOM_IDS.map(r => (
-                                                    <button 
-                                                        key={r}
-                                                        onClick={() => {
-                                                            const currentRooms = adminBookingForm.rooms.includes(r) 
-                                                                ? adminBookingForm.rooms.filter(room => room !== r)
-                                                                : [...adminBookingForm.rooms, r];
-                                                            setAdminBookingForm({...adminBookingForm, rooms: currentRooms});
-                                                        }}
-                                                        className={`py-2 rounded-lg text-sm font-bold transition border ${adminBookingForm.rooms.includes(r) ? 'bg-blue-600 text-white border-blue-600 shadow-md transform scale-105' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
-                                                    >
-                                                        {r}
-                                                    </button>
-                                                ))}
+                                            <label className="block text-sm font-bold text-gray-700 mb-2">เลือกห้องพัก {loadingAvailability && <span className="text-xs text-blue-500 font-normal">(กำลังตรวจสอบ...)</span>}</label>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                {ROOM_IDS.map(r => {
+                                                    const isAvailable = adminAvailability && (r === 'Z8' ? adminAvailability.zone8Available > 0 : !adminAvailability.bookedRooms.includes(r));
+                                                    // Show only if available OR if date not selected yet (show disabled)
+                                                    if (adminBookingForm.checkIn && adminBookingForm.checkOut && !isAvailable) return null;
+
+                                                    return (
+                                                        <button 
+                                                            key={r}
+                                                            disabled={!adminBookingForm.checkIn || !adminBookingForm.checkOut}
+                                                            onClick={() => {
+                                                                const currentRooms = adminBookingForm.rooms.includes(r) 
+                                                                    ? adminBookingForm.rooms.filter(room => room !== r)
+                                                                    : [...adminBookingForm.rooms, r];
+                                                                setAdminBookingForm({...adminBookingForm, rooms: currentRooms});
+                                                            }}
+                                                            className={`py-2 px-3 rounded-lg text-sm font-bold transition border truncate ${
+                                                                adminBookingForm.rooms.includes(r) 
+                                                                    ? 'bg-blue-600 text-white border-blue-600 shadow-md transform scale-105' 
+                                                                    : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+                                                            } ${(!adminBookingForm.checkIn || !adminBookingForm.checkOut) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                        >
+                                                            {ROOM_NAMES[r] || r}
+                                                        </button>
+                                                    );
+                                                })}
+                                                {adminBookingForm.checkIn && adminBookingForm.checkOut && adminAvailability && adminAvailability.bookedRooms.length === ROOM_IDS.length - (adminAvailability.zone8Available > 0 ? 0 : 1) && (
+                                                    <div className="col-span-2 text-center text-red-500 text-xs py-2">ไม่มีห้องว่างในช่วงเวลานี้</div>
+                                                )}
+                                                {(!adminBookingForm.checkIn || !adminBookingForm.checkOut) && (
+                                                    <div className="col-span-2 text-center text-gray-400 text-xs py-2">กรุณาเลือกวันเข้าพักก่อน</div>
+                                                )}
                                             </div>
                                         </div>
                                         
