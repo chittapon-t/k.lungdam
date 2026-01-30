@@ -120,8 +120,11 @@
             const [isDark, setIsDark] = React.useState(true);
             const [step, setStep] = React.useState(1);
             
-            // Mode: 'booking' or 'manage'
-            const [mode, setMode] = React.useState('booking'); 
+            // Mode: 'booking' or 'manage' (Check URL param)
+            const [mode, setMode] = React.useState(() => {
+                const params = new URLSearchParams(window.location.search);
+                return params.get('mode') === 'manage' ? 'manage' : 'booking';
+            }); 
 
             const [dates, setDates] = React.useState({ checkIn: '', checkOut: '' });
             const [availability, setAvailability] = React.useState(null);
