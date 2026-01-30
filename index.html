@@ -500,7 +500,7 @@
                                             <label className="block text-gray-700 dark:text-red-300 font-bold mb-1">วันที่ออก</label>
                                             <input type="date" min={dates.checkIn || getTommorow()} className="w-full border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" onChange={e => setDates({...dates, checkOut: e.target.value})} />
                                         </div>
-                                        <button onClick={handleSearch} disabled={loading} className="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition font-bold shadow-lg mt-2">{loading ? 'กำลังโหลด...' : 'ค้นหาที่พักว่าง'}</button>
+                                        <button onClick={handleSearch} disabled={loading} className="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition font-bold shadow-lg mt-2">{loading ? 'กำลังเตรียมห้องพัก...' : 'ค้นหาที่พักว่าง'}</button>
                                     </div>
                                 </div>
 
@@ -550,7 +550,7 @@
                                         const disable = isBooked || isZ8Full;
                                         const inCart = cart.find(c => c.id === key);
                                         
-                                        let circleClasses = "w-10 h-10 rounded-full flex items-center justify-center text-center text-[8px] font-bold border-2 shadow-lg p-1 leading-tight transition-all duration-300";
+                                        let circleClasses = "w-12 h-12 rounded-full flex items-center justify-center text-center text-[8px] font-bold border-2 shadow-lg p-1 leading-tight transition-all duration-300";
                                         if (disable) circleClasses += " bg-gray-400 text-white border-gray-500 cursor-not-allowed opacity-80 grayscale";
                                         else if (inCart) circleClasses += " bg-yellow-400 text-black border-yellow-600 scale-110 shadow-xl z-20";
                                         else circleClasses += " bg-white dark:bg-gray-800 text-green-800 dark:text-green-400 border-green-600 hover:scale-110 z-10";
@@ -732,7 +732,7 @@
                                             <img src={qrUrl} className="mx-auto border-2 border-gray-200 dark:border-gray-600 rounded-lg mb-3 shadow-sm p-1 bg-white" alt="QR Code" width="200" height="200" />
                                             {/* Removed button and replaced with instructions */}
                                             <p className="text-sm text-blue-600 dark:text-blue-400 font-bold mt-2">
-                                                กรุณาแคปหน้าจอ (Screenshot) หรือกดค้างที่รูป<br/>เพื่อบันทึก แล้วนำไปสแกนจ่ายในแอปธนาคาร
+                                                กรุณาบันทึกหน้าจอหรือกดค้างที่รูปเพื่อบันทึก
                                             </p>
                                         </div>
                                     ) : (
@@ -775,11 +775,11 @@
                                 <div className="text-6xl mb-4">🎉</div>
                                 <h2 className="text-2xl font-bold text-green-700 dark:text-green-400 mb-2">จองสำเร็จ!</h2>
                                 <p className="text-gray-600 dark:text-gray-300 mb-4">รหัส: <strong>{bookingResult}</strong></p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">ระบบส่งใบจองให้ทาง LINE แล้วครับ</p>
+                                <p className="text-sm text-gray-500 mb-4">ระบบส่งใบจองให้ทาง LINE แล้วครับ</p>
                                 <p className="text-sm text-gray-600 mb-4">เงื่อนไข : ไม่สามารถคืนมัดจำได้</p>
                                 <p className="text-sm text-gray-600 mb-4">เลื่อนที่พักก่อนเข้าพักไม่น้อยกว่า 7 วัน</p>
                                 <p className="text-sm text-gray-600 mb-4">ยกเว้นโรคระบาดและภัยพิบัติเลื่อนที่พักได้</p>
-                                <button onClick={() => liff.closeWindow()} className="mt-8 bg-gray-800 dark:bg-gray-600 text-white px-6 py-2 rounded-full">ปิดหน้าต่าง</button>
+                                <button onClick={() => liff.closeWindow()} className="mt-8 bg-gray-800 dark:bg-gray-600 text-white px-6 py-2 rounded-full">กดปิดเบาๆนะครับ</button>
                             </div>
                         )}
                         
