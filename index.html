@@ -724,7 +724,6 @@
                                         })}
                                     </div>
                                 </div>
-                                {selectedFood && ( <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"> <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-sm relative animate-pop"> <img src={selectedFood.img} className="w-full h-40 object-cover rounded-lg mb-4 shadow-md" /> <h3 className="text-xl font-bold mb-1 text-green-800 dark:text-green-400">{selectedFood.name}</h3> {selectedFood.desc && <p className="text-gray-600 dark:text-gray-300 text-sm mb-2">{selectedFood.desc}</p>} <p className="text-gray-500 dark:text-gray-400 text-sm mb-4 font-bold">ราคาชุดละ {selectedFood.price} บาท</p> <div className="flex items-center justify-center gap-4 mb-6"> <button onClick={() => setFoodCount(Math.max(1, foodCount - 1))} className="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-full text-xl font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-200">-</button> <span className="text-2xl font-bold w-10 text-center dark:text-white">{foodCount}</span> <button onClick={() => setFoodCount(foodCount + 1)} className="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-full text-xl font-bold text-green-600 hover:bg-green-100">+</button> </div> <div className="flex gap-2"> <button onClick={() => setSelectedFood(null)} className="flex-1 py-3 text-gray-500 bg-gray-200 dark:bg-gray-600 dark:text-gray-300 rounded-lg font-bold">ยกเลิก</button> <button onClick={confirmFoodSelection} className="flex-1 py-3 text-white bg-green-600 hover:bg-green-700 rounded-lg font-bold shadow-lg">ยืนยัน ({selectedFood.price * foodCount}.-)</button> </div> </div> </div> )}
                                 <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded mb-4"><h3 className="font-bold dark:text-white">🛒 ตะกร้า ({cart.length})</h3> {cart.map((c,i)=><div key={i} className="flex justify-between text-sm mt-1 dark:text-gray-200"><span>{c.name} {c.type==='food'?`x${c.qty}`:`(${c.guests} คน)`}</span><button onClick={()=>setCart(cart.filter((_,idx)=>idx!==i))} className="text-red-500">ลบ</button></div>)} </div>
                                 <button onClick={() => { const hasRoom = cart.some(c => c.type !== 'food'); if (!hasRoom) { setShowRoomRequiredModal(true); return; } setStep(3); }} className="w-full bg-green-600 text-white p-3 rounded-lg font-bold"> ดำเนินการต่อ </button>
                             </div>
@@ -784,6 +783,27 @@
                         )}
                         
                         {showRoomRequiredModal && ( <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-6"> <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center relative animate-pop transform scale-100 transition-all"> <div className="w-20 h-20 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-white dark:border-gray-700 shadow-lg"> <i className="fas fa-bed text-4xl text-red-500 dark:text-red-300"></i> </div> <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">กรุณาเลือกที่พัก</h3> <p className="text-gray-600 dark:text-gray-300 mb-6 text-sm leading-relaxed"> อาหารเป็นเพียงบริการเสริม <br/> <span className="text-red-500 font-bold">ท่านจำเป็นต้องจองที่พักก่อน</span><br/> จึงจะสามารถทำรายการต่อไปได้ครับ </p> <button onClick={() => setShowRoomRequiredModal(false)} className="w-full bg-gray-800 dark:bg-gray-600 text-white py-3 rounded-xl font-bold hover:bg-gray-700 transition shadow-lg"> รับทราบ </button> </div> </div> )}
+
+                        {/* --- FOOD MODAL (Moved to Global Scope) --- */}
+                        {selectedFood && ( 
+                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"> 
+                                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-sm relative animate-pop"> 
+                                    <img src={selectedFood.img} className="w-full h-40 object-cover rounded-lg mb-4 shadow-md" /> 
+                                    <h3 className="text-xl font-bold mb-1 text-green-800 dark:text-green-400">{selectedFood.name}</h3> 
+                                    {selectedFood.desc && <p className="text-gray-600 dark:text-gray-300 text-sm mb-2">{selectedFood.desc}</p>} 
+                                    <p className="text-gray-500 dark:text-gray-400 text-sm mb-4 font-bold">ราคาชุดละ {selectedFood.price} บาท</p> 
+                                    <div className="flex items-center justify-center gap-4 mb-6"> 
+                                        <button onClick={() => setFoodCount(Math.max(1, foodCount - 1))} className="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-full text-xl font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-200">-</button> 
+                                        <span className="text-2xl font-bold w-10 text-center dark:text-white">{foodCount}</span> 
+                                        <button onClick={() => setFoodCount(foodCount + 1)} className="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-full text-xl font-bold text-green-600 hover:bg-green-100">+</button> 
+                                    </div> 
+                                    <div className="flex gap-2"> 
+                                        <button onClick={() => setSelectedFood(null)} className="flex-1 py-3 text-gray-500 bg-gray-200 dark:bg-gray-600 dark:text-gray-300 rounded-lg font-bold">ยกเลิก</button> 
+                                        <button onClick={confirmFoodSelection} className="flex-1 py-3 text-white bg-green-600 hover:bg-green-700 rounded-lg font-bold shadow-lg">ยืนยัน ({selectedFood.price * foodCount}.-)</button> 
+                                    </div> 
+                                </div> 
+                            </div> 
+                        )}
 
                         {/* --- BEAUTIFUL ALERT MODAL --- */}
                         {modalAlert.show && (
@@ -863,3 +883,10 @@
     </script>
 </body>
 </html>
+```
+
+### สิ่งที่แก้ไข:
+* ย้ายส่วน `Food Modal` ออกมาจากเงื่อนไข `mode === 'booking' && step === 2` มาวางไว้ที่ส่วนท้ายสุดของ `App` (ใกล้กับ `modalAlert` และ `modalConfirm`) เพื่อให้สามารถถูกเรียกใช้ได้จากทุกหน้า (รวมถึงหน้า **Manage Booking** ด้วย)
+* ลบโค้ด Food Modal ที่ซ้ำซ้อนใน Step 2 ออกไป (ตอนนี้ใช้ตัวเดียวกันที่ระดับ Global)
+
+ตอนนี้ท่านสามารถกดเลือกอาหารได้ทั้งตอน **จองห้อง** และตอน **สั่งเพิ่มทีหลัง** ได้อย่างไม่มีปัญหาแล้วครับ! 🚀🍲
