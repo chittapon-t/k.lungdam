@@ -52,6 +52,9 @@
         @media (max-width: 640px) {
             .map-pin-responsive { transform: translate(-50%, -50%) scale(0.8) !important; }
         }
+        /* Custom Scrollbar for Modal content if needed */
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(156, 163, 175, 0.5); border-radius: 4px; }
     </style>
 </head>
 <body>
@@ -155,6 +158,10 @@
             const [manageData, setManageData] = React.useState(null);
             const [rescheduleDates, setRescheduleDates] = React.useState({ checkIn: '', checkOut: '' });
 
+            // --- NEW: BEAUTIFUL POPUP STATES ---
+            const [modalAlert, setModalAlert] = React.useState({ show: false, type: 'info', title: '', text: '' }); // type: success, error, warning, info
+            const [modalConfirm, setModalConfirm] = React.useState({ show: false, title: '', text: '', onConfirm: null });
+
             const getTommorow = () => {
                 const d = new Date(); d.setDate(d.getDate() + 1);
                 return d.toISOString().split('T')[0];
@@ -163,7 +170,7 @@
             const formatThaiDate = (dateStr) => {
                 if(!dateStr) return "-";
                 const date = new Date(dateStr);
-                const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+                const months = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
                 return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear() + 543}`;
             };
 
@@ -345,7 +352,10 @@
 
             // --- MANAGE BOOKING HANDLERS ---
             const handleFindBooking = () => {
-                if(!manageForm.bookingId || !manageForm.phone) return alert("กรุณากรอกข้อมูลให้ครบ");
+                if(!manageForm.bookingId || !manageForm.phone) {
+                    setModalAlert({ show: true, type: 'warning', title: 'ข้อมูลไม่ครบถ้วน', text: 'กรุณากรอกเลขที่ใบจองและเบอร์โทรศัพท์' });
+                    return;
+                }
                 setLoading(true);
                 fetch(GOOGLE_SCRIPT_URL, {
                     method: 'POST',
@@ -357,18 +367,39 @@
                     if(res.status === 'success') {
                         setManageData(res.booking);
                     } else {
-                        alert(res.message);
+                        setModalAlert({ show: true, type: 'error', title: 'ไม่พบข้อมูล', text: res.message });
                     }
                 })
-                .catch(e => { setLoading(false); alert('Error: ' + e); });
+                .catch(e => { 
+                    setLoading(false); 
+                    setModalAlert({ show: true, type: 'error', title: 'Error', text: 'เกิดข้อผิดพลาดในการเชื่อมต่อ' }); 
+                });
             };
 
             const handleCustomerReschedule = () => {
-                if(!rescheduleDates.checkIn || !rescheduleDates.checkOut) return alert("กรุณาเลือกวันที่ใหม่");
-                if(rescheduleDates.checkIn >= rescheduleDates.checkOut) return alert("วันที่ออกต้องอยู่หลังวันที่เข้าพัก");
+                if(!rescheduleDates.checkIn || !rescheduleDates.checkOut) {
+                    setModalAlert({ show: true, type: 'warning', title: 'แจ้งเตือน', text: 'กรุณาเลือกวันเข้าพักและวันออกใหม่ให้ครบถ้วน' });
+                    return;
+                }
+                if(rescheduleDates.checkIn >= rescheduleDates.checkOut) {
+                    setModalAlert({ show: true, type: 'warning', title: 'แจ้งเตือน', text: 'วันเช็คเอาท์ต้องอยู่หลังจากวันเช็คอิน' });
+                    return;
+                }
                 
-                if(!confirm(`ยืนยันการเลื่อนวันเป็น ${formatThaiDate(rescheduleDates.checkIn)} - ${formatThaiDate(rescheduleDates.checkOut)} ใช่หรือไม่?`)) return;
+                // Show Custom Confirm Modal
+                setModalConfirm({
+                    show: true,
+                    title: 'ยืนยันการเลื่อนวันเข้าพัก',
+                    text: `คุณต้องการเปลี่ยนวันเข้าพักเป็น\n${formatThaiDate(rescheduleDates.checkIn)} - ${formatThaiDate(rescheduleDates.checkOut)}\nใช่หรือไม่?`,
+                    onConfirm: () => {
+                        // Close Confirm Modal then Execute
+                        setModalConfirm({ ...modalConfirm, show: false });
+                        executeReschedule();
+                    }
+                });
+            };
 
+            const executeReschedule = () => {
                 setLoading(true);
                 fetch(GOOGLE_SCRIPT_URL, {
                     method: 'POST',
@@ -384,15 +415,18 @@
                 .then(res => {
                     setLoading(false);
                     if(res.status === 'success') {
-                        alert("เลื่อนวันเข้าพักสำเร็จ! ระบบได้ส่งใบนัดหมายใหม่ทาง LINE แล้วครับ");
+                        setModalAlert({ show: true, type: 'success', title: 'สำเร็จ!', text: 'เลื่อนวันเข้าพักเรียบร้อย ระบบได้ส่งใบนัดหมายใหม่ทาง LINE แล้วครับ' });
                         setManageData(null);
                         setManageForm({bookingId: '', phone: ''});
                         setMode('booking');
                     } else {
-                        alert("ไม่สามารถดำเนินการได้: " + res.message);
+                        setModalAlert({ show: true, type: 'error', title: 'ไม่สามารถทำรายการได้', text: res.message });
                     }
                 })
-                .catch(e => { setLoading(false); alert("Error: " + e); });
+                .catch(e => { 
+                    setLoading(false); 
+                    setModalAlert({ show: true, type: 'error', title: 'Error', text: 'เกิดข้อผิดพลาด: ' + e });
+                });
             };
 
             return (
@@ -559,7 +593,6 @@
                             </div>
                         )}
 
-                        {/* --- STEP 3 & 5 (Same as before but wrapped in mode check) --- */}
                         {mode === 'booking' && step === 3 && (
                             <div className="max-w-md mx-auto p-6 bg-white dark:bg-gray-800 shadow-xl rounded-xl">
                                 <div className="flex items-center gap-2 mb-4">
@@ -614,6 +647,75 @@
                         )}
                         
                         {showRoomRequiredModal && ( <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-6"> <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center relative animate-pop transform scale-100 transition-all"> <div className="w-20 h-20 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-white dark:border-gray-700 shadow-lg"> <i className="fas fa-bed text-4xl text-red-500 dark:text-red-300"></i> </div> <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">กรุณาเลือกที่พัก</h3> <p className="text-gray-600 dark:text-gray-300 mb-6 text-sm leading-relaxed"> อาหารเป็นเพียงบริการเสริม <br/> <span className="text-red-500 font-bold">ท่านจำเป็นต้องจองที่พักก่อน</span><br/> จึงจะสามารถทำรายการต่อไปได้ครับ </p> <button onClick={() => setShowRoomRequiredModal(false)} className="w-full bg-gray-800 dark:bg-gray-600 text-white py-3 rounded-xl font-bold hover:bg-gray-700 transition shadow-lg"> รับทราบ </button> </div> </div> )}
+
+                        {/* --- BEAUTIFUL ALERT MODAL --- */}
+                        {modalAlert.show && (
+                            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity">
+                                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-100 animate-pop">
+                                    <div className={`p-6 text-center ${
+                                        modalAlert.type === 'error' ? 'bg-red-50 dark:bg-red-900/30' : 
+                                        modalAlert.type === 'success' ? 'bg-green-50 dark:bg-green-900/30' : 
+                                        modalAlert.type === 'warning' ? 'bg-yellow-50 dark:bg-yellow-900/30' : 'bg-blue-50 dark:bg-blue-900/30'
+                                    }`}>
+                                        <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm ${
+                                            modalAlert.type === 'error' ? 'bg-red-100 text-red-500' : 
+                                            modalAlert.type === 'success' ? 'bg-green-100 text-green-500' : 
+                                            modalAlert.type === 'warning' ? 'bg-yellow-100 text-yellow-500' : 'bg-blue-100 text-blue-500'
+                                        }`}>
+                                            <i className={`fas ${
+                                                modalAlert.type === 'error' ? 'fa-times' : 
+                                                modalAlert.type === 'success' ? 'fa-check' : 
+                                                modalAlert.type === 'warning' ? 'fa-exclamation' : 'fa-info'
+                                            } text-3xl`}></i>
+                                        </div>
+                                        <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">{modalAlert.title}</h3>
+                                        <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed">{modalAlert.text}</p>
+                                    </div>
+                                    <div className="p-4 bg-gray-50 dark:bg-gray-700">
+                                        <button 
+                                            onClick={() => setModalAlert({ ...modalAlert, show: false })} 
+                                            className={`w-full py-3 rounded-xl font-bold text-white shadow-lg transition transform active:scale-95 ${
+                                                modalAlert.type === 'error' ? 'bg-red-500 hover:bg-red-600' : 
+                                                modalAlert.type === 'success' ? 'bg-green-500 hover:bg-green-600' : 
+                                                modalAlert.type === 'warning' ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-600 hover:bg-blue-700'
+                                            }`}
+                                        >
+                                            ตกลง
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* --- BEAUTIFUL CONFIRM MODAL --- */}
+                        {modalConfirm.show && (
+                            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity">
+                                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-100 animate-pop">
+                                    <div className="p-6 text-center bg-white dark:bg-gray-800">
+                                        <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300">
+                                            <i className="fas fa-question text-3xl"></i>
+                                        </div>
+                                        <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">{modalConfirm.title}</h3>
+                                        <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed whitespace-pre-line">{modalConfirm.text}</p>
+                                    </div>
+                                    <div className="p-4 bg-gray-50 dark:bg-gray-700 flex gap-3">
+                                        <button 
+                                            onClick={() => setModalConfirm({ ...modalConfirm, show: false })}
+                                            className="flex-1 py-3 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200 rounded-xl font-bold hover:bg-gray-100 dark:hover:bg-gray-500 transition shadow-sm"
+                                        >
+                                            ยกเลิก
+                                        </button>
+                                        <button 
+                                            onClick={modalConfirm.onConfirm}
+                                            className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow-lg transform active:scale-95"
+                                        >
+                                            ยืนยัน
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                     </div>
                 </div>
             );
