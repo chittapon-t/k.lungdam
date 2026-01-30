@@ -228,7 +228,6 @@
                 if(!foodItem) return;
                 confirmMsg(`ยืนยันเพิ่ม ${foodItem.name} จำนวน ${addFoodQty} ชุด?`, () => {
                     setLoading(true);
-                    // Safe Check for foodItem before sending
                     if(!foodItem.id || !foodItem.name) return errorMsg('ข้อมูลอาหารไม่ถูกต้อง');
                     fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'addFoodToBooking', bookingId: viewBooking.id, foodItem: { id: foodItem.id, name: foodItem.name, price: foodItem.price, qty: parseInt(addFoodQty) }, password: password })
                     }).then(r => r.json()).then(res => { setLoading(false); if(res.status === 'success') { successMsg('เพิ่มรายการอาหารเรียบร้อย'); fetchData(); setViewBooking(null); } else { errorMsg('Error: ' + res.message); } });
@@ -273,6 +272,7 @@
                             <button onClick={() => setActiveTab('settings')} className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${activeTab==='settings'?'bg-green-600 text-white shadow-lg transform scale-105':'bg-white text-gray-600 shadow hover:bg-gray-50'}`}><i className="fas fa-cogs mr-1"></i> ตั้งค่าระบบ</button>
                         </div>
 
+                        {/* --- DASHBOARD TAB --- */}
                         {activeTab === 'dashboard' && (
                             <div className="space-y-6 animate-fade-in">
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -516,8 +516,82 @@
                                         </div>
                                     </div>
                                 )}
-                                
-                                {/* Discount & Closed Dates settings code included but shortened here to avoid length limits in response, ensure you use the full previous logic for these sections */}
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="bg-white p-4 rounded-lg shadow border-l-4 border-green-500">
+                                        <h3 className="font-bold text-lg mb-4 text-green-800"><i className="fas fa-tags"></i> โค้ดส่วนลด</h3>
+                                        <div className="flex gap-2 mb-4 flex-wrap items-end bg-gray-50 p-2 rounded">
+                                            <div><label className="text-xs text-gray-500">Code</label><input className="border p-2 rounded text-sm w-24 block" value={formDiscount.code} onChange={e=>setFormDiscount({...formDiscount, code:e.target.value})} /></div>
+                                            <div><label className="text-xs text-gray-500">Type</label><select className="border p-2 rounded text-sm block" value={formDiscount.type} onChange={e=>setFormDiscount({...formDiscount, type:e.target.value})}><option value="FIXED">บาท</option><option value="PERCENT">%</option></select></div>
+                                            <div><label className="text-xs text-gray-500">Value</label><input type="number" className="border p-2 rounded text-sm w-20 block" value={formDiscount.value} onChange={e=>setFormDiscount({...formDiscount, value:e.target.value})} /></div>
+                                            <button onClick={()=>handleSaveSetting('discount', formDiscount)} className={`px-3 py-2 rounded text-sm text-white ${editMode?.code===formDiscount.code ? 'bg-orange-500':'bg-green-600'}`}>{editMode?.code===formDiscount.code ? 'บันทึกแก้ไข':'เพิ่ม'}</button>
+                                            {editMode && <button onClick={()=>{setEditMode(null); setFormDiscount({code:'',type:'FIXED',value:''})}} className="text-gray-500 text-sm">ยกเลิก</button>}
+                                        </div>
+                                        <ul className="divide-y max-h-40 overflow-y-auto">
+                                            {settings.discounts.map((d, i) => (
+                                                <li key={i} className="flex justify-between items-center p-2 text-sm">
+                                                    <span><b>{d.code}</b> : ลด {d.value} {d.type}</span>
+                                                    <div className="flex gap-2"><button onClick={()=>startEdit('discount', d)} className="text-blue-500"><i className="fas fa-edit"></i></button><button onClick={()=>handleDeleteSetting('discount', d.id)} className="text-red-500"><i className="fas fa-trash"></i></button></div>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                    <div className="bg-white p-4 rounded-lg shadow border-l-4 border-red-500">
+                                        <h3 className="font-bold text-lg mb-4 text-red-800"><i className="fas fa-calendar-times"></i> วันปิดบริการ (ทั้งรีสอร์ท)</h3>
+                                        <div className="flex gap-2 mb-4 flex-wrap items-end bg-gray-50 p-2 rounded">
+                                            <div><label className="text-xs text-gray-500 block">เริ่ม</label><input type="date" className="border p-2 rounded text-sm" value={formClosed.startDate} onChange={e=>setFormClosed({...formClosed, startDate:e.target.value})} /></div>
+                                            <div><label className="text-xs text-gray-500 block">สิ้นสุด</label><input type="date" className="border p-2 rounded text-sm" value={formClosed.endDate} onChange={e=>setFormClosed({...formClosed, endDate:e.target.value})} /></div>
+                                            <div className="flex-1"><label className="text-xs text-gray-500 block">เหตุผล</label><input placeholder="เหตุผล" className="border p-2 rounded text-sm w-full" value={formClosed.reason} onChange={e=>setFormClosed({...formClosed, reason:e.target.value})} /></div>
+                                            <button onClick={()=>handleSaveSetting('closed', formClosed)} className="px-3 py-2 rounded text-sm text-white bg-red-600 mb-0.5">ปิด</button>
+                                        </div>
+                                        <ul className="divide-y max-h-40 overflow-y-auto">
+                                            {settings.closed.map((c, i) => (
+                                                <li key={i} className="flex justify-between items-center p-2 text-sm text-red-800">
+                                                    <span>{formatThaiDate(c.date)} ({c.reason})</span>
+                                                    <button onClick={()=>handleDeleteSetting('closed', c.id)} className="text-red-500"><i className="fas fa-trash"></i></button>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                    
+                                    {/* --- NEW: Room Closure Settings (Range) --- */}
+                                    <div className="bg-white p-4 rounded-lg shadow border-l-4 border-gray-500">
+                                        <h3 className="font-bold text-lg mb-4 text-gray-800"><i className="fas fa-ban"></i> ปิดปรับปรุงห้องพัก (รายห้อง)</h3>
+                                        <div className="flex gap-2 mb-4 flex-wrap items-end bg-gray-50 p-2 rounded">
+                                            <div><label className="text-xs text-gray-500 block">เริ่ม</label><input type="date" className="border p-2 rounded text-sm" value={formRoomClosure.startDate} onChange={e=>setFormRoomClosure({...formRoomClosure, startDate:e.target.value})} /></div>
+                                            <div><label className="text-xs text-gray-500 block">สิ้นสุด</label><input type="date" className="border p-2 rounded text-sm" value={formRoomClosure.endDate} onChange={e=>setFormRoomClosure({...formRoomClosure, endDate:e.target.value})} /></div>
+                                            <div><label className="text-xs text-gray-500 block">ห้อง</label><select className="border p-2 rounded text-sm" value={formRoomClosure.roomId} onChange={e=>setFormRoomClosure({...formRoomClosure, roomId:e.target.value})}>{ROOM_IDS.map(r => <option key={r} value={r}>{ROOM_NAMES[r]}</option>)}</select></div>
+                                            <div className="flex-1"><label className="text-xs text-gray-500 block">สาเหตุ</label><input placeholder="สาเหตุ" className="border p-2 rounded text-sm w-full" value={formRoomClosure.reason} onChange={e=>setFormRoomClosure({...formRoomClosure, reason:e.target.value})} /></div>
+                                            <button onClick={()=>handleSaveSetting('room_closure', formRoomClosure)} className="px-3 py-2 rounded text-sm text-white bg-gray-600 mb-0.5">ปิด</button>
+                                        </div>
+                                        <ul className="divide-y max-h-40 overflow-y-auto">
+                                            {(settings.roomClosures || []).map((rc, i) => (
+                                                <li key={i} className="flex justify-between items-center p-2 text-sm text-gray-700">
+                                                    <span>{formatThaiDate(rc.date)} : <b>{ROOM_NAMES[rc.roomId] || rc.roomId}</b> ({rc.reason})</span>
+                                                    <button onClick={()=>handleDeleteSetting('room_closure', rc.id)} className="text-red-500"><i className="fas fa-trash"></i></button>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+
+                                    <div className="bg-white p-4 rounded-lg shadow border-l-4 border-blue-800">
+                                        <h3 className="font-bold text-lg mb-4 text-blue-800"><i className="fas fa-star"></i> วันพิเศษ (มัดจำ 100%)</h3>
+                                        <div className="flex gap-2 mb-4 flex-wrap items-end bg-gray-50 p-2 rounded">
+                                            <div><label className="text-xs text-gray-500 block">เริ่ม</label><input type="date" className="border p-2 rounded text-sm" value={formSpecial.startDate} onChange={e=>setFormSpecial({...formSpecial, startDate:e.target.value})} /></div>
+                                            <div><label className="text-xs text-gray-500 block">สิ้นสุด</label><input type="date" className="border p-2 rounded text-sm" value={formSpecial.endDate} onChange={e=>setFormSpecial({...formSpecial, endDate:e.target.value})} /></div>
+                                            <div className="flex-1"><label className="text-xs text-gray-500 block">รายละเอียด</label><input placeholder="รายละเอียด" className="border p-2 rounded text-sm w-full" value={formSpecial.desc} onChange={e=>setFormSpecial({...formSpecial, desc:e.target.value})} /></div>
+                                            <button onClick={()=>handleSaveSetting('special', formSpecial)} className={`px-3 py-2 rounded text-sm text-white ${editMode?.desc===formSpecial.desc ? 'bg-orange-500':'bg-blue-600'} mb-0.5`}>{editMode?'บันทึก':'เพิ่ม'}</button>
+                                        </div>
+                                        <ul className="divide-y max-h-40 overflow-y-auto">
+                                            {settings.special.map((s, i) => (
+                                                <li key={i} className="flex justify-between items-center p-2 text-sm text-blue-800">
+                                                    <span>{formatThaiDate(s.date)} ({s.desc})</span>
+                                                    <div className="flex gap-2"><button onClick={()=>startEdit('special', s)} className="text-blue-500"><i className="fas fa-edit"></i></button><button onClick={()=>handleDeleteSetting('special', s.id)} className="text-red-500"><i className="fas fa-trash"></i></button></div>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </div>
