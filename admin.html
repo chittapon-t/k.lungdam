@@ -347,6 +347,7 @@
                             setFormDiscount({ code: '', type: 'FIXED', value: '' });
                             setFormClosed({ date: '', reason: '' });
                             setFormSpecial({ date: '', desc: '' });
+                            setFormRoomClosure({ date: '', roomId: 'R1', reason: '' });
                         } else errorMsg('บันทึกไม่สำเร็จ');
                     });
                 });
@@ -650,7 +651,7 @@
                                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                                 {ROOM_IDS.map(roomId => (
                                                     <div key={roomId} className="border p-3 rounded bg-gray-50 flex flex-col h-full">
-                                                        <h4 className="font-bold mb-2 text-sm">{roomId}</h4>
+                                                        <h4 className="font-bold mb-2 text-sm">{ROOM_NAMES[roomId]}</h4>
                                                         <textarea className="w-full border p-1 rounded text-xs mb-2 resize-none h-16" placeholder="คำอธิบายห้องพัก..." value={siteSettings.roomDescriptions?.[roomId] || ''} onChange={e => {
                                                                 const newDesc = {...(siteSettings.roomDescriptions || {})};
                                                                 newDesc[roomId] = e.target.value;
@@ -768,7 +769,7 @@
                                         <div className="flex gap-2 mb-4 flex-wrap items-end bg-gray-50 p-2 rounded">
                                             <input type="date" className="border p-2 rounded text-sm" value={formRoomClosure.date} onChange={e=>setFormRoomClosure({...formRoomClosure, date:e.target.value})} />
                                             <select className="border p-2 rounded text-sm" value={formRoomClosure.roomId} onChange={e=>setFormRoomClosure({...formRoomClosure, roomId:e.target.value})}>
-                                                {ROOM_IDS.map(r => <option key={r} value={r}>{r}</option>)}
+                                                {ROOM_IDS.map(r => <option key={r} value={r}>{ROOM_NAMES[r]}</option>)}
                                             </select>
                                             <input placeholder="สาเหตุ" className="border p-2 rounded text-sm flex-1" value={formRoomClosure.reason} onChange={e=>setFormRoomClosure({...formRoomClosure, reason:e.target.value})} />
                                             <button onClick={()=>handleSaveSetting('room_closure', formRoomClosure)} className="px-3 py-2 rounded text-sm text-white bg-gray-600">ปิด</button>
@@ -776,7 +777,7 @@
                                         <ul className="divide-y max-h-40 overflow-y-auto">
                                             {(settings.roomClosures || []).map((rc, i) => (
                                                 <li key={i} className="flex justify-between items-center p-2 text-sm text-gray-700">
-                                                    <span>{formatThaiDate(rc.date)} : <b>{rc.roomId}</b> ({rc.reason})</span>
+                                                    <span>{formatThaiDate(rc.date)} : <b>{ROOM_NAMES[rc.roomId] || rc.roomId}</b> ({rc.reason})</span>
                                                     <button onClick={()=>handleDeleteSetting('room_closure', rc.id)} className="text-red-500"><i className="fas fa-trash"></i></button>
                                                 </li>
                                             ))}
@@ -939,6 +940,7 @@
                                             />
                                         </div>
                                         
+                                        {/* Warning for < 1 day */}
                                         {(() => {
                                             const checkInDate = new Date(viewBooking.checkIn);
                                             const now = new Date();
