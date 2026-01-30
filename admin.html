@@ -15,12 +15,7 @@
         body { font-family: 'Kanit', sans-serif; background-color: #f3f4f6; }
         .calendar-day { min-height: 80px; }
         @media(max-width: 640px){ .calendar-day { min-height: 50px; } }
-        
-        /* Animation for Modal */
-        @keyframes popIn {
-            0% { opacity: 0; transform: scale(0.95); }
-            100% { opacity: 1; transform: scale(1); }
-        }
+        @keyframes popIn { 0% { opacity: 0; transform: scale(0.95); } 100% { opacity: 1; transform: scale(1); } }
         .animate-modal { animation: popIn 0.2s ease-out forwards; }
     </style>
 </head>
@@ -29,6 +24,7 @@
 
     <script type="text/babel">
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwQjaz5oaVekrtSlw_kGqt9gLOg0uQeXphG4H2Q5cqrv4ZSEiJnzO63lctvaaYTRr9HNQ/exec"; 
+        const ROOM_IDS = ['R1','R2','R3','T1','T2','K1','K2','Z8'];
 
         const compressImage = async (file) => {
             return new Promise((resolve, reject) => {
@@ -73,11 +69,7 @@
             const [activeTab, setActiveTab] = React.useState('dashboard');
             
             const [bookings, setBookings] = React.useState([]);
-            
-            // System Settings
-            const [settings, setSettings] = React.useState({ discounts: [], closed: [], special: [] });
-            
-            // Site Settings
+            const [settings, setSettings] = React.useState({ discounts: [], closed: [], special: [], roomClosures: [] });
             const [siteSettings, setSiteSettings] = React.useState(null);
             const [savingSiteSettings, setSavingSiteSettings] = React.useState(false);
             
@@ -86,8 +78,6 @@
             const [filter, setFilter] = React.useState('all'); 
 
             const [rescheduleData, setRescheduleData] = React.useState(null);
-            
-            // Add Food States
             const [selectedAddFood, setSelectedAddFood] = React.useState('');
             const [addFoodQty, setAddFoodQty] = React.useState(1);
 
@@ -95,23 +85,16 @@
             const [formDiscount, setFormDiscount] = React.useState({ code: '', type: 'FIXED', value: '' });
             const [formClosed, setFormClosed] = React.useState({ date: '', reason: '' });
             const [formSpecial, setFormSpecial] = React.useState({ date: '', desc: '' });
+            
+            // New States for Room Maintenance & Admin Booking
+            const [formRoomClosure, setFormRoomClosure] = React.useState({ date: '', roomId: 'R1', reason: '' });
+            const [showAdminBooking, setShowAdminBooking] = React.useState(false);
+            const [adminBookingForm, setAdminBookingForm] = React.useState({ name: '', phone: '', checkIn: '', checkOut: '', rooms: [], price: '', deposit: '' });
 
-            // Calendar State
             const [calendarDate, setCalendarDate] = React.useState(new Date());
 
-            // --- Custom Modal State ---
-            const [modal, setModal] = React.useState({
-                isOpen: false,
-                type: 'alert', // alert, confirm, success, error, warning
-                title: '',
-                message: '',
-                onConfirm: null
-            });
-
-            const showModal = (title, message, type = 'alert', onConfirm = null) => {
-                setModal({ isOpen: true, title, message, type, onConfirm });
-            };
-
+            const [modal, setModal] = React.useState({ isOpen: false, type: 'alert', title: '', message: '', onConfirm: null });
+            const showModal = (title, message, type = 'alert', onConfirm = null) => { setModal({ isOpen: true, title, message, type, onConfirm }); };
             const closeModal = () => setModal(prev => ({ ...prev, isOpen: false }));
             const alertMsg = (message, title = 'แจ้งเตือน', type = 'warning') => showModal(title, message, type, closeModal);
             const successMsg = (message) => alertMsg(message, 'สำเร็จ', 'success');
@@ -183,6 +166,32 @@
                 });
             };
 
+            const handleCreateAdminBooking = () => {
+                const { name, phone, checkIn, checkOut, rooms, price, deposit } = adminBookingForm;
+                if(!name || !phone || !checkIn || !checkOut || rooms.length === 0 || !price) return alertMsg('กรุณากรอกข้อมูลให้ครบถ้วน');
+                confirmMsg('ยืนยันสร้างรายการจอง?', () => {
+                    setLoading(true);
+                    const cart = rooms.map(rid => ({ id: rid, name: rid, type: (rid==='Z8'?'ground':(rid.startsWith('K')?'tent_rent':(rid.startsWith('T')?'tent':'room'))), guests: 2, qty: 1 }));
+                    fetch(GOOGLE_SCRIPT_URL, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            action: 'createAdminBooking',
+                            password: password,
+                            customer: { name, phone },
+                            checkIn, checkOut,
+                            totalGuests: 2, // Default
+                            cart: cart,
+                            price: parseFloat(price),
+                            deposit: parseFloat(deposit || price)
+                        })
+                    }).then(r => r.json()).then(res => {
+                        setLoading(false);
+                        if(res.status === 'success') { successMsg('สร้างรายการจองสำเร็จ'); fetchData(); setShowAdminBooking(false); setAdminBookingForm({ name: '', phone: '', checkIn: '', checkOut: '', rooms: [], price: '', deposit: '' }); }
+                        else errorMsg('ไม่สำเร็จ: ' + res.message);
+                    });
+                });
+            };
+
             const handleReschedule = () => {
                 if(!rescheduleData.checkIn || !rescheduleData.checkOut) return alertMsg('กรุณาเลือกวันที่ให้ครบถ้วน');
                 if(rescheduleData.checkIn >= rescheduleData.checkOut) return alertMsg('วันที่ออกต้องอยู่หลังวันที่เข้าพัก');
@@ -212,7 +221,7 @@
                 const id = editMode ? editMode.id : null;
                 confirmMsg('ยืนยันการบันทึกข้อมูล?', () => {
                     fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action, type, id, payload, password: password }) }).then(r => r.json()).then(res => {
-                        if (res.status === 'success') { successMsg('บันทึกสำเร็จ'); fetchSettings(); setEditMode(null); setFormDiscount({ code: '', type: 'FIXED', value: '' }); setFormClosed({ date: '', reason: '' }); setFormSpecial({ date: '', desc: '' }); } else errorMsg('บันทึกไม่สำเร็จ');
+                        if (res.status === 'success') { successMsg('บันทึกสำเร็จ'); fetchSettings(); setEditMode(null); setFormDiscount({ code: '', type: 'FIXED', value: '' }); setFormClosed({ date: '', reason: '' }); setFormSpecial({ date: '', desc: '' }); setFormRoomClosure({ date: '', roomId: 'R1', reason: '' }); } else errorMsg('บันทึกไม่สำเร็จ');
                     });
                 });
             };
@@ -378,7 +387,10 @@
                                             <button key={f} onClick={() => setFilter(f)} className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${filter === f ? 'bg-gray-800 text-white shadow' : 'bg-white text-gray-600 border hover:bg-gray-50'}`}>{f === 'all' ? 'ทั้งหมด' : (f === 'pending' ? 'รอตรวจสอบ' : 'ยืนยันแล้ว')}</button>
                                         ))}
                                     </div>
-                                    <button onClick={handleExport} className="px-4 py-1.5 bg-green-600 text-white rounded-full text-xs font-bold hover:bg-green-700 shadow flex items-center gap-1 transition"><i className="fas fa-file-excel"></i> Export</button>
+                                    <div className="flex gap-2">
+                                        <button onClick={() => setShowAdminBooking(true)} className="px-4 py-1.5 bg-blue-600 text-white rounded-full text-xs font-bold hover:bg-blue-700 shadow flex items-center gap-1 transition"><i className="fas fa-plus"></i> Walk-in</button>
+                                        <button onClick={handleExport} className="px-4 py-1.5 bg-green-600 text-white rounded-full text-xs font-bold hover:bg-green-700 shadow flex items-center gap-1 transition"><i className="fas fa-file-excel"></i> Export</button>
+                                    </div>
                                 </div>
                                 <div className="space-y-4">
                                     {bookings.filter(b => filter==='all' || (filter==='pending' && b.status==='รอตรวจสอบ') || (filter==='confirmed' && b.status==='ยืนยัน')).map(b => (
@@ -488,7 +500,7 @@
                                         <div className="mb-8">
                                             <h3 className="font-bold text-lg mb-4 text-blue-600">รูปภาพและรายละเอียดห้องพัก</h3>
                                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                                {['R1','R2','R3','T1','T2','K1','K2','Z8'].map(roomId => (
+                                                {ROOM_IDS.map(roomId => (
                                                     <div key={roomId} className="border p-3 rounded bg-gray-50 flex flex-col h-full">
                                                         <h4 className="font-bold mb-2 text-sm">{roomId}</h4>
                                                         <textarea className="w-full border p-1 rounded text-xs mb-2 resize-none h-16" placeholder="คำอธิบายห้องพัก..." value={siteSettings.roomDescriptions?.[roomId] || ''} onChange={e => {
@@ -586,7 +598,7 @@
                                         </ul>
                                     </div>
                                     <div className="bg-white p-4 rounded-lg shadow border-l-4 border-red-500">
-                                        <h3 className="font-bold text-lg mb-4 text-red-800"><i className="fas fa-calendar-times"></i> วันปิดบริการ</h3>
+                                        <h3 className="font-bold text-lg mb-4 text-red-800"><i className="fas fa-calendar-times"></i> วันปิดบริการ (ทั้งรีสอร์ท)</h3>
                                         <div className="flex gap-2 mb-4 flex-wrap items-end bg-gray-50 p-2 rounded">
                                             <input type="date" className="border p-2 rounded text-sm" value={formClosed.date} onChange={e=>setFormClosed({...formClosed, date:e.target.value})} />
                                             <input placeholder="เหตุผล" className="border p-2 rounded text-sm flex-1" value={formClosed.reason} onChange={e=>setFormClosed({...formClosed, reason:e.target.value})} />
@@ -601,7 +613,29 @@
                                             ))}
                                         </ul>
                                     </div>
-                                    <div className="bg-white p-4 rounded-lg shadow border-l-4 border-blue-800 md:col-span-2">
+                                    
+                                    {/* --- NEW: Room Closure Settings --- */}
+                                    <div className="bg-white p-4 rounded-lg shadow border-l-4 border-gray-500">
+                                        <h3 className="font-bold text-lg mb-4 text-gray-800"><i className="fas fa-ban"></i> ปิดปรับปรุงห้องพัก (รายห้อง)</h3>
+                                        <div className="flex gap-2 mb-4 flex-wrap items-end bg-gray-50 p-2 rounded">
+                                            <input type="date" className="border p-2 rounded text-sm" value={formRoomClosure.date} onChange={e=>setFormRoomClosure({...formRoomClosure, date:e.target.value})} />
+                                            <select className="border p-2 rounded text-sm" value={formRoomClosure.roomId} onChange={e=>setFormRoomClosure({...formRoomClosure, roomId:e.target.value})}>
+                                                {ROOM_IDS.map(r => <option key={r} value={r}>{r}</option>)}
+                                            </select>
+                                            <input placeholder="สาเหตุ" className="border p-2 rounded text-sm flex-1" value={formRoomClosure.reason} onChange={e=>setFormRoomClosure({...formRoomClosure, reason:e.target.value})} />
+                                            <button onClick={()=>handleSaveSetting('room_closure', formRoomClosure)} className="px-3 py-2 rounded text-sm text-white bg-gray-600">ปิด</button>
+                                        </div>
+                                        <ul className="divide-y max-h-40 overflow-y-auto">
+                                            {(settings.roomClosures || []).map((rc, i) => (
+                                                <li key={i} className="flex justify-between items-center p-2 text-sm text-gray-700">
+                                                    <span>{formatThaiDate(rc.date)} : <b>{rc.roomId}</b> ({rc.reason})</span>
+                                                    <button onClick={()=>handleDeleteSetting('room_closure', rc.id)} className="text-red-500"><i className="fas fa-trash"></i></button>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+
+                                    <div className="bg-white p-4 rounded-lg shadow border-l-4 border-blue-800">
                                         <h3 className="font-bold text-lg mb-4 text-blue-800"><i className="fas fa-star"></i> วันพิเศษ (มัดจำ 100%)</h3>
                                         <div className="flex gap-2 mb-4 flex-wrap items-end bg-gray-50 p-2 rounded">
                                             <input type="date" className="border p-2 rounded text-sm" value={formSpecial.date} onChange={e=>setFormSpecial({...formSpecial, date:e.target.value})} />
@@ -622,38 +656,65 @@
                         )}
                     </div>
 
+                    {/* --- CUSTOM GLOBAL MODAL --- */}
                     {modal.isOpen && (
                         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity">
                             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-100 animate-modal">
                                 <div className={`p-6 text-center ${modal.type==='error' ? 'bg-red-50' : modal.type==='success' ? 'bg-green-50' : modal.type==='warning' ? 'bg-orange-50' : 'bg-white'}`}>
-                                    <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm ${modal.type==='confirm' ? 'bg-blue-100 text-blue-600' : modal.type==='success' ? 'bg-green-100 text-green-600' : modal.type==='error' ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-600'}`}>
-                                        <i className={`fas ${modal.type==='confirm' ? 'fa-question' : modal.type==='success' ? 'fa-check' : modal.type==='error' ? 'fa-times' : 'fa-exclamation'} text-3xl`}></i>
+                                    <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm 
+                                        ${modal.type==='confirm' ? 'bg-blue-100 text-blue-600' : 
+                                          modal.type==='success' ? 'bg-green-100 text-green-600' :
+                                          modal.type==='error' ? 'bg-red-100 text-red-600' : 
+                                          'bg-orange-100 text-orange-600'}`}>
+                                        <i className={`fas ${
+                                            modal.type==='confirm' ? 'fa-question' : 
+                                            modal.type==='success' ? 'fa-check' : 
+                                            modal.type==='error' ? 'fa-times' : 
+                                            'fa-exclamation'
+                                        } text-3xl`}></i>
                                     </div>
                                     <h3 className="text-xl font-bold text-gray-800 mb-2">{modal.title}</h3>
                                     <p className="text-gray-600 text-sm leading-relaxed">{modal.message}</p>
                                 </div>
                                 <div className="p-4 bg-gray-50 flex gap-3 border-t border-gray-100">
                                     {modal.type === 'confirm' && (
-                                        <button onClick={closeModal} className="flex-1 py-3 bg-white border border-gray-300 text-gray-700 rounded-xl font-bold hover:bg-gray-100 transition shadow-sm">ยกเลิก</button>
+                                        <button 
+                                            onClick={closeModal}
+                                            className="flex-1 py-3 bg-white border border-gray-300 text-gray-700 rounded-xl font-bold hover:bg-gray-100 transition shadow-sm"
+                                        >
+                                            ยกเลิก
+                                        </button>
                                     )}
-                                    <button onClick={modal.onConfirm} className={`flex-1 py-3 rounded-xl font-bold text-white shadow-lg transition transform active:scale-95 ${modal.type==='error' ? 'bg-red-500 hover:bg-red-600' : modal.type==='success' ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-800 hover:bg-gray-900'}`}>{modal.type === 'confirm' ? 'ยืนยัน' : 'ตกลง'}</button>
+                                    <button 
+                                        onClick={modal.onConfirm}
+                                        className={`flex-1 py-3 rounded-xl font-bold text-white shadow-lg transition transform active:scale-95 
+                                            ${modal.type==='error' ? 'bg-red-500 hover:bg-red-600' : 
+                                              modal.type==='success' ? 'bg-green-500 hover:bg-green-600' :
+                                              'bg-gray-800 hover:bg-gray-900'}`}
+                                    >
+                                        {modal.type === 'confirm' ? 'ยืนยัน' : 'ตกลง'}
+                                    </button>
                                 </div>
                             </div>
                         </div>
                     )}
 
+                    {/* Image Viewer Modal */}
                     {viewSlip && (
                         <div className="fixed inset-0 bg-black/95 flex items-center justify-center z-50 p-4 backdrop-blur-md" onClick={() => setViewSlip(null)}>
                             <div className="relative max-w-full">
                                 <button className="absolute -top-12 right-0 text-white text-3xl bg-white/20 w-10 h-10 rounded-full hover:bg-white/40 flex items-center justify-center transition"><i className="fas fa-times"></i></button>
                                 <img src={viewSlip} className="max-w-full max-h-[85vh] rounded-lg shadow-2xl" referrerPolicy="no-referrer" />
                                 <div className="text-center mt-6">
-                                    <a href={viewSlip} target="_blank" className="inline-block px-6 py-2 bg-white text-gray-900 rounded-full text-sm font-bold hover:bg-gray-200 transition shadow-lg no-underline"><i className="fas fa-external-link-alt mr-2"></i> เปิดรูปเต็ม</a>
+                                    <a href={viewSlip} target="_blank" className="inline-block px-6 py-2 bg-white text-gray-900 rounded-full text-sm font-bold hover:bg-gray-200 transition shadow-lg no-underline">
+                                        <i className="fas fa-external-link-alt mr-2"></i> เปิดรูปเต็ม
+                                    </a>
                                 </div>
                             </div>
                         </div>
                     )}
 
+                    {/* Booking Detail Modal */}
                     {viewBooking && (
                         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm" onClick={() => { setViewBooking(null); setRescheduleData(null); }}>
                             <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-modal max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
@@ -663,7 +724,10 @@
                                 </div>
                                 <div className="p-6 overflow-y-auto custom-scrollbar">
                                     <div className="flex justify-between items-start mb-4">
-                                        <div><div className="font-bold text-xl text-green-800">{viewBooking.name}</div><div className="text-xs text-gray-400">{viewBooking.id}</div></div>
+                                        <div>
+                                            <div className="font-bold text-xl text-green-800">{viewBooking.name}</div>
+                                            <div className="text-xs text-gray-400">{viewBooking.id}</div>
+                                        </div>
                                         <StatusBadge status={viewBooking.status} />
                                     </div>
                                     <div className="space-y-3 text-sm text-gray-600 bg-white rounded-lg">
@@ -677,35 +741,70 @@
                                         <div className="bg-green-50 p-3 rounded-lg border border-green-100">
                                             <p className="font-bold text-green-800 mb-1"><i className="fas fa-bed mr-1"></i> ห้องพัก</p>
                                             <p className="whitespace-pre-wrap">{viewBooking.rooms}</p>
-                                            {viewBooking.food !== '-' && (<div className="mt-2 pt-2 border-t border-green-200"><p className="font-bold text-orange-600 mb-1"><i className="fas fa-utensils mr-1"></i> อาหาร</p><p>{viewBooking.food}</p></div>)}
+                                            {viewBooking.food !== '-' && (
+                                                <div className="mt-2 pt-2 border-t border-green-200">
+                                                    <p className="font-bold text-orange-600 mb-1"><i className="fas fa-utensils mr-1"></i> อาหาร</p>
+                                                    <p>{viewBooking.food}</p>
+                                                </div>
+                                            )}
                                         </div>
+                                        
+                                        {/* Financial Details in Modal (NEW) */}
                                         <div className="flex justify-between items-center pt-2 bg-blue-50 p-3 rounded-lg border border-blue-100">
-                                            <div className="text-center w-1/3"><div className="text-[10px] text-gray-500">สุทธิ</div><div className="font-bold text-gray-800">{parseInt(viewBooking.price).toLocaleString()}</div></div>
+                                            <div className="text-center w-1/3">
+                                                <div className="text-[10px] text-gray-500">สุทธิ</div>
+                                                <div className="font-bold text-gray-800">{parseInt(viewBooking.price).toLocaleString()}</div>
+                                            </div>
                                             <div className="h-8 w-px bg-blue-200"></div>
-                                            <div className="text-center w-1/3"><div className="text-[10px] text-gray-500">มัดจำ</div><div className="font-bold text-red-600">{parseInt(viewBooking.deposit).toLocaleString()}</div></div>
+                                            <div className="text-center w-1/3">
+                                                <div className="text-[10px] text-gray-500">มัดจำ</div>
+                                                <div className="font-bold text-red-600">{parseInt(viewBooking.deposit).toLocaleString()}</div>
+                                            </div>
                                             <div className="h-8 w-px bg-blue-200"></div>
-                                            <div className="text-center w-1/3"><div className="text-[10px] text-gray-500">คงเหลือ</div><div className="font-bold text-green-600">{(parseInt(viewBooking.price) - parseInt(viewBooking.deposit)).toLocaleString()}</div></div>
+                                            <div className="text-center w-1/3">
+                                                <div className="text-[10px] text-gray-500">คงเหลือ</div>
+                                                <div className="font-bold text-green-600">{(parseInt(viewBooking.price) - parseInt(viewBooking.deposit)).toLocaleString()}</div>
+                                            </div>
                                         </div>
                                     </div>
+                                    
+                                    {/* Add Food Section */}
                                     <div className="mt-6 border-t pt-4">
                                         <h4 className="font-bold text-sm mb-3 text-blue-700 flex items-center"><i className="fas fa-plus-circle mr-2"></i> เพิ่มรายการอาหาร (Add-on)</h4>
                                         <div className="flex gap-2 mb-2">
-                                            <select className="border p-2 rounded-lg text-sm flex-1 bg-gray-50 focus:ring-2 focus:ring-blue-200 focus:outline-none" value={selectedAddFood} onChange={e => setSelectedAddFood(e.target.value)}>
+                                            <select 
+                                                className="border p-2 rounded-lg text-sm flex-1 bg-gray-50 focus:ring-2 focus:ring-blue-200 focus:outline-none" 
+                                                value={selectedAddFood} 
+                                                onChange={e => setSelectedAddFood(e.target.value)}
+                                            >
                                                 <option value="">-- เลือกเมนู --</option>
-                                                {siteSettings && siteSettings.foodMenu.map(f => (<option key={f.id} value={f.id}>{f.name} ({f.price}.-)</option>))}
+                                                {siteSettings && siteSettings.foodMenu.map(f => (
+                                                    <option key={f.id} value={f.id}>{f.name} ({f.price}.-)</option>
+                                                ))}
                                             </select>
-                                            <input type="number" className="border p-2 rounded-lg text-sm w-16 bg-gray-50 text-center focus:ring-2 focus:ring-blue-200 focus:outline-none" min="1" value={addFoodQty} onChange={e => setAddFoodQty(e.target.value)} />
+                                            <input 
+                                                type="number" 
+                                                className="border p-2 rounded-lg text-sm w-16 bg-gray-50 text-center focus:ring-2 focus:ring-blue-200 focus:outline-none" 
+                                                min="1" 
+                                                value={addFoodQty} 
+                                                onChange={e => setAddFoodQty(e.target.value)} 
+                                            />
                                         </div>
+                                        
                                         {(() => {
                                             const checkInDate = new Date(viewBooking.checkIn);
                                             const now = new Date();
                                             const diffTime = checkInDate - now;
                                             const diffDays = diffTime / (1000 * 60 * 60 * 24);
-                                            if (diffDays < 1) { return <div className="text-orange-500 text-xs mb-2 bg-orange-50 p-2 rounded"><i className="fas fa-exclamation-triangle mr-1"></i> ใกล้วันเข้าพักแล้ว (เหลือ {diffDays.toFixed(1)} วัน)</div>; }
+                                            if (diffDays < 1) {
+                                                return <div className="text-orange-500 text-xs mb-2 bg-orange-50 p-2 rounded"><i className="fas fa-exclamation-triangle mr-1"></i> ใกล้วันเข้าพักแล้ว (เหลือ {diffDays.toFixed(1)} วัน)</div>;
+                                            }
                                             return null;
                                         })()}
+
                                         <button onClick={handleAddFood} className="w-full py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 text-sm font-bold shadow transition"><i className="fas fa-save mr-1"></i> บันทึกเพิ่มรายการอาหาร</button>
                                     </div>
+
                                     <div className="mt-6 flex flex-col gap-2 border-t pt-4">
                                         {!rescheduleData ? (
                                             <button onClick={() => setRescheduleData({ id: viewBooking.id, checkIn: '', checkOut: '' })} className="w-full py-2.5 bg-orange-50 text-orange-600 border border-orange-200 rounded-xl hover:bg-orange-100 font-bold transition text-sm"><i className="fas fa-calendar-alt mr-1"></i> เลื่อนวันเข้าพัก</button>
@@ -713,8 +812,14 @@
                                             <div className="bg-orange-50 p-4 rounded-xl border border-orange-200">
                                                 <h4 className="font-bold text-orange-800 mb-3 text-sm flex items-center"><i className="fas fa-calendar-check mr-2"></i> เลือกวันเข้าพักใหม่</h4>
                                                 <div className="space-y-3 mb-3">
-                                                    <div><label className="text-xs text-orange-700 block mb-1">เช็คอิน</label><input type="date" className="w-full border p-2 rounded-lg text-sm" onChange={e => setRescheduleData({...rescheduleData, checkIn: e.target.value})} /></div>
-                                                    <div><label className="text-xs text-orange-700 block mb-1">เช็คเอาท์</label><input type="date" className="w-full border p-2 rounded-lg text-sm" onChange={e => setRescheduleData({...rescheduleData, checkOut: e.target.value})} /></div>
+                                                    <div>
+                                                        <label className="text-xs text-orange-700 block mb-1">เช็คอิน</label>
+                                                        <input type="date" className="w-full border p-2 rounded-lg text-sm" onChange={e => setRescheduleData({...rescheduleData, checkIn: e.target.value})} />
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-xs text-orange-700 block mb-1">เช็คเอาท์</label>
+                                                        <input type="date" className="w-full border p-2 rounded-lg text-sm" onChange={e => setRescheduleData({...rescheduleData, checkOut: e.target.value})} />
+                                                    </div>
                                                 </div>
                                                 <div className="flex gap-2">
                                                     <button onClick={() => setRescheduleData(null)} className="flex-1 py-2 bg-white border border-gray-300 text-gray-600 rounded-lg text-xs font-bold hover:bg-gray-50">ยกเลิก</button>
@@ -723,6 +828,75 @@
                                             </div>
                                         )}
                                         {viewBooking.slip.includes('http') && <button onClick={() => setViewSlip(viewBooking.slip)} className="w-full py-2.5 bg-white border border-blue-200 text-blue-600 rounded-xl hover:bg-blue-50 text-sm font-bold transition"><i className="fas fa-file-invoice-dollar mr-1"></i> ดูสลิปโอนเงิน</button>}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    
+                    {/* --- ADMIN BOOKING MODAL (NEW) --- */}
+                    {showAdminBooking && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity">
+                            <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-modal max-h-[90vh] flex flex-col">
+                                <div className="bg-blue-600 px-6 py-4 flex justify-between items-center text-white">
+                                    <h3 className="font-bold text-lg"><i className="fas fa-plus-circle mr-2"></i> สร้างรายการจองใหม่</h3>
+                                    <button onClick={() => setShowAdminBooking(false)} className="hover:text-gray-200"><i className="fas fa-times text-xl"></i></button>
+                                </div>
+                                <div className="p-6 overflow-y-auto custom-scrollbar">
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-700 mb-1">ชื่อลูกค้า</label>
+                                            <input className="w-full border p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" value={adminBookingForm.name} onChange={e => setAdminBookingForm({...adminBookingForm, name: e.target.value})} />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-700 mb-1">เบอร์โทร</label>
+                                            <input type="tel" className="w-full border p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" value={adminBookingForm.phone} onChange={e => setAdminBookingForm({...adminBookingForm, phone: e.target.value})} />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <label className="block text-sm font-bold text-gray-700 mb-1">เช็คอิน</label>
+                                                <input type="date" className="w-full border p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" value={adminBookingForm.checkIn} onChange={e => setAdminBookingForm({...adminBookingForm, checkIn: e.target.value})} />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-bold text-gray-700 mb-1">เช็คเอาท์</label>
+                                                <input type="date" className="w-full border p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" value={adminBookingForm.checkOut} onChange={e => setAdminBookingForm({...adminBookingForm, checkOut: e.target.value})} />
+                                            </div>
+                                        </div>
+                                        
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-700 mb-2">เลือกห้องพัก</label>
+                                            <div className="grid grid-cols-4 gap-2">
+                                                {ROOM_IDS.map(r => (
+                                                    <button 
+                                                        key={r}
+                                                        onClick={() => {
+                                                            const currentRooms = adminBookingForm.rooms.includes(r) 
+                                                                ? adminBookingForm.rooms.filter(room => room !== r)
+                                                                : [...adminBookingForm.rooms, r];
+                                                            setAdminBookingForm({...adminBookingForm, rooms: currentRooms});
+                                                        }}
+                                                        className={`py-2 rounded-lg text-sm font-bold transition border ${adminBookingForm.rooms.includes(r) ? 'bg-blue-600 text-white border-blue-600 shadow-md transform scale-105' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
+                                                    >
+                                                        {r}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-2 gap-3 pt-2 border-t">
+                                            <div>
+                                                <label className="block text-sm font-bold text-gray-700 mb-1">ยอดรวมสุทธิ</label>
+                                                <input type="number" className="w-full border p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" value={adminBookingForm.price} onChange={e => setAdminBookingForm({...adminBookingForm, price: e.target.value})} />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-bold text-gray-700 mb-1">มัดจำที่รับมา</label>
+                                                <input type="number" className="w-full border p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" value={adminBookingForm.deposit} onChange={e => setAdminBookingForm({...adminBookingForm, deposit: e.target.value})} />
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="pt-4">
+                                            <button onClick={handleCreateAdminBooking} className="w-full py-3 bg-green-600 text-white rounded-xl font-bold shadow-lg hover:bg-green-700 transition transform active:scale-95">บันทึกรายการจอง</button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
