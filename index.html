@@ -514,29 +514,31 @@
             return (
                 <div className={isDark ? "dark" : ""}>
                     <div className="min-h-screen bg-[#f3f4f6] dark:bg-gray-900 text-gray-800 dark:text-gray-100 transition-colors duration-300">
-                        {/* Header & Mode Switch */}
-                        <div className="flex justify-between items-center p-4">
-                            <button 
-                                onClick={() => {
-                                    setMode(mode === 'booking' ? 'manage' : 'booking');
-                                    setStep(1);
-                                    setManageData(null);
-                                    setManageTab('info');
-                                    setAddOnCart([]);
-                                    setAddOnSlip(null);
-                                }}
-                                className="bg-white dark:bg-gray-700 text-gray-800 dark:text-white px-4 py-2 rounded-full shadow border text-sm font-bold flex items-center gap-2"
-                            >
-                                {mode === 'booking' ? <><i className="fas fa-search"></i> จัดการการจอง/สั่งอาหาร</> : <><i className="fas fa-home"></i> กลับหน้าจองที่พัก</>}
-                            </button>
-                            <button onClick={() => setIsDark(!isDark)} className="bg-white dark:bg-gray-700 p-2 rounded-full shadow border w-10 h-10 flex items-center justify-center">
-                                {isDark ? '☀️' : '🌙'}
-                            </button>
-                        </div>
+                        {/* FIXED FLOATING BUTTONS (Top Right) */}
+                        <button 
+                            onClick={() => setIsDark(!isDark)} 
+                            className="fixed top-4 right-4 z-50 bg-white dark:bg-gray-700 p-2 rounded-full shadow-lg border border-gray-200 dark:border-gray-600 w-10 h-10 flex items-center justify-center transition-transform hover:scale-110"
+                        >
+                            {isDark ? '☀️' : '🌙'}
+                        </button>
+
+                        <button 
+                            onClick={() => {
+                                setMode(mode === 'booking' ? 'manage' : 'booking');
+                                setStep(1);
+                                setManageData(null);
+                                setManageTab('info');
+                                setAddOnCart([]);
+                                setAddOnSlip(null);
+                            }}
+                            className="fixed top-16 right-4 z-50 bg-white dark:bg-gray-700 p-2 rounded-full shadow-lg border border-gray-200 dark:border-gray-600 w-10 h-10 flex items-center justify-center transition-transform hover:scale-110 text-gray-800 dark:text-white"
+                        >
+                             {mode === 'booking' ? <i className="fas fa-search"></i> : <i className="fas fa-home"></i>}
+                        </button>
 
                         {/* --- MODE: MANAGE BOOKING --- */}
                         {mode === 'manage' && (
-                            <div className="max-w-md mx-auto p-4">
+                            <div className="max-w-md mx-auto p-4 pt-16">
                                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
                                     <h2 className="text-xl font-bold mb-4 text-center text-blue-600 dark:text-blue-400">จัดการการจอง / สั่งอาหาร</h2>
                                     
