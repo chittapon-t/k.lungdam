@@ -15,15 +15,31 @@
     <!-- HTML2PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
+    <!-- Google Fonts: Sarabun for Official Documents -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap');
         body { font-family: 'Kanit', sans-serif; background-color: #f3f4f6; }
+        
+        /* Font for Reports/Receipts */
+        .font-sarabun { font-family: 'Sarabun', sans-serif; }
+        
         .calendar-day { min-height: 80px; }
         @media(max-width: 640px){ .calendar-day { min-height: 50px; } }
+        
         @keyframes popIn { 0% { opacity: 0; transform: scale(0.95); } 100% { opacity: 1; transform: scale(1); } }
         .animate-modal { animation: popIn 0.2s ease-out forwards; }
+        
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Print Area Fixes */
+        .print-container { background: white; color: black; box-sizing: border-box; }
+        table.official-table { width: 100%; border-collapse: collapse; }
+        table.official-table th, table.official-table td { border: 1px solid #000; padding: 4px 8px; }
+        table.official-table th { background-color: #f0f0f0; text-align: center; }
     </style>
 </head>
 <body>
@@ -61,6 +77,16 @@
                 };
                 reader.onerror = (err) => reject(err);
             });
+        };
+
+        const toThaiNum = (num) => {
+            const thaiNum = ['๐','๑','๒','๓','๔','๕','๖','๗','๘','๙'];
+            return String(num).replace(/[0-9]/g, w => thaiNum[w]);
+        };
+
+        const bahtText = (num) => {
+            if (!num) return 'ศูนย์บาทถ้วน';
+            return new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(num).replace('฿', '') + ' บาทถ้วน';
         };
 
         const StatusBadge = ({ status }) => {
@@ -121,6 +147,12 @@
                 const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
                 return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear() + 543}`;
             };
+            
+            const formatThaiDateShort = (dateStr) => {
+                 if(!dateStr) return "-";
+                 const date = new Date(dateStr);
+                 return `${date.getDate()}/${date.getMonth()+1}/${date.getFullYear()+543}`;
+            };
 
             React.useEffect(() => {
                 if (showAdminBooking && adminBookingForm.checkIn && adminBookingForm.checkOut) {
@@ -155,6 +187,7 @@
                     const bCheckIn = new Date(b.checkIn);
                     bCheckIn.setHours(0,0,0,0);
                     let statusMatch = false;
+                    
                     if (filter === 'all') statusMatch = true;
                     else if (filter === 'pending') statusMatch = b.status === 'รอตรวจสอบ';
                     else if (filter === 'upcoming') statusMatch = b.status === 'ยืนยัน' && bCheckIn >= today;
@@ -169,7 +202,10 @@
                     const bLine = String(b.lineProfile || '').toLowerCase();
                     return bId.includes(term) || bName.includes(term) || bPhone.includes(term) || bLine.includes(term);
                 });
-                if (filter === 'upcoming') result.sort((a, b) => new Date(a.checkIn) - new Date(b.checkIn));
+                
+                if (filter === 'upcoming') {
+                    result.sort((a, b) => new Date(a.checkIn) - new Date(b.checkIn));
+                }
                 return result;
             }, [bookings, filter, searchTerm]);
 
@@ -203,7 +239,7 @@
                 confirmMsg(`ยืนยันการ${actionText} ใช่หรือไม่?`, () => {
                     setBookings(prev => prev.map(b => b.id === id ? {...b, status: newStatus} : b));
                     fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'updateStatus', bookingId: id, newStatus: newStatus, password: password }) });
-                    if (newStatus === 'ยกเลิก' && viewBooking?.id === id) setViewBooking({...viewBooking, status: 'ยกเลิก'});
+                    if (newStatus === 'ยกเลิก' && viewBooking && viewBooking.id === id) setViewBooking({...viewBooking, status: 'ยกเลิก'});
                 });
             };
 
@@ -253,17 +289,29 @@
             const handleMultipleImageUpload = async (files, callback) => { if (!files || files.length === 0) return; try { const promises = Array.from(files).map(file => compressImage(file)); const base64List = await Promise.all(promises); callback(base64List); } catch(e) { errorMsg('Upload Failed'); } };
             const handleExport = () => { const header = ["BookingID", "Date", "Customer", "Phone", "CheckIn", "CheckOut", "Rooms", "Total", "Deposit", "Status"]; const rows = bookings.map(b => [ b.id, b.timestamp, `"${b.name}"`, `'${b.phone}`, b.checkIn, b.checkOut, `"${b.rooms.replace(/"/g, '""')}"`, b.price, b.deposit, b.status ]); const csvContent = [header.join(","), ...rows.map(r => r.join(","))].join("\n"); const blob = new Blob(["\uFEFF"+csvContent], { type: 'text/csv;charset=utf-8;' }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.setAttribute("href", url); link.setAttribute("download", "bookings_lungdam.csv"); document.body.appendChild(link); link.click(); document.body.removeChild(link); };
             
-            // --- NEW: PDF EXPORT ---
+            // --- NEW: PDF EXPORT (A4 Landscape Official) ---
             const handleExportPDF = () => {
                 const element = document.getElementById('report-print-area');
-                const opt = { margin: 0.5, filename: 'Booking_Report.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' } };
+                const opt = { 
+                    margin: [0.5, 0.5, 0.5, 0.5], // inch
+                    filename: 'Booking_Report.pdf', 
+                    image: { type: 'jpeg', quality: 0.98 }, 
+                    html2canvas: { scale: 2 }, 
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' } 
+                };
                 html2pdf().set(opt).from(element).save();
             };
 
-            // --- NEW: RECEIPT PRINT ---
+            // --- NEW: RECEIPT PRINT (A4 Portrait Official) ---
             const handlePrintReceipt = () => {
                 const element = document.getElementById('receipt-print-area');
-                const opt = { margin: 0.3, filename: `Receipt_${viewBooking.id}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' } };
+                const opt = { 
+                    margin: [0, 0, 0, 0], // Zero margin for full control
+                    filename: `Receipt_${viewBooking.id}.pdf`, 
+                    image: { type: 'jpeg', quality: 0.98 }, 
+                    html2canvas: { scale: 2 }, 
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } 
+                };
                 html2pdf().set(opt).from(element).save();
             };
 
@@ -790,172 +838,162 @@
                     {/* ... (Admin Booking Modal - same as before) ... */}
                     {showAdminBooking && ( <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity"> <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-modal max-h-[90vh] flex flex-col"> <div className="bg-blue-600 px-6 py-4 flex justify-between items-center text-white"> <h3 className="font-bold text-lg"><i className="fas fa-plus-circle mr-2"></i> สร้างรายการจองใหม่</h3> <button onClick={() => setShowAdminBooking(false)} className="hover:text-gray-200"><i className="fas fa-times text-xl"></i></button> </div> <div className="p-6 overflow-y-auto custom-scrollbar"> <div className="space-y-4"> <div> <label className="block text-sm font-bold text-gray-700 mb-1">ชื่อลูกค้า</label> <input className="w-full border p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" value={adminBookingForm.name} onChange={e => setAdminBookingForm({...adminBookingForm, name: e.target.value})} /> </div> <div> <label className="block text-sm font-bold text-gray-700 mb-1">เบอร์โทร</label> <input type="tel" className="w-full border p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" value={adminBookingForm.phone} onChange={e => setAdminBookingForm({...adminBookingForm, phone: e.target.value})} /> </div> <div className="grid grid-cols-2 gap-3"> <div> <label className="block text-sm font-bold text-gray-700 mb-1">เช็คอิน</label> <input type="date" className="w-full border p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" value={adminBookingForm.checkIn} onChange={e => setAdminBookingForm({...adminBookingForm, checkIn: e.target.value})} /> </div> <div> <label className="block text-sm font-bold text-gray-700 mb-1">เช็คเอาท์</label> <input type="date" className="w-full border p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" value={adminBookingForm.checkOut} onChange={e => setAdminBookingForm({...adminBookingForm, checkOut: e.target.value})} /> </div> </div> <div> <label className="block text-sm font-bold text-gray-700 mb-2">เลือกห้องพัก {loadingAvailability && <span className="text-xs text-blue-500 font-normal">(กำลังตรวจสอบ...)</span>}</label> <div className="grid grid-cols-2 gap-2"> {ROOM_IDS.map(r => { const isAvailable = adminAvailability && (r === 'Z8' ? adminAvailability.zone8Available > 0 : !adminAvailability.bookedRooms.includes(r)); if (adminBookingForm.checkIn && adminBookingForm.checkOut && !isAvailable) return null; return ( <button key={r} disabled={!adminBookingForm.checkIn || !adminBookingForm.checkOut} onClick={() => { const currentRooms = adminBookingForm.rooms.includes(r) ? adminBookingForm.rooms.filter(room => room !== r) : [...adminBookingForm.rooms, r]; setAdminBookingForm({...adminBookingForm, rooms: currentRooms}); }} className={`py-2 px-3 rounded-lg text-sm font-bold transition border truncate ${ adminBookingForm.rooms.includes(r) ? 'bg-blue-600 text-white border-blue-600 shadow-md transform scale-105' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100' } ${(!adminBookingForm.checkIn || !adminBookingForm.checkOut) ? 'opacity-50 cursor-not-allowed' : ''}`} > {ROOM_NAMES[r] || r} </button> ); })} {adminBookingForm.checkIn && adminBookingForm.checkOut && adminAvailability && adminAvailability.bookedRooms.length === ROOM_IDS.length - (adminAvailability.zone8Available > 0 ? 0 : 1) && ( <div className="col-span-2 text-center text-red-500 text-xs py-2">ไม่มีห้องว่างในช่วงเวลานี้</div> )} {(!adminBookingForm.checkIn || !adminBookingForm.checkOut) && ( <div className="col-span-2 text-center text-gray-400 text-xs py-2">กรุณาเลือกวันเข้าพักก่อน</div> )} </div> </div> <div className="grid grid-cols-2 gap-3 pt-2 border-t"> <div> <label className="block text-sm font-bold text-gray-700 mb-1">ยอดรวมสุทธิ</label> <input type="number" className="w-full border p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" value={adminBookingForm.price} onChange={e => setAdminBookingForm({...adminBookingForm, price: e.target.value})} /> </div> <div> <label className="block text-sm font-bold text-gray-700 mb-1">มัดจำที่รับมา</label> <input type="number" className="w-full border p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" value={adminBookingForm.deposit} onChange={e => setAdminBookingForm({...adminBookingForm, deposit: e.target.value})} /> </div> </div> <div className="pt-4"> <button onClick={handleCreateAdminBooking} className="w-full py-3 bg-green-600 text-white rounded-xl font-bold shadow-lg hover:bg-green-700 transition transform active:scale-95">บันทึกรายการจอง</button> </div> </div> </div> </div> )}
 
-                    {/* --- HIDDEN PRINT TEMPLATES --- */}
+                    {/* --- HIDDEN PRINT TEMPLATES (OFFICIAL STYLE) --- */}
                     <div className="fixed top-0 left-0 -z-50 opacity-0 pointer-events-none">
-                        {/* 1. REPORT TEMPLATE */}
-                        <div id="report-print-area" className="p-8 bg-white text-black w-[29.7cm] h-auto min-h-[21cm]">
-                            <div className="flex justify-between items-center mb-6 border-b-2 border-gray-800 pb-4">
-                                <div className="flex items-center gap-4">
-                                    <img src={siteSettings?.logoUrl} className="w-20 h-20 object-cover rounded-full" />
-                                    <div>
-                                        <h1 className="text-2xl font-bold">{siteSettings?.headerTitle}</h1>
-                                        <p className="text-sm text-gray-600">รายงานการจองห้องพัก (Booking Report)</p>
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-sm">วันที่พิมพ์: {new Date().toLocaleDateString('th-TH')}</p>
-                                    <p className="text-sm">ผู้พิมพ์: Admin</p>
-                                </div>
+                        {/* 1. REPORT TEMPLATE (A4 Landscape Official) */}
+                        <div id="report-print-area" className="p-8 bg-white text-black font-sarabun w-[297mm] h-auto min-h-[210mm] relative">
+                            <div className="text-center mb-6">
+                                <h1 className="text-xl font-bold">รายงานสรุปการจองห้องพัก</h1>
+                                <h2 className="text-lg font-bold">{siteSettings && siteSettings.headerTitle}</h2>
+                                <p className="text-sm">พิมพ์วันที่: {new Date().toLocaleDateString('th-TH')}</p>
                             </div>
-                            <table className="w-full text-xs text-left">
-                                <thead className="text-xs text-gray-700 uppercase bg-gray-100 border-b border-gray-300">
+                            
+                            <table className="official-table w-full text-sm border-collapse border border-black">
+                                <thead className="bg-gray-200">
                                     <tr>
-                                        <th className="px-2 py-3">ID</th>
-                                        <th className="px-2 py-3">ลูกค้า</th>
-                                        <th className="px-2 py-3">เบอร์โทร</th>
-                                        <th className="px-2 py-3">เข้าพัก</th>
-                                        <th className="px-2 py-3">ออก</th>
-                                        <th className="px-2 py-3">ห้องพัก</th>
-                                        <th className="px-2 py-3 text-right">ยอดสุทธิ</th>
-                                        <th className="px-2 py-3 text-right">มัดจำ</th>
-                                        <th className="px-2 py-3 text-center">สถานะ</th>
+                                        <th className="border border-black px-2 py-1 w-10 text-center">ลำดับ</th>
+                                        <th className="border border-black px-2 py-1 text-left">รหัสการจอง</th>
+                                        <th className="border border-black px-2 py-1 text-left">ชื่อลูกค้า</th>
+                                        <th className="border border-black px-2 py-1 text-center">เบอร์โทร</th>
+                                        <th className="border border-black px-2 py-1 text-center">เข้าพัก</th>
+                                        <th className="border border-black px-2 py-1 text-center">ออก</th>
+                                        <th className="border border-black px-2 py-1 text-left w-48">ห้องพัก</th>
+                                        <th className="border border-black px-2 py-1 text-right">ยอดสุทธิ</th>
+                                        <th className="border border-black px-2 py-1 text-right">มัดจำ</th>
+                                        <th className="border border-black px-2 py-1 text-center">สถานะ</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filteredBookings.map(b => (
-                                        <tr key={b.id} className="bg-white border-b hover:bg-gray-50">
-                                            <td className="px-2 py-2 font-mono">{b.id}</td>
-                                            <td className="px-2 py-2">{b.name}</td>
-                                            <td className="px-2 py-2">{b.phone}</td>
-                                            <td className="px-2 py-2">{formatThaiDate(b.checkIn)}</td>
-                                            <td className="px-2 py-2">{formatThaiDate(b.checkOut)}</td>
-                                            <td className="px-2 py-2 max-w-[200px] truncate">{b.rooms}</td>
-                                            <td className="px-2 py-2 text-right">{parseInt(b.price).toLocaleString()}</td>
-                                            <td className="px-2 py-2 text-right">{parseInt(b.deposit).toLocaleString()}</td>
-                                            <td className="px-2 py-2 text-center"><span className="border px-1 rounded text-[10px]">{b.status}</span></td>
+                                    {filteredBookings.map((b, index) => (
+                                        <tr key={b.id}>
+                                            <td className="border border-black px-2 py-1 text-center">{index + 1}</td>
+                                            <td className="border border-black px-2 py-1 font-mono">{b.id}</td>
+                                            <td className="border border-black px-2 py-1">{b.name}</td>
+                                            <td className="border border-black px-2 py-1 text-center">{b.phone}</td>
+                                            <td className="border border-black px-2 py-1 text-center">{formatThaiDateShort(b.checkIn)}</td>
+                                            <td className="border border-black px-2 py-1 text-center">{formatThaiDateShort(b.checkOut)}</td>
+                                            <td className="border border-black px-2 py-1 text-xs">{b.rooms}</td>
+                                            <td className="border border-black px-2 py-1 text-right">{parseInt(b.price).toLocaleString()}</td>
+                                            <td className="border border-black px-2 py-1 text-right">{parseInt(b.deposit).toLocaleString()}</td>
+                                            <td className="border border-black px-2 py-1 text-center text-xs">{b.status}</td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
+                            <div className="mt-4 text-right text-sm">
+                                <p>ลงชื่อ ....................................................... ผู้จัดทำรายงาน</p>
+                            </div>
                         </div>
 
-                        {/* 2. RECEIPT TEMPLATE */}
+                        {/* 2. RECEIPT TEMPLATE (A4 Portrait Official) */}
                         {viewBooking && (
-                            <div id="receipt-print-area" className="p-10 bg-white text-black w-[21cm] h-auto min-h-[29.7cm] relative">
-                                <div className="text-center mb-8">
-                                    <img src={siteSettings?.logoUrl} className="w-24 h-24 object-cover mx-auto mb-2 rounded-full border" />
-                                    <h1 className="text-3xl font-bold mb-1">{siteSettings?.headerTitle}</h1>
-                                    <p className="text-sm text-gray-500 whitespace-pre-line px-10">{siteSettings?.headerDesc}</p>
-                                    <p className="text-sm font-bold mt-1">โทร: {viewBooking.phone} (อ้างอิงจากลูกค้า)</p> {/* ปรับเป็นเบอร์ที่พักจริงถ้ามีใน config */}
-                                </div>
-                                
-                                <div className="border-t-2 border-b-2 border-gray-800 py-4 mb-6 flex justify-between items-center">
-                                    <div>
-                                        <h2 className="text-2xl font-bold">ใบเสร็จรับเงิน / Receipt</h2>
-                                        <p className="text-sm">ต้นฉบับ (Original)</p>
+                            <div id="receipt-print-area" className="p-12 bg-white text-black font-sarabun w-[210mm] h-[297mm] relative box-border">
+                                {/* Header */}
+                                <div className="flex justify-between items-start mb-6">
+                                    <div className="flex items-center gap-4">
+                                        {siteSettings && siteSettings.logoUrl && <img src={siteSettings.logoUrl} className="w-20 h-20 object-contain" />}
+                                        <div>
+                                            <h1 className="text-xl font-bold">{siteSettings && siteSettings.headerTitle}</h1>
+                                            <p className="text-sm whitespace-pre-line max-w-sm">{siteSettings && siteSettings.headerDesc}</p>
+                                            <p className="text-sm">โทร: {viewBooking.phone} (สำรอง)</p>
+                                        </div>
                                     </div>
                                     <div className="text-right">
-                                        <p><b>เลขที่:</b> {viewBooking.id}</p>
-                                        <p><b>วันที่:</b> {new Date().toLocaleDateString('th-TH')}</p>
+                                        <h2 className="text-2xl font-bold mb-2">ใบเสร็จรับเงิน</h2>
+                                        <h3 className="text-lg text-gray-600 font-bold mb-2">(RECEIPT)</h3>
+                                        <div className="border border-black p-2 text-sm text-left w-48">
+                                            <p><b>เลขที่:</b> {viewBooking.id}</p>
+                                            <p><b>วันที่:</b> {formatThaiDate(new Date().toISOString())}</p>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div className="mb-6 flex justify-between">
-                                    <div className="w-1/2">
-                                        <h3 className="font-bold border-b mb-2 pb-1">ข้อมูลลูกค้า</h3>
-                                        <p className="text-sm"><b>ชื่อ:</b> {viewBooking.name}</p>
-                                        <p className="text-sm"><b>เบอร์โทร:</b> {viewBooking.phone}</p>
-                                        <p className="text-sm"><b>LINE:</b> {viewBooking.lineProfile}</p>
+                                {/* Customer Info Box */}
+                                <div className="border border-black p-4 mb-6 rounded-sm">
+                                    <div className="flex justify-between mb-2">
+                                        <p className="text-sm w-2/3"><b>นามลูกค้า:</b> {viewBooking.name}</p>
+                                        <p className="text-sm w-1/3"><b>เบอร์โทร:</b> {viewBooking.phone}</p>
                                     </div>
-                                    <div className="w-1/2 text-right">
-                                        <h3 className="font-bold border-b mb-2 pb-1">รายละเอียดการเข้าพัก</h3>
-                                        <p className="text-sm"><b>เช็คอิน:</b> {formatThaiDate(viewBooking.checkIn)}</p>
-                                        <p className="text-sm"><b>เช็คเอาท์:</b> {formatThaiDate(viewBooking.checkOut)}</p>
-                                        <p className="text-sm"><b>จำนวนผู้เข้าพัก:</b> {viewBooking.totalGuests} ท่าน</p>
+                                    <div className="flex justify-between">
+                                        <p className="text-sm w-2/3"><b>รายละเอียดการเข้าพัก:</b> {formatThaiDate(viewBooking.checkIn)} ถึง {formatThaiDate(viewBooking.checkOut)}</p>
+                                        <p className="text-sm w-1/3"><b>จำนวนผู้เข้าพัก:</b> {viewBooking.totalGuests} ท่าน</p>
                                     </div>
                                 </div>
 
-                                <table className="w-full mb-6 border-collapse">
-                                    <thead>
-                                        <tr className="bg-gray-100 border-t border-b border-gray-300">
-                                            <th className="py-2 text-left pl-2">รายการ (Description)</th>
-                                            <th className="py-2 text-center w-20">จำนวน</th>
-                                            <th className="py-2 text-right w-32 pr-2">จำนวนเงิน</th>
+                                {/* Items Table */}
+                                <table className="official-table w-full mb-6 border-collapse border border-black">
+                                    <thead className="bg-gray-200">
+                                        <tr>
+                                            <th className="border border-black py-2 w-16 text-center">ลำดับ</th>
+                                            <th className="border border-black py-2 text-left">รายการ (Description)</th>
+                                            <th className="border border-black py-2 w-20 text-center">จำนวน</th>
+                                            <th className="border border-black py-2 w-32 text-right">จำนวนเงิน (บาท)</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {(() => {
-                                            // Parse Rooms & Food from cart if available, else fall back to text
-                                            let items = [];
-                                            try {
-                                                const cart = JSON.parse(viewBooking.cart || '[]');
-                                                items = cart.map(c => ({
-                                                    name: c.name + (c.type==='food' ? ' (อาหาร)' : ' (ที่พัก)'),
-                                                    qty: c.qty || c.guests || 1, // Fallback logic
-                                                    price: (c.price || c.pricePerNight || 0) * (c.qty || 1) // Rough calc
-                                                }));
-                                            } catch(e) {
-                                                // Fallback if cart json fails
-                                                items.push({ name: viewBooking.rooms, qty: 1, price: parseInt(viewBooking.price) });
-                                            }
-                                            
-                                            // If cart parsing works well, use it. If not, use manual list.
-                                            // For simplicity in this template, let's list main Summary
-                                            return (
-                                                <>
-                                                    <tr className="border-b border-gray-200">
-                                                        <td className="py-3 pl-2">
-                                                            <div className="font-bold">ค่าที่พัก (Accommodation)</div>
-                                                            <div className="text-sm text-gray-500 whitespace-pre-wrap">{viewBooking.rooms}</div>
-                                                        </td>
-                                                        <td className="text-center">1</td>
-                                                        <td className="text-right pr-2">{(parseInt(viewBooking.price) - (viewBooking.food ? 0 : 0)).toLocaleString()}</td> 
-                                                        {/* Note: Price separation might need better logic if food included in total. Assuming Total Price is mostly Room here for simplicity unless broken down */}
-                                                    </tr>
-                                                    {viewBooking.food && viewBooking.food !== '-' && (
-                                                         <tr className="border-b border-gray-200">
-                                                            <td className="py-3 pl-2">
-                                                                <div className="font-bold">ค่าอาหารและบริการเสริม (Food & Services)</div>
-                                                                <div className="text-sm text-gray-500">{viewBooking.food}</div>
-                                                            </td>
-                                                            <td className="text-center">1</td>
-                                                            <td className="text-right pr-2">-</td> 
-                                                            {/* Price breakdown for food isn't stored separately in simple columns easily, user can customize this */}
-                                                        </tr>
-                                                    )}
-                                                </>
-                                            );
-                                        })()}
+                                        {/* Room Line */}
+                                        <tr>
+                                            <td className="border border-black py-2 text-center">1</td>
+                                            <td className="border border-black py-2 text-left">
+                                                <b>ค่าที่พัก (Accommodation)</b><br/>
+                                                <span className="text-xs">{viewBooking.rooms}</span>
+                                            </td>
+                                            <td className="border border-black py-2 text-center">1</td>
+                                            <td className="border border-black py-2 text-right">
+                                                {/* Calculate approximate room price by subtracting food if possible, or show total price for simplicity */}
+                                                {(parseInt(viewBooking.price) - (/* logic for food price deduction if needed, keeping simple total here as requested */ 0)).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                                            </td>
+                                        </tr>
+                                        {/* Food Line (if any) */}
+                                        {viewBooking.food && viewBooking.food !== '-' && viewBooking.food !== 'ไม่มีรายการอาหาร' && (
+                                            <tr>
+                                                <td className="border border-black py-2 text-center">2</td>
+                                                <td className="border border-black py-2 text-left">
+                                                    <b>ค่าอาหารและบริการเสริม</b><br/>
+                                                    <span className="text-xs">{viewBooking.food}</span>
+                                                </td>
+                                                <td className="border border-black py-2 text-center">1</td>
+                                                <td className="border border-black py-2 text-right">-</td>
+                                            </tr>
+                                        )}
+                                        {/* Empty Lines Filler to look official */}
+                                        {[...Array(4)].map((_, i) => (
+                                            <tr key={i}>
+                                                <td className="border border-black py-4">&nbsp;</td>
+                                                <td className="border border-black py-4">&nbsp;</td>
+                                                <td className="border border-black py-4">&nbsp;</td>
+                                                <td className="border border-black py-4">&nbsp;</td>
+                                            </tr>
+                                        ))}
                                     </tbody>
                                     <tfoot>
-                                        <tr>
-                                            <td colSpan="2" className="text-right pt-4 font-bold">รวมเป็นเงิน (Total)</td>
-                                            <td className="text-right pt-4 font-bold pr-2">{parseInt(viewBooking.price).toLocaleString()} บาท</td>
-                                        </tr>
-                                        <tr>
-                                            <td colSpan="2" className="text-right text-red-600">หัก มัดจำ (Deposit)</td>
-                                            <td className="text-right text-red-600 pr-2">-{parseInt(viewBooking.deposit).toLocaleString()} บาท</td>
-                                        </tr>
-                                        <tr className="text-lg">
-                                            <td colSpan="2" className="text-right font-bold pt-2 border-t border-gray-800">ยอดคงเหลือ (Balance)</td>
-                                            <td className="text-right font-bold pt-2 border-t border-gray-800 pr-2 text-green-700">{(parseInt(viewBooking.price) - parseInt(viewBooking.deposit)).toLocaleString()} บาท</td>
+                                        <tr className="bg-gray-100 font-bold">
+                                            <td colSpan="2" className="border border-black py-2 text-center">
+                                                ({bahtText(parseInt(viewBooking.price))})
+                                            </td>
+                                            <td className="border border-black py-2 text-right">รวมเป็นเงิน</td>
+                                            <td className="border border-black py-2 text-right">{parseInt(viewBooking.price).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
                                         </tr>
                                     </tfoot>
                                 </table>
 
-                                <div className="absolute bottom-20 left-0 w-full flex justify-between px-10">
-                                    <div className="text-center">
-                                        <p className="border-b border-black w-40 mb-2"></p>
-                                        <p>ผู้รับเงิน</p>
-                                        <p className="text-xs text-gray-500">วันที่: ...../...../.......</p>
+                                {/* Summary & Signatures */}
+                                <div className="flex justify-between items-start mt-8">
+                                    <div className="w-1/2 pr-4">
+                                        <div className="border border-black p-4 text-center h-32 flex flex-col justify-end">
+                                            <p className="border-b border-dotted border-black w-3/4 mx-auto mb-2"></p>
+                                            <p className="text-sm">ผู้จ่ายเงิน</p>
+                                        </div>
                                     </div>
-                                    <div className="text-center">
-                                        <p className="border-b border-black w-40 mb-2"></p>
-                                        <p>ผู้จ่ายเงิน</p>
-                                        <p className="text-xs text-gray-500">วันที่: ...../...../.......</p>
+                                    <div className="w-1/2 pl-4">
+                                        <div className="border border-black p-4 text-center h-32 flex flex-col justify-end">
+                                            <p className="border-b border-dotted border-black w-3/4 mx-auto mb-2"></p>
+                                            <p className="text-sm">ผู้รับเงิน</p>
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="absolute bottom-5 w-full text-center text-xs text-gray-400">
+                                
+                                <div className="text-center text-xs mt-8">
                                     <p>ขอบคุณที่ใช้บริการ ขนำลุงดำ แคมป์ปิ้ง</p>
                                 </div>
                             </div>
