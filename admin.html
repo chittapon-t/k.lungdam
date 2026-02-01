@@ -18,1028 +18,551 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap');
         body { font-family: 'Kanit', sans-serif; background-color: #f3f4f6; }
-        .calendar-day { min-height: 80px; }
-        @media(max-width: 640px){ .calendar-day { min-height: 50px; } }
-        @keyframes popIn { 0% { opacity: 0; transform: scale(0.95); } 100% { opacity: 1; transform: scale(1); } }
-        .animate-modal { animation: popIn 0.2s ease-out forwards; }
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        .calendar-day { min-height: 100px; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Print Styles */
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background-color: white; }
+        }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="text/babel">
-        // --- CONFIGURATION ---
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwQjaz5oaVekrtSlw_kGqt9gLOg0uQeXphG4H2Q5cqrv4ZSEiJnzO63lctvaaYTRr9HNQ/exec"; 
-        
-        let ROOM_IDS = ['R1','R2','R3','T1','T2','K1','K2','Z8'];
-        let ROOM_NAMES = {
-            'R1': 'โฮมสเตย์หนำโป', 'R2': 'บ้านพักริมน้ำ 1', 'R3': 'บ้านพักริมน้ำ 2',
-            'T1': 'เต็นท์กระโจม 1', 'T2': 'เต็นท์กระโจม 2', 'K1': 'เช่าเต็นท์สนาม K1',
-            'K2': 'เช่าเต็นท์สนาม K2', 'Z8': 'ลานกางเต็นท์'
-        };
+        // --- CONSTANTS ---
+        // *** แก้ไขเบอร์โทรศัพท์ร้าน (พร้อมเพย์) ที่นี่ ***
+        const SHOP_PHONE = "081-xxx-xxxx"; 
+        const API_URL = 'https://script.google.com/macros/s/AKfycbwt36q3fMpvJ_W9X2p43rD6W9zZ5z5z5z/exec'; // ใส่ URL ของ Web App ที่ deploy แล้ว
 
-        const compressImage = async (file) => {
-            return new Promise((resolve, reject) => {
-                const maxWidth = 800;
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = (event) => {
-                    const img = new Image();
-                    img.src = event.target.result;
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        let width = img.width;
-                        let height = img.height;
-                        if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; }
-                        canvas.width = width; canvas.height = height;
-                        const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.7)); 
-                    };
-                    img.onerror = (err) => reject(err);
-                };
-                reader.onerror = (err) => reject(err);
-            });
-        };
-
-        const StatusBadge = ({ status }) => {
-            let color = 'bg-gray-100 text-gray-800';
-            const safeStatus = String(status || '');
-            if (safeStatus === 'รอตรวจสอบ') color = 'bg-yellow-100 text-yellow-800';
-            if (safeStatus === 'ยืนยัน') color = 'bg-green-100 text-green-800';
-            if (safeStatus.includes('ยกเลิก')) color = 'bg-red-100 text-red-800';
-            return <span className={`px-2 py-1 rounded text-xs font-bold border ${color}`}>{safeStatus}</span>;
-        };
+        const { useState, useEffect, useRef } = React;
 
         const AdminApp = () => {
-            const [isLoggedIn, setIsLoggedIn] = React.useState(false);
-            const [password, setPassword] = React.useState('');
-            const [loading, setLoading] = React.useState(false);
-            const [activeTab, setActiveTab] = React.useState('dashboard');
-            
-            const [bookings, setBookings] = React.useState([]);
-            const [settings, setSettings] = React.useState({ discounts: [], closed: [], special: [], roomClosures: [] });
-            const [siteSettings, setSiteSettings] = React.useState(null);
-            const [savingSiteSettings, setSavingSiteSettings] = React.useState(false);
-            const [roomConfig, setRoomConfig] = React.useState({});
+            const [view, setView] = useState('login'); // login, dashboard, calendar, booking, settings
+            const [token, setToken] = useState(localStorage.getItem('adminToken'));
+            const [bookings, setBookings] = useState([]);
+            const [loading, setLoading] = useState(false);
+            const [siteSettings, setSiteSettings] = useState({});
 
-            const [viewSlip, setViewSlip] = React.useState(null); 
-            const [viewBooking, setViewBooking] = React.useState(null); 
-            const [filter, setFilter] = React.useState('all'); 
-            const [searchTerm, setSearchTerm] = React.useState(''); 
+            // Login State
+            const [password, setPassword] = useState('');
 
-            const [rescheduleData, setRescheduleData] = React.useState(null);
-            const [selectedAddFood, setSelectedAddFood] = React.useState('');
-            const [addFoodQty, setAddFoodQty] = React.useState(1);
+            // Filter State
+            const [filterStatus, setFilterStatus] = useState('all');
 
-            const [editMode, setEditMode] = React.useState(null); 
-            const [formDiscount, setFormDiscount] = React.useState({ code: '', type: 'FIXED', value: '' });
-            const [formClosed, setFormClosed] = React.useState({ startDate: '', endDate: '', reason: '' });
-            const [formSpecial, setFormSpecial] = React.useState({ startDate: '', endDate: '', desc: '' });
-            const [formRoomClosure, setFormRoomClosure] = React.useState({ startDate: '', endDate: '', roomId: 'R1', reason: '' });
+            // Modal State
+            const [selectedBooking, setSelectedBooking] = useState(null);
+            const [showReceipt, setShowReceipt] = useState(false);
 
-            const [showAdminBooking, setShowAdminBooking] = React.useState(false);
-            const [adminBookingForm, setAdminBookingForm] = React.useState({ name: '', phone: '', checkIn: '', checkOut: '', rooms: [], price: '', deposit: '' });
-            const [adminAvailability, setAdminAvailability] = React.useState(null); 
-            const [loadingAvailability, setLoadingAvailability] = React.useState(false);
+            useEffect(() => {
+                if (token) {
+                    setView('dashboard');
+                    fetchData();
+                    fetchSettings();
+                }
+            }, [token]);
 
-            const [calendarDate, setCalendarDate] = React.useState(new Date());
-
-            const [modal, setModal] = React.useState({ isOpen: false, type: 'alert', title: '', message: '', onConfirm: null });
-
-            const showModal = (title, message, type = 'alert', onConfirm = null) => { setModal({ isOpen: true, title, message, type, onConfirm }); };
-            const closeModal = () => setModal(prev => ({ ...prev, isOpen: false }));
-            const alertMsg = (message, title = 'แจ้งเตือน', type = 'warning') => showModal(title, message, type, closeModal);
-            const successMsg = (message) => alertMsg(message, 'สำเร็จ', 'success');
-            const errorMsg = (message) => alertMsg(message, 'เกิดข้อผิดพลาด', 'error');
-            const confirmMsg = (message, onConfirm) => showModal('ยืนยันการทำรายการ', message, 'confirm', () => { closeModal(); onConfirm(); });
-
-            const formatThaiDate = (dateStr) => {
-                if(!dateStr || dateStr === '-') return "-";
-                const date = new Date(dateStr);
-                const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
-                return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear() + 543}`;
+            const fetchData = async () => {
+                setLoading(true);
+                try {
+                    const res = await fetch(API_URL, {
+                        method: 'POST',
+                        body: JSON.stringify({ action: 'getAdminData', password: 'TOKEN_AUTH' }) // In real app, use token
+                    });
+                    const json = await res.json();
+                    if (json.status === 'success') {
+                        setBookings(json.data);
+                    }
+                } catch (err) {
+                    console.error(err);
+                } finally {
+                    setLoading(false);
+                }
             };
 
-            React.useEffect(() => {
-                if (showAdminBooking && adminBookingForm.checkIn && adminBookingForm.checkOut) {
-                    if (adminBookingForm.checkIn < adminBookingForm.checkOut) {
-                        setLoadingAvailability(true);
-                        setAdminBookingForm(prev => ({...prev, rooms: []})); 
-                        fetch(`${GOOGLE_SCRIPT_URL}?action=getAvailability&checkIn=${adminBookingForm.checkIn}&checkOut=${adminBookingForm.checkOut}`)
-                            .then(r => r.json())
-                            .then(res => { setLoadingAvailability(false); if (res.status === 'success') setAdminAvailability(res); })
-                            .catch(e => setLoadingAvailability(false));
-                    }
-                } else { setAdminAvailability(null); }
-            }, [showAdminBooking, adminBookingForm.checkIn, adminBookingForm.checkOut]);
+            const fetchSettings = async () => {
+                try {
+                    const res = await fetch(`${API_URL}?action=getSiteSettings`);
+                    const json = await res.json();
+                    if(json.status === 'success') setSiteSettings(json.data);
+                } catch(e) {}
+            };
 
-            const stats = React.useMemo(() => {
-                const now = new Date();
-                const currentMonth = now.getMonth();
-                const currentYear = now.getFullYear();
-                const totalRevenue = bookings.filter(b => b.status === 'ยืนยัน').reduce((sum, b) => sum + parseInt(b.deposit || 0), 0);
-                const monthlyRevenue = bookings.filter(b => { const d = new Date(b.checkIn); return b.status === 'ยืนยัน' && d.getMonth() === currentMonth && d.getFullYear() === currentYear; }).reduce((sum, b) => sum + parseInt(b.deposit || 0), 0);
-                const pendingCount = bookings.filter(b => b.status === 'รอตรวจสอบ').length;
-                const monthlyCounts = Array(12).fill(0);
-                bookings.forEach(b => { if (b.status !== 'ยกเลิก' && b.status !== 'Cancelled') { const d = new Date(b.checkIn); if (d.getFullYear() === currentYear) { monthlyCounts[d.getMonth()]++; } } });
-                const upcoming = bookings.filter(b => { const checkIn = new Date(b.checkIn); const diffTime = checkIn - now; const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); return b.status === 'ยืนยัน' && diffDays >= 0 && diffDays <= 3; }).sort((a,b) => new Date(a.checkIn) - new Date(b.checkIn));
-                return { totalRevenue, monthlyRevenue, pendingCount, monthlyCounts, upcoming };
-            }, [bookings]);
-
-            const filteredBookings = React.useMemo(() => {
-                const today = new Date();
-                today.setHours(0,0,0,0);
-                let result = bookings.filter(b => {
-                    const bCheckIn = new Date(b.checkIn);
-                    bCheckIn.setHours(0,0,0,0);
-                    let statusMatch = false;
-                    
-                    if (filter === 'all') statusMatch = true;
-                    else if (filter === 'pending') statusMatch = b.status === 'รอตรวจสอบ';
-                    else if (filter === 'upcoming') statusMatch = b.status === 'ยืนยัน' && bCheckIn >= today;
-                    else if (filter === 'history') statusMatch = b.status === 'ยืนยัน' && bCheckIn < today;
-
-                    if (!statusMatch) return false;
-                    
-                    const term = searchTerm.toLowerCase();
-                    const bId = String(b.id || '').toLowerCase();
-                    const bName = String(b.name || '').toLowerCase();
-                    const bPhone = String(b.phone || '').toLowerCase();
-                    const bLine = String(b.lineProfile || '').toLowerCase();
-                    return bId.includes(term) || bName.includes(term) || bPhone.includes(term) || bLine.includes(term);
-                });
-                
-                if (filter === 'upcoming') {
-                    result.sort((a, b) => new Date(a.checkIn) - new Date(b.checkIn));
-                }
-                return result;
-            }, [bookings, filter, searchTerm]);
-
-            const handleLogin = (e) => {
+            const handleLogin = async (e) => {
                 e.preventDefault();
                 setLoading(true);
-                fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'adminLogin', password: password }) })
-                .then(r => r.json()).then(res => {
+                try {
+                    const res = await fetch(API_URL, {
+                        method: 'POST',
+                        body: JSON.stringify({ action: 'adminLogin', password })
+                    });
+                    const json = await res.json();
+                    if (json.status === 'success') {
+                        localStorage.setItem('adminToken', 'logged_in');
+                        setToken('logged_in');
+                        setView('dashboard');
+                    } else {
+                        alert('รหัสผ่านไม่ถูกต้อง');
+                    }
+                } catch (err) {
+                    alert('Error Login');
+                } finally {
                     setLoading(false);
-                    if (res.status === 'success') { setIsLoggedIn(true); fetchData(); fetchSettings(); fetchRoomConfig(); } else errorMsg('รหัสผ่านไม่ถูกต้อง');
-                }).catch(err => { setLoading(false); errorMsg('Connection Error: ' + err); });
+                }
             };
 
-            const fetchData = () => {
+            const updateStatus = async (id, status) => {
+                if(!confirm(`ยืนยันเปลี่ยนสถานะเป็น ${status}?`)) return;
                 setLoading(true);
-                fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'getAdminData', password: password }) })
-                .then(r => r.json()).then(res => { setLoading(false); if (res.status === 'success') setBookings(res.data); });
+                try {
+                    await fetch(API_URL, {
+                        method: 'POST',
+                        body: JSON.stringify({ action: 'updateStatus', bookingId: id, newStatus: status, password: 'TOKEN_AUTH' })
+                    });
+                    fetchData();
+                    if(selectedBooking) setSelectedBooking(null);
+                } catch(e) {
+                    alert('Error');
+                } finally {
+                    setLoading(false);
+                }
             };
 
-            const fetchSettings = () => {
-                fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'getSettings', password: password }) }).then(r => r.json()).then(res => { if (res.status === 'success') setSettings(res); });
-                fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'getSiteSettings', password: password }) }).then(r => r.json()).then(res => { if (res.status === 'success') setSiteSettings(res.data); });
+            const handleLogout = () => {
+                localStorage.removeItem('adminToken');
+                setToken(null);
+                setView('login');
             };
 
-            const fetchRoomConfig = () => {
-                fetch(`${GOOGLE_SCRIPT_URL}?action=getRoomConfig`).then(r => r.json()).then(res => { if (res.status === 'success') { setRoomConfig(res.data); const loadedIds = Object.keys(res.data); if (loadedIds.length > 0) { ROOM_IDS = loadedIds; ROOM_NAMES = {}; loadedIds.forEach(id => ROOM_NAMES[id] = res.data[id].name); } } });
-            };
-
-            const updateStatus = (id, newStatus) => {
-                const actionText = newStatus === 'ยกเลิก' ? 'ยกเลิกรายการ' : `เปลี่ยนสถานะเป็น "${newStatus}"`;
-                confirmMsg(`ยืนยันการ${actionText} ใช่หรือไม่?`, () => {
-                    setBookings(prev => prev.map(b => b.id === id ? {...b, status: newStatus} : b));
-                    fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'updateStatus', bookingId: id, newStatus: newStatus, password: password }) });
-                    if (newStatus === 'ยกเลิก' && viewBooking && viewBooking.id === id) setViewBooking({...viewBooking, status: 'ยกเลิก'});
-                });
-            };
-
-            const handleCreateAdminBooking = () => {
-                const { name, phone, checkIn, checkOut, rooms, price, deposit } = adminBookingForm;
-                if(!name || !phone || !checkIn || !checkOut || rooms.length === 0 || !price) return alertMsg('กรุณากรอกข้อมูลให้ครบถ้วน');
-                confirmMsg('ยืนยันสร้างรายการจอง?', () => {
-                    setLoading(true);
-                    const cart = rooms.map(rid => ({ id: rid, name: ROOM_NAMES[rid] || rid, type: (rid==='Z8'?'ground':(rid.startsWith('K')?'tent_rent':(rid.startsWith('T')?'tent':'room'))), guests: 2, qty: 1 }));
-                    fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'createAdminBooking', password: password, customer: { name, phone }, checkIn, checkOut, totalGuests: 2, cart: cart, price: parseFloat(price), deposit: parseFloat(deposit || price) })
-                    }).then(r => r.json()).then(res => { setLoading(false); if(res.status === 'success') { successMsg('สร้างรายการจองสำเร็จ'); fetchData(); setShowAdminBooking(false); setAdminBookingForm({ name: '', phone: '', checkIn: '', checkOut: '', rooms: [], price: '', deposit: '' }); setAdminAvailability(null); } else errorMsg('ไม่สำเร็จ: ' + res.message); });
-                });
-            };
-
-            const handleReschedule = () => {
-                if(!rescheduleData.checkIn || !rescheduleData.checkOut) return alertMsg('กรุณาเลือกวันที่ให้ครบถ้วน');
-                if(rescheduleData.checkIn >= rescheduleData.checkOut) return alertMsg('วันที่ออกต้องอยู่หลังวันที่เข้าพัก');
-                confirmMsg('ยืนยันการเลื่อนวันเข้าพัก?', () => {
-                    fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'rescheduleBooking', bookingId: rescheduleData.id, newCheckIn: rescheduleData.checkIn, newCheckOut: rescheduleData.checkOut, password: password }) 
-                    }).then(r => r.json()).then(res => { if (res.status === 'success') { successMsg('เลื่อนวันสำเร็จเรียบร้อย'); setRescheduleData(null); setViewBooking(null); fetchData(); } else errorMsg('ไม่สำเร็จ: ' + res.message); });
-                });
-            };
-
-            const handleAddFood = () => {
-                if(!selectedAddFood) return alertMsg('กรุณาเลือกเมนูอาหาร');
-                const foodItem = siteSettings.foodMenu.find(f => f.id === selectedAddFood);
-                if(!foodItem) return;
-                confirmMsg(`ยืนยันเพิ่ม ${foodItem.name} จำนวน ${addFoodQty} ชุด?`, () => {
-                    setLoading(true);
-                    if(!foodItem.id || !foodItem.name) return errorMsg('ข้อมูลอาหารไม่ถูกต้อง');
-                    fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'addFoodToBooking', bookingId: viewBooking.id, foodItem: { id: foodItem.id, name: foodItem.name, price: foodItem.price, qty: parseInt(addFoodQty) }, password: password })
-                    }).then(r => r.json()).then(res => { setLoading(false); if(res.status === 'success') { successMsg('เพิ่มรายการอาหารเรียบร้อย'); fetchData(); setViewBooking(null); } else { errorMsg('Error: ' + res.message); } });
-                });
-            };
-
-            const handleSaveSetting = (type, payload) => {
-                const action = editMode ? 'editSetting' : 'addSetting'; const id = editMode ? editMode.id : null;
-                if ((type !== 'discount') && (!payload.startDate || !payload.endDate)) return alertMsg('กรุณาระบุวันที่เริ่มต้นและสิ้นสุด');
-                confirmMsg('ยืนยันการบันทึกข้อมูล?', () => {
-                    fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action, type, id, payload, password: password }) }).then(r => r.json()).then(res => { if (res.status === 'success') { successMsg('บันทึกสำเร็จ'); fetchSettings(); setEditMode(null); setFormDiscount({ code: '', type: 'FIXED', value: '' }); setFormClosed({ startDate: '', endDate: '', reason: '' }); setFormSpecial({ startDate: '', endDate: '', desc: '' }); setFormRoomClosure({ startDate: '', endDate: '', roomId: 'R1', reason: '' }); } else errorMsg('บันทึกไม่สำเร็จ'); });
-                });
-            };
-            const startEdit = (type, item) => alertMsg('การแก้ไขช่วงวันที่ต้องลบแล้วเพิ่มใหม่ครับ');
-            const handleDeleteSetting = (type, id) => confirmMsg('ยืนยันการลบรายการนี้?', () => { fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'deleteSetting', type, id, password: password }) }).then(r => r.json()).then(res => { if (res.status === 'success') fetchSettings(); }); });
-            const handleSaveSiteSettings = () => confirmMsg('ยืนยันบันทึกการตั้งค่าร้านค้า?', () => { setSavingSiteSettings(true); fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'saveSiteSettings', password: password, settings: siteSettings }) }).then(r => r.json()).then(res => { setSavingSiteSettings(false); if(res.status === 'success') { successMsg('บันทึกเรียบร้อย'); fetchSettings(); } else errorMsg('บันทึกไม่สำเร็จ'); }); });
-            const handleImageUpload = async (file, callback) => { if(file) { try { const base64 = await compressImage(file); callback(base64); } catch(e) { errorMsg('Upload Failed'); } } };
-            const handleMultipleImageUpload = async (files, callback) => { if (!files || files.length === 0) return; try { const promises = Array.from(files).map(file => compressImage(file)); const base64List = await Promise.all(promises); callback(base64List); } catch(e) { errorMsg('Upload Failed'); } };
-            const handleExport = () => { const header = ["BookingID", "Date", "Customer", "Phone", "CheckIn", "CheckOut", "Rooms", "Total", "Deposit", "Status"]; const rows = bookings.map(b => [ b.id, b.timestamp, `"${b.name}"`, `'${b.phone}`, b.checkIn, b.checkOut, `"${b.rooms.replace(/"/g, '""')}"`, b.price, b.deposit, b.status ]); const csvContent = [header.join(","), ...rows.map(r => r.join(","))].join("\n"); const blob = new Blob(["\uFEFF"+csvContent], { type: 'text/csv;charset=utf-8;' }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.setAttribute("href", url); link.setAttribute("download", "bookings_lungdam.csv"); document.body.appendChild(link); link.click(); document.body.removeChild(link); };
-            
-            // --- NEW: PDF EXPORT ---
-            const handleExportPDF = () => {
-                const element = document.getElementById('report-print-area');
-                const opt = { margin: 0.5, filename: 'Booking_Report.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' } };
+            // --- PDF GENERATION ---
+            const printReceipt = () => {
+                const element = document.getElementById('receipt-content');
+                const opt = {
+                    margin: 5,
+                    filename: `receipt_${selectedBooking.id}.pdf`,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2 },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                };
                 html2pdf().set(opt).from(element).save();
             };
 
-            // --- NEW: RECEIPT PRINT ---
-            const handlePrintReceipt = () => {
-                const element = document.getElementById('receipt-print-area');
-                const opt = { margin: 0.3, filename: `Receipt_${viewBooking.id}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' } };
+            const printReport = () => {
+                const element = document.getElementById('report-content');
+                const opt = {
+                    margin: 10,
+                    filename: `report_${new Date().toISOString().split('T')[0]}.pdf`,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2 },
+                    // เปลี่ยนเป็น Landscape เพื่อไม่ให้ตารางล้น
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' } 
+                };
                 html2pdf().set(opt).from(element).save();
             };
 
-            const getDaysInMonth = (date) => new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
-            const firstDayOfMonth = new Date(calendarDate.getFullYear(), calendarDate.getMonth(), 1).getDay();
-            const days = []; for(let i=0; i<firstDayOfMonth; i++) days.push(null); for(let i=1; i<=getDaysInMonth(calendarDate); i++) days.push(i);
-            const getBookingsForDate = (day) => { if(!day) return []; const dateStr = `${calendarDate.getFullYear()}-${String(calendarDate.getMonth()+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`; return bookings.filter(b => b.status !== 'ยกเลิก' && b.checkIn <= dateStr && b.checkOut > dateStr); };
+            // --- VIEW COMPONENTS ---
 
-            if (!isLoggedIn) return ( <div className="min-h-screen flex items-center justify-center bg-gray-900 px-4 relative"> <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-sm z-10"> <div className="text-center mb-6"><h1 className="text-3xl font-bold text-green-800">Admin Panel</h1><p className="text-gray-500">ขนำลุงดำ แคมป์ปิ้ง</p></div> <form onSubmit={handleLogin} className="space-y-4"> <input type="password" placeholder="รหัสผ่าน" className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" value={password} onChange={e => setPassword(e.target.value)} /> <button disabled={loading} className="w-full bg-gray-800 text-white p-3 rounded-lg hover:bg-gray-700 transition font-bold shadow-lg">{loading ? 'กำลังตรวจสอบ...' : 'เข้าสู่ระบบ'}</button> </form> </div> {modal.isOpen && ( <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60 backdrop-blur-sm transition-opacity"> <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xs overflow-hidden animate-modal"> <div className={`p-6 text-center ${modal.type==='error'?'bg-red-50':''}`}> <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${modal.type==='error'?'bg-red-100 text-red-500':'bg-gray-100 text-gray-500'}`}> <i className={`fas ${modal.type==='error'?'fa-times':'fa-info'} text-2xl`}></i> </div> <h3 className="text-xl font-bold text-gray-800 mb-2">{modal.title}</h3> <p className="text-gray-600 text-sm">{modal.message}</p> </div> <div className="p-4 bg-gray-50"> <button onClick={closeModal} className="w-full py-2.5 bg-gray-800 text-white rounded-xl font-bold hover:bg-gray-700 transition">ตกลง</button> </div> </div> </div> )} </div> );
+            if (view === 'login') {
+                return (
+                    <div className="flex items-center justify-center min-h-screen bg-gray-800">
+                        <div className="bg-white p-8 rounded-lg shadow-xl w-96">
+                            <h1 className="text-2xl font-bold mb-6 text-center text-gray-800">Admin Login</h1>
+                            <form onSubmit={handleLogin}>
+                                <input 
+                                    type="password" 
+                                    className="w-full p-3 border rounded mb-4" 
+                                    placeholder="Password" 
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                />
+                                <button type="submit" className="w-full bg-green-600 text-white p-3 rounded font-bold hover:bg-green-700 transition">
+                                    {loading ? 'Logging in...' : 'Login'}
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                );
+            }
 
             return (
-                <div className="min-h-screen pb-20 bg-gray-100 font-sans">
-                    <nav className="bg-white shadow p-3 sticky top-0 z-20 flex justify-between items-center">
-                        <div className="font-bold text-lg text-green-800 flex items-center gap-2"><i className="fas fa-campground"></i> จัดการระบบ</div>
-                        <div className="flex gap-2">
-                            <button onClick={fetchData} className="w-8 h-8 bg-gray-100 rounded-full text-gray-600 hover:bg-gray-200 transition"><i className="fas fa-sync"></i></button>
-                            <button onClick={() => window.location.reload()} className="w-8 h-8 bg-red-50 rounded-full text-red-500 hover:bg-red-100 transition"><i className="fas fa-power-off"></i></button>
+                <div className="min-h-screen flex flex-col md:flex-row">
+                    {/* Sidebar */}
+                    <div className="bg-gray-900 text-white w-full md:w-64 flex-shrink-0">
+                        <div className="p-6 border-b border-gray-700">
+                            <h2 className="text-xl font-bold">ขนำลุงดำ Admin</h2>
                         </div>
-                    </nav>
-
-                    <div className="max-w-7xl mx-auto p-3 md:p-6">
-                        <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
-                            <button onClick={() => setActiveTab('dashboard')} className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${activeTab==='dashboard'?'bg-green-600 text-white shadow-lg transform scale-105':'bg-white text-gray-600 shadow hover:bg-gray-50'}`}><i className="fas fa-chart-line mr-1"></i> ภาพรวม</button>
-                            <button onClick={() => setActiveTab('bookings')} className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${activeTab==='bookings'?'bg-green-600 text-white shadow-lg transform scale-105':'bg-white text-gray-600 shadow hover:bg-gray-50'}`}><i className="fas fa-list mr-1"></i> รายการจอง</button>
-                            <button onClick={() => setActiveTab('calendar')} className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${activeTab==='calendar'?'bg-green-600 text-white shadow-lg transform scale-105':'bg-white text-gray-600 shadow hover:bg-gray-50'}`}><i className="fas fa-calendar-alt mr-1"></i> ปฏิทิน</button>
-                            <button onClick={() => setActiveTab('settings')} className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${activeTab==='settings'?'bg-green-600 text-white shadow-lg transform scale-105':'bg-white text-gray-600 shadow hover:bg-gray-50'}`}><i className="fas fa-cogs mr-1"></i> ตั้งค่าระบบ</button>
-                        </div>
-
-                        {activeTab === 'dashboard' && (
-                            <div className="space-y-6 animate-fade-in">
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                    <div className="bg-white p-5 rounded-2xl shadow-sm border-l-4 border-green-500">
-                                        <div className="text-gray-500 text-xs mb-1">รายได้รวม (มัดจำ)</div>
-                                        <div className="text-2xl font-bold text-green-700">{stats.totalRevenue.toLocaleString()} ฿</div>
-                                    </div>
-                                    <div className="bg-white p-5 rounded-2xl shadow-sm border-l-4 border-blue-500">
-                                        <div className="text-gray-500 text-xs mb-1">รายได้เดือนนี้</div>
-                                        <div className="text-2xl font-bold text-blue-700">{stats.monthlyRevenue.toLocaleString()} ฿</div>
-                                    </div>
-                                    <div className="bg-white p-5 rounded-2xl shadow-sm border-l-4 border-yellow-500">
-                                        <div className="text-gray-500 text-xs mb-1">รอตรวจสอบ</div>
-                                        <div className="text-2xl font-bold text-yellow-600">{stats.pendingCount} รายการ</div>
-                                    </div>
-                                    <div className="bg-white p-5 rounded-2xl shadow-sm border-l-4 border-gray-500">
-                                        <div className="text-gray-500 text-xs mb-1">การจองทั้งหมด</div>
-                                        <div className="text-2xl font-bold text-gray-700">{bookings.length}</div>
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="bg-white p-6 rounded-2xl shadow-sm">
-                                        <h3 className="font-bold text-gray-700 mb-6 flex items-center gap-2"><i className="fas fa-chart-bar text-green-500"></i> ยอดจองรายเดือน (ปีนี้)</h3>
-                                        <div className="flex items-end gap-2 h-40">
-                                            {stats.monthlyCounts.map((count, i) => (
-                                                <div key={i} className="flex-1 flex flex-col items-center group relative">
-                                                    <div className="w-full bg-green-100 rounded-t hover:bg-green-400 transition-all duration-300 relative" style={{ height: `${count > 0 ? (count / Math.max(...stats.monthlyCounts)) * 100 : 5}%` }}></div>
-                                                    <div className="absolute -top-6 text-xs font-bold text-green-700 opacity-0 group-hover:opacity-100 transition">{count}</div>
-                                                    <div className="text-[10px] text-gray-400 mt-2">{["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."][i]}</div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                    <div className="bg-white p-6 rounded-2xl shadow-sm">
-                                        <h3 className="font-bold text-gray-700 mb-4 flex items-center gap-2"><i className="fas fa-clock text-blue-500"></i> เข้าพักเร็วๆ นี้ (3 วัน)</h3>
-                                        <div className="space-y-3 overflow-y-auto max-h-40 pr-2">
-                                            {stats.upcoming.length === 0 && <p className="text-gray-400 text-sm text-center py-4">ไม่มีรายการเร็วๆ นี้</p>}
-                                            {stats.upcoming.map(b => (
-                                                <div key={b.id} onClick={()=>setViewBooking(b)} className="flex justify-between items-center p-3 bg-blue-50 rounded-xl cursor-pointer hover:bg-blue-100 transition">
-                                                    <div>
-                                                        <div className="font-bold text-sm text-gray-800">{b.name}</div>
-                                                        <div className="text-xs text-blue-600"><i className="fas fa-calendar-day mr-1"></i>{formatThaiDate(b.checkIn)}</div>
-                                                    </div>
-                                                    <div className="text-xs bg-white px-2 py-1 rounded-lg border border-blue-200 text-blue-500 font-bold shadow-sm">{b.rooms.split(',')[0].substring(0, 10)}..</div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {activeTab === 'bookings' && (
-                            <div>
-                                <div className="flex flex-col md:flex-row gap-4 mb-4 items-center justify-between">
-                                    <div className="flex gap-2 overflow-x-auto pb-2 w-full md:w-auto">
-                                        {['all', 'pending', 'confirmed', 'upcoming', 'history'].map(f => (
-                                            <button key={f} onClick={() => setFilter(f)} className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${filter === f ? 'bg-gray-800 text-white shadow' : 'bg-white text-gray-600 border hover:bg-gray-50'}`}>{f === 'all' ? 'ทั้งหมด' : (f === 'pending' ? 'รอตรวจสอบ' : (f === 'confirmed' ? 'ยืนยันแล้ว' : (f === 'upcoming' ? 'เร็วๆ นี้' : 'ประวัติ')))}</button>
-                                        ))}
-                                    </div>
-                                    
-                                    {/* --- NEW: SEARCH BAR --- */}
-                                    <div className="relative w-full md:w-64">
-                                        <i className="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                                        <input 
-                                            type="text" 
-                                            placeholder="ค้นหา (ID, ชื่อ, เบอร์, LINE)" 
-                                            className="w-full pl-10 pr-4 py-2 rounded-full border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            value={searchTerm}
-                                            onChange={e => setSearchTerm(e.target.value)}
-                                        />
-                                    </div>
-
-                                    <div className="flex gap-2 w-full md:w-auto">
-                                        <button onClick={() => setShowAdminBooking(true)} className="flex-1 md:flex-none px-4 py-2 bg-blue-600 text-white rounded-full text-xs font-bold hover:bg-blue-700 shadow flex items-center justify-center gap-1 transition"><i className="fas fa-plus"></i> Walk-in</button>
-                                        <button onClick={handleExport} className="flex-1 md:flex-none px-4 py-2 bg-green-600 text-white rounded-full text-xs font-bold hover:bg-green-700 shadow flex items-center justify-center gap-1 transition"><i className="fas fa-file-excel"></i> Excel</button>
-                                        <button onClick={handleExportPDF} className="flex-1 md:flex-none px-4 py-2 bg-red-600 text-white rounded-full text-xs font-bold hover:bg-red-700 shadow flex items-center justify-center gap-1 transition"><i className="fas fa-file-pdf"></i> Report</button>
-                                    </div>
-                                </div>
-                                
-                                <div className="space-y-4">
-                                    {filteredBookings.length === 0 && <div className="text-center text-gray-400 py-10">ไม่พบข้อมูลการจอง</div>}
-                                    {filteredBookings.map(b => (
-                                        <div key={b.id} className="bg-white rounded-xl shadow-sm hover:shadow-md transition p-5 border-l-4 border-green-500 relative group">
-                                            <div className="flex justify-between items-start mb-3">
-                                                <div><div className="text-xs text-gray-400 font-mono mb-0.5">{b.id} • {b.timestamp.split(' ')[0]}</div><div className="font-bold text-lg text-gray-800">{b.name}</div></div>
-                                                <StatusBadge status={b.status} />
-                                            </div>
-                                            <div className="text-sm text-gray-600 mb-3 space-y-1">
-                                                <div className="flex items-center gap-2"><i className="fas fa-phone w-4 text-center text-gray-400"></i> <a href={`tel:${b.phone}`} className="hover:text-green-600">{b.phone}</a></div>
-                                                <div className="flex items-center gap-2"><i className="fab fa-line w-4 text-center text-gray-400"></i> {b.lineProfile}</div>
-                                            </div>
-                                            <div className="bg-gray-50 p-3 rounded-lg text-sm mb-3 border border-gray-100">
-                                                <div className="flex justify-between mb-1"><span>เข้าพัก:</span> <b className="text-gray-700">{formatThaiDate(b.checkIn)}</b></div>
-                                                <div className="flex justify-between"><span>คืนห้อง:</span> <b className="text-gray-700">{formatThaiDate(b.checkOut)}</b></div>
-                                                <hr className="my-2 border-gray-200"/>
-                                                <div className="font-medium text-green-700 text-sm whitespace-pre-wrap"><i className="fas fa-home mr-1"></i> {b.rooms}</div>
-                                                {b.food !== '-' && <div className="text-orange-600 text-xs mt-1"><i className="fas fa-utensils mr-1"></i> {b.food}</div>}
-                                            </div>
-                                            <div className="flex justify-between items-center bg-blue-50 p-2 rounded-lg mb-3">
-                                                <div className="text-center px-2"><div className="text-[10px] text-gray-500">ยอดสุทธิ</div><div className="font-bold text-gray-800">{parseInt(b.price).toLocaleString()}</div></div>
-                                                <div className="h-8 w-px bg-blue-200"></div>
-                                                <div className="text-center px-2"><div className="text-[10px] text-gray-500">มัดจำ</div><div className="font-bold text-red-600">{parseInt(b.deposit).toLocaleString()}</div></div>
-                                                <div className="h-8 w-px bg-blue-200"></div>
-                                                <div className="text-center px-2"><div className="text-[10px] text-gray-500">คงเหลือ</div><div className="font-bold text-green-600">{(parseInt(b.price) - parseInt(b.deposit)).toLocaleString()}</div></div>
-                                            </div>
-                                            <div className="flex justify-end gap-2">
-                                                {/* Safe Check for Slip */}
-                                                {String(b.slip || '').includes('http') && <button onClick={() => setViewSlip(b.slip)} className="bg-blue-50 text-blue-600 px-3 py-2 rounded-lg hover:bg-blue-100 transition text-sm font-bold"><i className="fas fa-image mr-1"></i> สลิป</button>}
-                                                <button onClick={() => { setViewBooking(b); }} className="bg-orange-50 text-orange-600 px-3 py-2 rounded-lg hover:bg-orange-100 transition text-sm font-bold"><i className="fas fa-edit mr-1"></i> จัดการ</button>
-                                                {b.status === 'รอตรวจสอบ' && (<><button onClick={() => updateStatus(b.id, 'ยืนยัน')} className="bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition text-sm font-bold shadow-sm">ยืนยัน</button><button onClick={() => updateStatus(b.id, 'ยกเลิก')} className="bg-white border border-red-200 text-red-500 px-3 py-2 rounded-lg hover:bg-red-50 transition text-sm font-bold">ยกเลิก</button></>)}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {activeTab === 'calendar' && (
-                            <div className="bg-white rounded-lg shadow p-4">
-                                <div className="flex justify-between items-center mb-4">
-                                    <button onClick={()=>setCalendarDate(new Date(calendarDate.setMonth(calendarDate.getMonth()-1)))} className="p-2 bg-gray-100 rounded hover:bg-gray-200"><i className="fas fa-chevron-left"></i></button>
-                                    <h2 className="text-xl font-bold">{calendarDate.toLocaleString('th-TH', { month: 'long', year: 'numeric' })}</h2>
-                                    <button onClick={()=>setCalendarDate(new Date(calendarDate.setMonth(calendarDate.getMonth()+1)))} className="p-2 bg-gray-100 rounded hover:bg-gray-200"><i className="fas fa-chevron-right"></i></button>
-                                </div>
-                                <div className="grid grid-cols-7 gap-1 text-center text-xs md:text-sm font-bold bg-gray-200 p-2 rounded-t">
-                                    <div>อา</div><div>จ</div><div>อ</div><div>พ</div><div>พฤ</div><div>ศ</div><div>ส</div>
-                                </div>
-                                <div className="grid grid-cols-7 gap-1 border-l border-b border-gray-200">
-                                    {days.map((day, idx) => {
-                                        const dayBookings = getBookingsForDate(day);
-                                        return (
-                                            <div key={idx} className="border-t border-r border-gray-200 calendar-day p-1 relative">
-                                                {day && <div className="text-right text-xs text-gray-500 mb-1">{day}</div>}
-                                                {dayBookings.map(b => (
-                                                    <div key={b.id} onClick={()=>setViewBooking(b)} className={`text-[10px] p-1 rounded mb-1 truncate cursor-pointer text-white ${b.status==='ยืนยัน'?'bg-green-500':'bg-yellow-500'}`}>{b.name}</div>
-                                                ))}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* --- SETTINGS TAB (Restored) --- */}
-                        {activeTab === 'settings' && (
-                            <div className="space-y-8 animate-fade-in">
-                                {siteSettings && (
-                                    <div className="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
-                                        <div className="flex justify-between items-center mb-6 border-b pb-4">
-                                            <h2 className="text-xl font-bold text-gray-800"><i className="fas fa-store mr-2"></i>ตั้งค่าหน้าร้าน (Store Config)</h2>
-                                            <button onClick={handleSaveSiteSettings} disabled={savingSiteSettings} className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 disabled:bg-gray-400"> {savingSiteSettings ? 'กำลังบันทึก...' : 'บันทึกข้อมูลร้าน'} </button>
-                                        </div>
-                                        
-                                        <div className="mb-8">
-                                            <h3 className="font-bold text-lg mb-4 text-blue-600">ข้อมูลทั่วไป</h3>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                                <div><label className="block text-sm font-bold mb-1">ชื่อร้าน (Title)</label><input className="w-full border p-2 rounded" value={siteSettings.headerTitle} onChange={e => setSiteSettings({...siteSettings, headerTitle: e.target.value})} /></div>
-                                                <div><label className="block text-sm font-bold mb-1">คำอธิบายร้าน (Description)</label><textarea className="w-full border p-2 rounded" rows="3" value={siteSettings.headerDesc} onChange={e => setSiteSettings({...siteSettings, headerDesc: e.target.value})}></textarea></div>
-                                            </div>
-                                        </div>
-
-                                        {/* รูปภาพและรายละเอียดห้องพัก */}
-                                        <div className="mb-8">
-                                            <h3 className="font-bold text-lg mb-4 text-blue-600">รูปภาพและรายละเอียดห้องพัก</h3>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                                {ROOM_IDS.map(roomId => (
-                                                    <div key={roomId} className="border p-3 rounded bg-gray-50 flex flex-col h-full">
-                                                        <h4 className="font-bold mb-2 text-sm">{ROOM_NAMES[roomId]} ({roomId})</h4>
-                                                        <textarea className="w-full border p-1 rounded text-xs mb-2 resize-none h-16" placeholder="คำอธิบายห้องพัก..." value={siteSettings.roomDescriptions?.[roomId] || ''} onChange={e => {
-                                                                const newDesc = {...(siteSettings.roomDescriptions || {})};
-                                                                newDesc[roomId] = e.target.value;
-                                                                setSiteSettings({...siteSettings, roomDescriptions: newDesc});
-                                                            }}></textarea>
-                                                        <div className="flex flex-wrap gap-2 mb-2 flex-grow">
-                                                            {(siteSettings.roomImages[roomId] || []).map((img, idx) => (
-                                                                <div key={idx} className="relative w-12 h-12">
-                                                                    <img src={img} className="w-full h-full object-cover rounded" />
-                                                                    <button onClick={() => {
-                                                                        const newImgs = siteSettings.roomImages[roomId].filter((_, i) => i !== idx);
-                                                                        setSiteSettings({...siteSettings, roomImages: {...siteSettings.roomImages, [roomId]: newImgs}});
-                                                                    }} className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 text-[10px] flex items-center justify-center">×</button>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                        <input type="file" multiple className="text-[10px] w-full mt-auto" onChange={e => handleMultipleImageUpload(e.target.files, base64List => {
-                                                                const current = siteSettings.roomImages[roomId] || [];
-                                                                setSiteSettings({...siteSettings, roomImages: {...siteSettings.roomImages, [roomId]: [...current, ...base64List]}});
-                                                            })} />
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        {/* เมนูอาหาร */}
-                                        <div>
-                                            <div className="flex justify-between items-center mb-4">
-                                                <h3 className="font-bold text-lg text-blue-600">เมนูอาหาร</h3>
-                                                <button onClick={() => {
-                                                    const newFood = { id: 'F'+Date.now(), name: 'เมนูใหม่', price: 0, img: '', desc: '' };
-                                                    setSiteSettings({...siteSettings, foodMenu: [...siteSettings.foodMenu, newFood]});
-                                                }} className="bg-blue-100 text-blue-600 px-3 py-1 rounded text-sm hover:bg-blue-200">+ เพิ่มเมนู</button>
-                                            </div>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                {siteSettings.foodMenu.map((food, idx) => (
-                                                    <div key={food.id} className="border p-3 rounded flex gap-3 bg-white items-start">
-                                                        <div className="w-16 h-16 bg-gray-200 rounded flex-shrink-0 relative overflow-hidden group">
-                                                            {food.img ? <img src={food.img} className="w-full h-full object-cover" /> : <div className="flex items-center justify-center h-full text-gray-400 text-xs">No Img</div>}
-                                                            <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={e => handleImageUpload(e.target.files[0], base64 => {
-                                                                const newFoods = [...siteSettings.foodMenu];
-                                                                newFoods[idx].img = base64;
-                                                                setSiteSettings({...siteSettings, foodMenu: newFoods});
-                                                            })} />
-                                                        </div>
-                                                        <div className="flex-1 space-y-1">
-                                                            <input className="w-full border p-1 rounded text-sm" placeholder="ชื่อเมนู" value={food.name} onChange={e => {
-                                                                const newFoods = [...siteSettings.foodMenu];
-                                                                newFoods[idx].name = e.target.value;
-                                                                setSiteSettings({...siteSettings, foodMenu: newFoods});
-                                                            }} />
-                                                            <textarea className="w-full border p-1 rounded text-xs resize-none" rows="2" placeholder="คำอธิบายอาหาร..." value={food.desc || ''} onChange={e => {
-                                                                    const newFoods = [...siteSettings.foodMenu];
-                                                                    newFoods[idx].desc = e.target.value;
-                                                                    setSiteSettings({...siteSettings, foodMenu: newFoods});
-                                                                }}></textarea>
-                                                            <div className="flex items-center gap-2">
-                                                                <input type="number" className="w-20 border p-1 rounded text-sm" placeholder="ราคา" value={food.price} onChange={e => {
-                                                                    const newFoods = [...siteSettings.foodMenu];
-                                                                    newFoods[idx].price = parseInt(e.target.value) || 0;
-                                                                    setSiteSettings({...siteSettings, foodMenu: newFoods});
-                                                                }} />
-                                                                <span className="text-sm text-gray-500">บาท</span>
-                                                            </div>
-                                                        </div>
-                                                        <button onClick={() => {
-                                                            const newFoods = siteSettings.foodMenu.filter((_, i) => i !== idx);
-                                                            setSiteSettings({...siteSettings, foodMenu: newFoods});
-                                                        }} className="text-red-500 hover:text-red-700"><i className="fas fa-trash"></i></button>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="bg-white p-4 rounded-lg shadow border-l-4 border-green-500">
-                                        <h3 className="font-bold text-lg mb-4 text-green-800"><i className="fas fa-tags"></i> โค้ดส่วนลด</h3>
-                                        <div className="flex gap-2 mb-4 flex-wrap items-end bg-gray-50 p-2 rounded">
-                                            <div><label className="text-xs text-gray-500">Code</label><input className="border p-2 rounded text-sm w-24 block" value={formDiscount.code} onChange={e=>setFormDiscount({...formDiscount, code:e.target.value})} /></div>
-                                            <div><label className="text-xs text-gray-500">Type</label><select className="border p-2 rounded text-sm block" value={formDiscount.type} onChange={e=>setFormDiscount({...formDiscount, type:e.target.value})}><option value="FIXED">บาท</option><option value="PERCENT">%</option></select></div>
-                                            <div><label className="text-xs text-gray-500">Value</label><input type="number" className="border p-2 rounded text-sm w-20 block" value={formDiscount.value} onChange={e=>setFormDiscount({...formDiscount, value:e.target.value})} /></div>
-                                            <button onClick={()=>handleSaveSetting('discount', formDiscount)} className={`px-3 py-2 rounded text-sm text-white ${editMode?.code===formDiscount.code ? 'bg-orange-500':'bg-green-600'}`}>{editMode?.code===formDiscount.code ? 'บันทึกแก้ไข':'เพิ่ม'}</button>
-                                            {editMode && <button onClick={()=>{setEditMode(null); setFormDiscount({code:'',type:'FIXED',value:''})}} className="text-gray-500 text-sm">ยกเลิก</button>}
-                                        </div>
-                                        <ul className="divide-y max-h-40 overflow-y-auto">
-                                            {settings.discounts.map((d, i) => (
-                                                <li key={i} className="flex justify-between items-center p-2 text-sm">
-                                                    <span><b>{d.code}</b> : ลด {d.value} {d.type}</span>
-                                                    <div className="flex gap-2"><button onClick={()=>startEdit('discount', d)} className="text-blue-500"><i className="fas fa-edit"></i></button><button onClick={()=>handleDeleteSetting('discount', d.id)} className="text-red-500"><i className="fas fa-trash"></i></button></div>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                    <div className="bg-white p-4 rounded-lg shadow border-l-4 border-red-500">
-                                        <h3 className="font-bold text-lg mb-4 text-red-800"><i className="fas fa-calendar-times"></i> วันปิดบริการ (ทั้งรีสอร์ท)</h3>
-                                        <div className="flex gap-2 mb-4 flex-wrap items-end bg-gray-50 p-2 rounded">
-                                            <div><label className="text-xs text-gray-500 block">เริ่ม</label><input type="date" className="border p-2 rounded text-sm" value={formClosed.startDate} onChange={e=>setFormClosed({...formClosed, startDate:e.target.value})} /></div>
-                                            <div><label className="text-xs text-gray-500 block">สิ้นสุด</label><input type="date" className="border p-2 rounded text-sm" value={formClosed.endDate} onChange={e=>setFormClosed({...formClosed, endDate:e.target.value})} /></div>
-                                            <div className="flex-1"><label className="text-xs text-gray-500 block">เหตุผล</label><input placeholder="เหตุผล" className="border p-2 rounded text-sm w-full" value={formClosed.reason} onChange={e=>setFormClosed({...formClosed, reason:e.target.value})} /></div>
-                                            <button onClick={()=>handleSaveSetting('closed', formClosed)} className="px-3 py-2 rounded text-sm text-white bg-red-600 mb-0.5">ปิด</button>
-                                        </div>
-                                        <ul className="divide-y max-h-40 overflow-y-auto">
-                                            {settings.closed.map((c, i) => (
-                                                <li key={i} className="flex justify-between items-center p-2 text-sm text-red-800">
-                                                    <span>{formatThaiDate(c.date)} ({c.reason})</span>
-                                                    <button onClick={()=>handleDeleteSetting('closed', c.id)} className="text-red-500"><i className="fas fa-trash"></i></button>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                    
-                                    {/* --- Room Closure Settings (Range) --- */}
-                                    <div className="bg-white p-4 rounded-lg shadow border-l-4 border-gray-500">
-                                        <h3 className="font-bold text-lg mb-4 text-gray-800"><i className="fas fa-ban"></i> ปิดปรับปรุงห้องพัก (รายห้อง)</h3>
-                                        <div className="flex gap-2 mb-4 flex-wrap items-end bg-gray-50 p-2 rounded">
-                                            <div><label className="text-xs text-gray-500 block">เริ่ม</label><input type="date" className="border p-2 rounded text-sm" value={formRoomClosure.startDate} onChange={e=>setFormRoomClosure({...formRoomClosure, startDate:e.target.value})} /></div>
-                                            <div><label className="text-xs text-gray-500 block">สิ้นสุด</label><input type="date" className="border p-2 rounded text-sm" value={formRoomClosure.endDate} onChange={e=>setFormRoomClosure({...formRoomClosure, endDate:e.target.value})} /></div>
-                                            <div><label className="text-xs text-gray-500 block">ห้อง</label><select className="border p-2 rounded text-sm" value={formRoomClosure.roomId} onChange={e=>setFormRoomClosure({...formRoomClosure, roomId:e.target.value})}>{ROOM_IDS.map(r => <option key={r} value={r}>{ROOM_NAMES[r]}</option>)}</select></div>
-                                            <div className="flex-1"><label className="text-xs text-gray-500 block">สาเหตุ</label><input placeholder="สาเหตุ" className="border p-2 rounded text-sm w-full" value={formRoomClosure.reason} onChange={e=>setFormRoomClosure({...formRoomClosure, reason:e.target.value})} /></div>
-                                            <button onClick={()=>handleSaveSetting('room_closure', formRoomClosure)} className="px-3 py-2 rounded text-sm text-white bg-gray-600 mb-0.5">ปิด</button>
-                                        </div>
-                                        <ul className="divide-y max-h-40 overflow-y-auto">
-                                            {(settings.roomClosures || []).map((rc, i) => (
-                                                <li key={i} className="flex justify-between items-center p-2 text-sm text-gray-700">
-                                                    <span>{formatThaiDate(rc.date)} : <b>{ROOM_NAMES[rc.roomId] || rc.roomId}</b> ({rc.reason})</span>
-                                                    <button onClick={()=>handleDeleteSetting('room_closure', rc.id)} className="text-red-500"><i className="fas fa-trash"></i></button>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-
-                                    <div className="bg-white p-4 rounded-lg shadow border-l-4 border-blue-800">
-                                        <h3 className="font-bold text-lg mb-4 text-blue-800"><i className="fas fa-star"></i> วันพิเศษ (มัดจำ 100%)</h3>
-                                        <div className="flex gap-2 mb-4 flex-wrap items-end bg-gray-50 p-2 rounded">
-                                            <div><label className="text-xs text-gray-500 block">เริ่ม</label><input type="date" className="border p-2 rounded text-sm" value={formSpecial.startDate} onChange={e=>setFormSpecial({...formSpecial, startDate:e.target.value})} /></div>
-                                            <div><label className="text-xs text-gray-500 block">สิ้นสุด</label><input type="date" className="border p-2 rounded text-sm" value={formSpecial.endDate} onChange={e=>setFormSpecial({...formSpecial, endDate:e.target.value})} /></div>
-                                            <div className="flex-1"><label className="text-xs text-gray-500 block">รายละเอียด</label><input placeholder="รายละเอียด" className="border p-2 rounded text-sm w-full" value={formSpecial.desc} onChange={e=>setFormSpecial({...formSpecial, desc:e.target.value})} /></div>
-                                            <button onClick={()=>handleSaveSetting('special', formSpecial)} className={`px-3 py-2 rounded text-sm text-white ${editMode?.desc===formSpecial.desc ? 'bg-orange-500':'bg-blue-600'} mb-0.5`}>{editMode?'บันทึก':'เพิ่ม'}</button>
-                                        </div>
-                                        <ul className="divide-y max-h-40 overflow-y-auto">
-                                            {settings.special.map((s, i) => (
-                                                <li key={i} className="flex justify-between items-center p-2 text-sm text-blue-800">
-                                                    <span>{formatThaiDate(s.date)} ({s.desc})</span>
-                                                    <div className="flex gap-2"><button onClick={()=>startEdit('special', s)} className="text-blue-500"><i className="fas fa-edit"></i></button><button onClick={()=>handleDeleteSetting('special', s.id)} className="text-red-500"><i className="fas fa-trash"></i></button></div>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
+                        <nav className="p-4 space-y-2">
+                            <button onClick={() => setView('dashboard')} className={`block w-full text-left p-3 rounded ${view === 'dashboard' ? 'bg-green-600' : 'hover:bg-gray-800'}`}>
+                                <i className="fas fa-chart-line w-6"></i> ภาพรวม
+                            </button>
+                            <button onClick={() => setView('booking')} className={`block w-full text-left p-3 rounded ${view === 'booking' ? 'bg-green-600' : 'hover:bg-gray-800'}`}>
+                                <i className="fas fa-list w-6"></i> รายการจอง
+                            </button>
+                            <button onClick={() => setView('report')} className={`block w-full text-left p-3 rounded ${view === 'report' ? 'bg-green-600' : 'hover:bg-gray-800'}`}>
+                                <i className="fas fa-file-alt w-6"></i> รายงาน (PDF)
+                            </button>
+                            <button onClick={handleLogout} className="block w-full text-left p-3 rounded hover:bg-red-600 text-red-200 mt-10">
+                                <i className="fas fa-sign-out-alt w-6"></i> ออกจากระบบ
+                            </button>
+                        </nav>
                     </div>
 
-                    {/* --- CUSTOM GLOBAL MODAL --- */}
-                    {modal.isOpen && (
-                        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity">
-                            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-100 animate-modal">
-                                <div className={`p-6 text-center ${modal.type==='error' ? 'bg-red-50' : modal.type==='success' ? 'bg-green-50' : modal.type==='warning' ? 'bg-orange-50' : 'bg-white'}`}>
-                                    <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm 
-                                        ${modal.type==='confirm' ? 'bg-blue-100 text-blue-600' : 
-                                          modal.type==='success' ? 'bg-green-100 text-green-600' :
-                                          modal.type==='error' ? 'bg-red-100 text-red-600' : 
-                                          'bg-orange-100 text-orange-600'}`}>
-                                        <i className={`fas ${
-                                            modal.type==='confirm' ? 'fa-question' : 
-                                            modal.type==='success' ? 'fa-check' : 
-                                            modal.type==='error' ? 'fa-times' : 
-                                            'fa-exclamation'
-                                        } text-3xl`}></i>
+                    {/* Main Content */}
+                    <div className="flex-1 overflow-auto bg-gray-100 p-6 relative">
+                        {loading && (
+                            <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+                                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+                            </div>
+                        )}
+
+                        {/* DASHBOARD VIEW */}
+                        {view === 'dashboard' && (
+                            <div>
+                                <h2 className="text-2xl font-bold mb-6">Dashboard ภาพรวม</h2>
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                                    <div className="bg-white p-6 rounded-lg shadow">
+                                        <p className="text-gray-500">รอตรวจสอบ</p>
+                                        <p className="text-3xl font-bold text-yellow-500">
+                                            {bookings.filter(b => b.status === 'รอตรวจสอบ').length}
+                                        </p>
                                     </div>
-                                    <h3 className="text-xl font-bold text-gray-800 mb-2">{modal.title}</h3>
-                                    <p className="text-gray-600 text-sm leading-relaxed">{modal.message}</p>
+                                    <div className="bg-white p-6 rounded-lg shadow">
+                                        <p className="text-gray-500">ยืนยันแล้ว</p>
+                                        <p className="text-3xl font-bold text-green-500">
+                                            {bookings.filter(b => b.status === 'ยืนยัน').length}
+                                        </p>
+                                    </div>
+                                    <div className="bg-white p-6 rounded-lg shadow">
+                                        <p className="text-gray-500">วันนี้เข้าพัก</p>
+                                        <p className="text-3xl font-bold text-blue-500">
+                                            {bookings.filter(b => b.checkIn === new Date().toISOString().split('T')[0] && b.status === 'ยืนยัน').length}
+                                        </p>
+                                    </div>
+                                    <div className="bg-white p-6 rounded-lg shadow">
+                                        <p className="text-gray-500">รายได้รวม (ยืนยัน)</p>
+                                        <p className="text-3xl font-bold text-gray-800">
+                                            {bookings.filter(b => b.status === 'ยืนยัน').reduce((sum, b) => sum + parseInt(b.price || 0), 0).toLocaleString()} ฿
+                                        </p>
+                                    </div>
                                 </div>
-                                <div className="p-4 bg-gray-50 flex gap-3 border-t border-gray-100">
-                                    {modal.type === 'confirm' && (
-                                        <button 
-                                            onClick={closeModal}
-                                            className="flex-1 py-3 bg-white border border-gray-300 text-gray-700 rounded-xl font-bold hover:bg-gray-100 transition shadow-sm"
-                                        >
-                                            ยกเลิก
-                                        </button>
-                                    )}
-                                    <button 
-                                        onClick={modal.onConfirm}
-                                        className={`flex-1 py-3 rounded-xl font-bold text-white shadow-lg transition transform active:scale-95 
-                                            ${modal.type==='error' ? 'bg-red-500 hover:bg-red-600' : 
-                                              modal.type==='success' ? 'bg-green-500 hover:bg-green-600' :
-                                              'bg-gray-800 hover:bg-gray-900'}`}
-                                    >
-                                        {modal.type === 'confirm' ? 'ยืนยัน' : 'ตกลง'}
+                            </div>
+                        )}
+
+                        {/* BOOKING LIST VIEW */}
+                        {view === 'booking' && (
+                            <div>
+                                <div className="flex justify-between items-center mb-6">
+                                    <h2 className="text-2xl font-bold">รายการจองทั้งหมด</h2>
+                                    <button onClick={fetchData} className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                                        <i className="fas fa-sync-alt"></i> Refresh
                                     </button>
                                 </div>
-                            </div>
-                        </div>
-                    )}
 
-                    {viewSlip && (
-                        <div className="fixed inset-0 bg-black/95 flex items-center justify-center z-50 p-4 backdrop-blur-md" onClick={() => setViewSlip(null)}>
-                            <div className="relative max-w-full">
-                                <button className="absolute -top-12 right-0 text-white text-3xl bg-white/20 w-10 h-10 rounded-full hover:bg-white/40 flex items-center justify-center transition"><i className="fas fa-times"></i></button>
-                                <img src={viewSlip} className="max-w-full max-h-[85vh] rounded-lg shadow-2xl" referrerPolicy="no-referrer" />
-                                <div className="text-center mt-6">
-                                    <a href={viewSlip} target="_blank" className="inline-block px-6 py-2 bg-white text-gray-900 rounded-full text-sm font-bold hover:bg-gray-200 transition shadow-lg no-underline">
-                                        <i className="fas fa-external-link-alt mr-2"></i> เปิดรูปเต็ม
-                                    </a>
+                                <div className="bg-white rounded-lg shadow overflow-hidden">
+                                    <table className="min-w-full divide-y divide-gray-200">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Booking ID</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ลูกค้า</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">เข้าพัก</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">สถานะ</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">จัดการ</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                            {bookings.map((b) => (
+                                                <tr key={b.id}>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{b.id}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                        {b.name}<br/>{b.phone}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                        {b.checkIn} <span className="text-xs">ถึง</span> {b.checkOut}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                                            ${b.status === 'ยืนยัน' ? 'bg-green-100 text-green-800' : 
+                                                              b.status === 'รอตรวจสอบ' ? 'bg-yellow-100 text-yellow-800' : 
+                                                              'bg-red-100 text-red-800'}`}>
+                                                            {b.status}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                                        <button onClick={() => setSelectedBooking(b)} className="text-indigo-600 hover:text-indigo-900 mr-3">รายละเอียด</button>
+                                                        {b.status === 'ยืนยัน' && (
+                                                            <button onClick={() => { setSelectedBooking(b); setShowReceipt(true); }} className="text-green-600 hover:text-green-900">
+                                                                <i className="fas fa-print"></i> ใบเสร็จ
+                                                            </button>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
-                        </div>
-                    )}
+                        )}
 
-                    {/* --- DETAIL MODAL (With Cancel Button) --- */}
-                    {viewBooking && (
-                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm" onClick={() => { setViewBooking(null); setRescheduleData(null); }}>
-                            <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-modal max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
-                                <div className="bg-gray-50 px-6 py-4 border-b flex justify-between items-center">
-                                    <h3 className="font-bold text-lg text-gray-800">รายละเอียดการจอง</h3>
-                                    <button onClick={() => { setViewBooking(null); setRescheduleData(null); }} className="text-gray-400 hover:text-gray-600"><i className="fas fa-times text-xl"></i></button>
+                        {/* REPORT VIEW */}
+                        {view === 'report' && (
+                            <div>
+                                <div className="flex justify-between items-center mb-6">
+                                    <h2 className="text-2xl font-bold">รายงานการจอง</h2>
+                                    <button onClick={printReport} className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+                                        <i className="fas fa-file-pdf"></i> Download PDF
+                                    </button>
                                 </div>
-                                <div className="p-6 overflow-y-auto custom-scrollbar">
-                                    <div className="flex justify-between items-start mb-4">
-                                        <div>
-                                            <div className="font-bold text-xl text-green-800">{viewBooking.name}</div>
-                                            <div className="text-xs text-gray-400">{viewBooking.id}</div>
-                                        </div>
-                                        <StatusBadge status={viewBooking.status} />
+                                <div className="bg-white p-8 rounded shadow overflow-x-auto">
+                                    <div id="report-content" className="p-4" style={{ width: '280mm' }}> {/* Fix width for landscape A4 */}
+                                        <h1 className="text-xl font-bold mb-2">รายงานการจอง - ขนำลุงดำ แคมป์ปิ้ง</h1>
+                                        <p className="text-sm text-gray-500 mb-4">ข้อมูล ณ วันที่ {new Date().toLocaleDateString('th-TH')}</p>
+                                        <table className="w-full text-sm border-collapse border border-gray-300">
+                                            <thead>
+                                                <tr className="bg-gray-100">
+                                                    <th className="border p-2">วันที่ทำรายการ</th>
+                                                    <th className="border p-2">Booking ID</th>
+                                                    <th className="border p-2">ลูกค้า</th>
+                                                    <th className="border p-2">เข้าพัก</th>
+                                                    <th className="border p-2">ห้องพัก</th>
+                                                    <th className="border p-2">ยอดเงิน</th>
+                                                    <th className="border p-2">สถานะ</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {bookings.map((b, index) => (
+                                                    <tr key={index}>
+                                                        <td className="border p-2">{b.timestamp.split(' ')[0]}</td>
+                                                        <td className="border p-2">{b.id}</td>
+                                                        <td className="border p-2">{b.name} ({b.phone})</td>
+                                                        <td className="border p-2">{b.checkIn}</td>
+                                                        <td className="border p-2 text-xs">{b.rooms}</td>
+                                                        <td className="border p-2 text-right">{parseInt(b.price).toLocaleString()}</td>
+                                                        <td className="border p-2 text-center">{b.status}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
                                     </div>
-                                    <div className="space-y-3 text-sm text-gray-600 bg-white rounded-lg">
-                                        <div className="flex gap-2 items-center"><i className="fas fa-phone w-5 text-center text-blue-500"></i> {viewBooking.phone}</div>
-                                        <div className="flex gap-2 items-center"><i className="fab fa-line w-5 text-center text-green-500"></i> {viewBooking.lineProfile}</div>
-                                        <hr className="border-dashed border-gray-300"/>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div><span className="text-xs text-gray-400 block">เช็คอิน</span><b className="text-gray-800">{formatThaiDate(viewBooking.checkIn)}</b></div>
-                                            <div><span className="text-xs text-gray-400 block">เช็คเอาท์</span><b className="text-gray-800">{formatThaiDate(viewBooking.checkOut)}</b></div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* MODAL DETAIL */}
+                        {selectedBooking && !showReceipt && (
+                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                                <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                                    <div className="p-6">
+                                        <div className="flex justify-between items-start mb-4">
+                                            <h3 className="text-xl font-bold">รายละเอียดการจอง: {selectedBooking.id}</h3>
+                                            <button onClick={() => setSelectedBooking(null)} className="text-gray-500 hover:text-gray-700">
+                                                <i className="fas fa-times text-xl"></i>
+                                            </button>
                                         </div>
-                                        <div className="bg-green-50 p-3 rounded-lg border border-green-100">
-                                            <p className="font-bold text-green-800 mb-1"><i className="fas fa-bed mr-1"></i> ห้องพัก</p>
-                                            <p className="whitespace-pre-wrap">{viewBooking.rooms}</p>
-                                            {viewBooking.food !== '-' && (
-                                                <div className="mt-2 pt-2 border-t border-green-200">
-                                                    <p className="font-bold text-orange-600 mb-1"><i className="fas fa-utensils mr-1"></i> อาหาร</p>
-                                                    <p>{viewBooking.food}</p>
+                                        <div className="grid grid-cols-2 gap-4 mb-6">
+                                            <div>
+                                                <p className="text-sm text-gray-500">ลูกค้า</p>
+                                                <p className="font-semibold">{selectedBooking.name}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-gray-500">เบอร์โทร</p>
+                                                <p className="font-semibold">{selectedBooking.phone}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-gray-500">เช็คอิน - เช็คเอาท์</p>
+                                                <p className="font-semibold">{selectedBooking.checkIn} ถึง {selectedBooking.checkOut}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-gray-500">ยอดเงิน / มัดจำ</p>
+                                                <p className="font-semibold text-green-600">{parseInt(selectedBooking.price).toLocaleString()} / {parseInt(selectedBooking.deposit).toLocaleString()}</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="mb-6">
+                                            <p className="text-sm text-gray-500 mb-2">หลักฐานการโอนเงิน</p>
+                                            {selectedBooking.slip && selectedBooking.slip !== 'No Slip' ? (
+                                                <a href={selectedBooking.slip} target="_blank" className="block w-full h-64 bg-gray-100 rounded flex items-center justify-center border hover:bg-gray-200">
+                                                    <img src={selectedBooking.slip} alt="Slip" className="max-h-full max-w-full object-contain" />
+                                                </a>
+                                            ) : (
+                                                <div className="w-full h-32 bg-gray-100 rounded flex items-center justify-center text-gray-400">
+                                                    ไม่มีหลักฐาน
                                                 </div>
                                             )}
                                         </div>
-                                        
-                                        <div className="flex justify-between items-center pt-2 bg-blue-50 p-3 rounded-lg border border-blue-100">
-                                            <div className="text-center w-1/3">
-                                                <div className="text-[10px] text-gray-500">สุทธิ</div>
-                                                <div className="font-bold text-gray-800">{parseInt(viewBooking.price).toLocaleString()}</div>
-                                            </div>
-                                            <div className="h-8 w-px bg-blue-200"></div>
-                                            <div className="text-center w-1/3">
-                                                <div className="text-[10px] text-gray-500">มัดจำ</div>
-                                                <div className="font-bold text-red-600">{parseInt(viewBooking.deposit).toLocaleString()}</div>
-                                            </div>
-                                            <div className="h-8 w-px bg-blue-200"></div>
-                                            <div className="text-center w-1/3">
-                                                <div className="text-[10px] text-gray-500">คงเหลือ</div>
-                                                <div className="font-bold text-green-600">{(parseInt(viewBooking.price) - parseInt(viewBooking.deposit)).toLocaleString()}</div>
-                                            </div>
+
+                                        <div className="flex gap-3 pt-4 border-t">
+                                            <button onClick={() => updateStatus(selectedBooking.id, 'ยืนยัน')} className="flex-1 bg-green-600 text-white py-2 rounded hover:bg-green-700">อนุมัติ (ยืนยัน)</button>
+                                            <button onClick={() => updateStatus(selectedBooking.id, 'ยกเลิก')} className="flex-1 bg-red-600 text-white py-2 rounded hover:bg-red-700">ยกเลิก</button>
                                         </div>
                                     </div>
-                                    
-                                    <div className="mt-6 border-t pt-4">
-                                        <h4 className="font-bold text-sm mb-3 text-blue-700 flex items-center"><i className="fas fa-plus-circle mr-2"></i> เพิ่มรายการอาหาร (Add-on)</h4>
-                                        <div className="flex gap-2 mb-2">
-                                            <select 
-                                                className="border p-2 rounded-lg text-sm flex-1 bg-gray-50 focus:ring-2 focus:ring-blue-200 focus:outline-none" 
-                                                value={selectedAddFood} 
-                                                onChange={e => setSelectedAddFood(e.target.value)}
-                                            >
-                                                <option value="">-- เลือกเมนู --</option>
-                                                {siteSettings && siteSettings.foodMenu.map(f => (
-                                                    <option key={f.id} value={f.id}>{f.name} ({f.price}.-)</option>
-                                                ))}
-                                            </select>
-                                            <input 
-                                                type="number" 
-                                                className="border p-2 rounded-lg text-sm w-16 bg-gray-50 text-center focus:ring-2 focus:ring-blue-200 focus:outline-none" 
-                                                min="1" 
-                                                value={addFoodQty} 
-                                                onChange={e => setAddFoodQty(e.target.value)} 
-                                            />
-                                        </div>
-                                        <button onClick={handleAddFood} className="w-full py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 text-sm font-bold shadow transition"><i className="fas fa-save mr-1"></i> บันทึกเพิ่มรายการอาหาร</button>
-                                    </div>
-
-                                    <div className="mt-6 flex flex-col gap-2 border-t pt-4">
-                                        {!rescheduleData ? (
-                                            <button onClick={() => setRescheduleData({ id: viewBooking.id, checkIn: '', checkOut: '' })} className="w-full py-2.5 bg-orange-50 text-orange-600 border border-orange-200 rounded-xl hover:bg-orange-100 font-bold transition text-sm"><i className="fas fa-calendar-alt mr-1"></i> เลื่อนวันเข้าพัก</button>
-                                        ) : (
-                                            <div className="bg-orange-50 p-4 rounded-xl border border-orange-200">
-                                                <h4 className="font-bold text-orange-800 mb-3 text-sm flex items-center"><i className="fas fa-calendar-check mr-2"></i> เลือกวันเข้าพักใหม่</h4>
-                                                <div className="space-y-3 mb-3">
-                                                    <div>
-                                                        <label className="text-xs text-orange-700 block mb-1">เช็คอิน</label>
-                                                        <input type="date" className="w-full border p-2 rounded-lg text-sm" onChange={e => setRescheduleData({...rescheduleData, checkIn: e.target.value})} />
-                                                    </div>
-                                                    <div>
-                                                        <label className="text-xs text-orange-700 block mb-1">เช็คเอาท์</label>
-                                                        <input type="date" className="w-full border p-2 rounded-lg text-sm" onChange={e => setRescheduleData({...rescheduleData, checkOut: e.target.value})} />
-                                                    </div>
-                                                </div>
-                                                <div className="flex gap-2">
-                                                    <button onClick={() => setRescheduleData(null)} className="flex-1 py-2 bg-white border border-gray-300 text-gray-600 rounded-lg text-xs font-bold hover:bg-gray-50">ยกเลิก</button>
-                                                    <button onClick={handleReschedule} className="flex-1 py-2 bg-orange-600 text-white rounded-lg text-xs font-bold hover:bg-orange-700 shadow">ยืนยันการเลื่อน</button>
-                                                </div>
-                                            </div>
-                                        )}
-                                        {String(viewBooking.slip || '').includes('http') && <button onClick={() => setViewSlip(viewBooking.slip)} className="w-full py-2.5 bg-white border border-blue-200 text-blue-600 rounded-xl hover:bg-blue-50 text-sm font-bold transition"><i className="fas fa-file-invoice-dollar mr-1"></i> ดูสลิปโอนเงิน</button>}
-                                        
-                                        {/* --- PRINT RECEIPT BUTTON --- */}
-                                        <button onClick={handlePrintReceipt} className="w-full py-2.5 bg-blue-50 border border-blue-200 text-blue-600 rounded-xl hover:bg-blue-100 text-sm font-bold transition mt-2"><i className="fas fa-print mr-1"></i> พิมพ์ใบเสร็จ</button>
-
-                                        {/* --- CANCEL BUTTON --- */}
-                                        {viewBooking.status !== 'ยกเลิก' && (
-                                            <button onClick={() => updateStatus(viewBooking.id, 'ยกเลิก')} className="w-full py-2.5 bg-red-50 border border-red-200 text-red-600 rounded-xl hover:bg-red-100 text-sm font-bold transition mt-2"><i className="fas fa-trash-alt mr-1"></i> ยกเลิกรายการจอง</button>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                    
-                    {/* ... (Admin Booking Modal - same as before) ... */}
-                    {showAdminBooking && (
-                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity">
-                            <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-modal max-h-[90vh] flex flex-col">
-                                <div className="bg-blue-600 px-6 py-4 flex justify-between items-center text-white">
-                                    <h3 className="font-bold text-lg"><i className="fas fa-plus-circle mr-2"></i> สร้างรายการจองใหม่</h3>
-                                    <button onClick={() => setShowAdminBooking(false)} className="hover:text-gray-200"><i className="fas fa-times text-xl"></i></button>
-                                </div>
-                                <div className="p-6 overflow-y-auto custom-scrollbar">
-                                    <div className="space-y-4">
-                                        <div>
-                                            <label className="block text-sm font-bold text-gray-700 mb-1">ชื่อลูกค้า</label>
-                                            <input className="w-full border p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" value={adminBookingForm.name} onChange={e => setAdminBookingForm({...adminBookingForm, name: e.target.value})} />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-bold text-gray-700 mb-1">เบอร์โทร</label>
-                                            <input type="tel" className="w-full border p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" value={adminBookingForm.phone} onChange={e => setAdminBookingForm({...adminBookingForm, phone: e.target.value})} />
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <div>
-                                                <label className="block text-sm font-bold text-gray-700 mb-1">เช็คอิน</label>
-                                                <input type="date" className="w-full border p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" value={adminBookingForm.checkIn} onChange={e => setAdminBookingForm({...adminBookingForm, checkIn: e.target.value})} />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-bold text-gray-700 mb-1">เช็คเอาท์</label>
-                                                <input type="date" className="w-full border p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" value={adminBookingForm.checkOut} onChange={e => setAdminBookingForm({...adminBookingForm, checkOut: e.target.value})} />
-                                            </div>
-                                        </div>
-                                        
-                                        <div>
-                                            <label className="block text-sm font-bold text-gray-700 mb-2">เลือกห้องพัก {loadingAvailability && <span className="text-xs text-blue-500 font-normal">(กำลังตรวจสอบ...)</span>}</label>
-                                            <div className="grid grid-cols-2 gap-2">
-                                                {ROOM_IDS.map(r => {
-                                                    const isAvailable = adminAvailability && (r === 'Z8' ? adminAvailability.zone8Available > 0 : !adminAvailability.bookedRooms.includes(r));
-                                                    if (adminBookingForm.checkIn && adminBookingForm.checkOut && !isAvailable) return null;
-
-                                                    return (
-                                                        <button 
-                                                            key={r}
-                                                            disabled={!adminBookingForm.checkIn || !adminBookingForm.checkOut}
-                                                            onClick={() => {
-                                                                const currentRooms = adminBookingForm.rooms.includes(r) 
-                                                                    ? adminBookingForm.rooms.filter(room => room !== r)
-                                                                    : [...adminBookingForm.rooms, r];
-                                                                setAdminBookingForm({...adminBookingForm, rooms: currentRooms});
-                                                            }}
-                                                            className={`py-2 px-3 rounded-lg text-sm font-bold transition border truncate ${
-                                                                adminBookingForm.rooms.includes(r) 
-                                                                    ? 'bg-blue-600 text-white border-blue-600 shadow-md transform scale-105' 
-                                                                    : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
-                                                            } ${(!adminBookingForm.checkIn || !adminBookingForm.checkOut) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                        >
-                                                            {ROOM_NAMES[r] || r}
-                                                        </button>
-                                                    );
-                                                })}
-                                                {adminBookingForm.checkIn && adminBookingForm.checkOut && adminAvailability && adminAvailability.bookedRooms.length === ROOM_IDS.length - (adminAvailability.zone8Available > 0 ? 0 : 1) && (
-                                                    <div className="col-span-2 text-center text-red-500 text-xs py-2">ไม่มีห้องว่างในช่วงเวลานี้</div>
-                                                )}
-                                                {(!adminBookingForm.checkIn || !adminBookingForm.checkOut) && (
-                                                    <div className="col-span-2 text-center text-gray-400 text-xs py-2">กรุณาเลือกวันเข้าพักก่อน</div>
-                                                )}
-                                            </div>
-                                        </div>
-                                        
-                                        <div className="grid grid-cols-2 gap-3 pt-2 border-t">
-                                            <div>
-                                                <label className="block text-sm font-bold text-gray-700 mb-1">ยอดรวมสุทธิ</label>
-                                                <input type="number" className="w-full border p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" value={adminBookingForm.price} onChange={e => setAdminBookingForm({...adminBookingForm, price: e.target.value})} />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-bold text-gray-700 mb-1">มัดจำที่รับมา</label>
-                                                <input type="number" className="w-full border p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" value={adminBookingForm.deposit} onChange={e => setAdminBookingForm({...adminBookingForm, deposit: e.target.value})} />
-                                            </div>
-                                        </div>
-                                        
-                                        <div className="pt-4">
-                                            <button onClick={handleCreateAdminBooking} className="w-full py-3 bg-green-600 text-white rounded-xl font-bold shadow-lg hover:bg-green-700 transition transform active:scale-95">บันทึกรายการจอง</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* --- HIDDEN PRINT TEMPLATES --- */}
-                    <div className="fixed top-0 left-0 -z-50 opacity-0 pointer-events-none">
-                        {/* 1. REPORT TEMPLATE */}
-                        <div id="report-print-area" className="p-8 bg-white text-black w-[29.7cm] h-auto min-h-[21cm]">
-                            <div className="flex justify-between items-center mb-6 border-b-2 border-gray-800 pb-4">
-                                <div className="flex items-center gap-4">
-                                    {siteSettings && siteSettings.logoUrl && <img src={siteSettings.logoUrl} className="w-20 h-20 object-cover rounded-full" />}
-                                    <div>
-                                        <h1 className="text-2xl font-bold">{siteSettings && siteSettings.headerTitle}</h1>
-                                        <p className="text-sm text-gray-600">รายงานการจองห้องพัก (Booking Report)</p>
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-sm">วันที่พิมพ์: {new Date().toLocaleDateString('th-TH')}</p>
-                                    <p className="text-sm">ผู้พิมพ์: Admin</p>
-                                </div>
-                            </div>
-                            <table className="w-full text-xs text-left">
-                                <thead className="text-xs text-gray-700 uppercase bg-gray-100 border-b border-gray-300">
-                                    <tr>
-                                        <th className="px-2 py-3">ID</th>
-                                        <th className="px-2 py-3">ลูกค้า</th>
-                                        <th className="px-2 py-3">เบอร์โทร</th>
-                                        <th className="px-2 py-3">เข้าพัก</th>
-                                        <th className="px-2 py-3">ออก</th>
-                                        <th className="px-2 py-3">ห้องพัก</th>
-                                        <th className="px-2 py-3 text-right">ยอดสุทธิ</th>
-                                        <th className="px-2 py-3 text-right">มัดจำ</th>
-                                        <th className="px-2 py-3 text-center">สถานะ</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filteredBookings.map(b => (
-                                        <tr key={b.id} className="bg-white border-b hover:bg-gray-50">
-                                            <td className="px-2 py-2 font-mono">{b.id}</td>
-                                            <td className="px-2 py-2">{b.name}</td>
-                                            <td className="px-2 py-2">{b.phone}</td>
-                                            <td className="px-2 py-2">{formatThaiDate(b.checkIn)}</td>
-                                            <td className="px-2 py-2">{formatThaiDate(b.checkOut)}</td>
-                                            <td className="px-2 py-2 max-w-[200px] truncate">{b.rooms}</td>
-                                            <td className="px-2 py-2 text-right">{parseInt(b.price).toLocaleString()}</td>
-                                            <td className="px-2 py-2 text-right">{parseInt(b.deposit).toLocaleString()}</td>
-                                            <td className="px-2 py-2 text-center"><span className="border px-1 rounded text-[10px]">{b.status}</span></td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {/* 2. RECEIPT TEMPLATE */}
-                        {viewBooking && (
-                            <div id="receipt-print-area" className="p-10 bg-white text-black w-[21cm] h-auto min-h-[29.7cm] relative">
-                                <div className="text-center mb-8">
-                                    {siteSettings && siteSettings.logoUrl && <img src={siteSettings.logoUrl} className="w-24 h-24 object-cover mx-auto mb-2 rounded-full border" />}
-                                    <h1 className="text-3xl font-bold mb-1">{siteSettings && siteSettings.headerTitle}</h1>
-                                    <p className="text-sm text-gray-500 whitespace-pre-line px-10">{siteSettings && siteSettings.headerDesc}</p>
-                                    <p className="text-sm font-bold mt-1">โทร: {viewBooking.phone} (อ้างอิงจากลูกค้า)</p> 
-                                </div>
-                                
-                                <div className="border-t-2 border-b-2 border-gray-800 py-4 mb-6 flex justify-between items-center">
-                                    <div>
-                                        <h2 className="text-2xl font-bold">ใบเสร็จรับเงิน / Receipt</h2>
-                                        <p className="text-sm">ต้นฉบับ (Original)</p>
-                                    </div>
-                                    <div className="text-right">
-                                        <p><b>เลขที่:</b> {viewBooking.id}</p>
-                                        <p><b>วันที่:</b> {new Date().toLocaleDateString('th-TH')}</p>
-                                    </div>
-                                </div>
-
-                                <div className="mb-6 flex justify-between">
-                                    <div className="w-1/2">
-                                        <h3 className="font-bold border-b mb-2 pb-1">ข้อมูลลูกค้า</h3>
-                                        <p className="text-sm"><b>ชื่อ:</b> {viewBooking.name}</p>
-                                        <p className="text-sm"><b>เบอร์โทร:</b> {viewBooking.phone}</p>
-                                        <p className="text-sm"><b>LINE:</b> {viewBooking.lineProfile}</p>
-                                    </div>
-                                    <div className="w-1/2 text-right">
-                                        <h3 className="font-bold border-b mb-2 pb-1">รายละเอียดการเข้าพัก</h3>
-                                        <p className="text-sm"><b>เช็คอิน:</b> {formatThaiDate(viewBooking.checkIn)}</p>
-                                        <p className="text-sm"><b>เช็คเอาท์:</b> {formatThaiDate(viewBooking.checkOut)}</p>
-                                        <p className="text-sm"><b>จำนวนผู้เข้าพัก:</b> {viewBooking.totalGuests} ท่าน</p>
-                                    </div>
-                                </div>
-
-                                <table className="w-full mb-6 border-collapse">
-                                    <thead>
-                                        <tr className="bg-gray-100 border-t border-b border-gray-300">
-                                            <th className="py-2 text-left pl-2">รายการ (Description)</th>
-                                            <th className="py-2 text-center w-20">จำนวน</th>
-                                            <th className="py-2 text-right w-32 pr-2">จำนวนเงิน</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {(() => {
-                                            let items = [];
-                                            try {
-                                                const cart = JSON.parse(viewBooking.cart || '[]');
-                                                items = cart.map(c => ({
-                                                    name: c.name + (c.type==='food' ? ' (อาหาร)' : ' (ที่พัก)'),
-                                                    qty: c.qty || c.guests || 1, 
-                                                    price: (c.price || c.pricePerNight || 0) * (c.qty || 1) 
-                                                }));
-                                            } catch(e) {
-                                                items.push({ name: viewBooking.rooms, qty: 1, price: parseInt(viewBooking.price) });
-                                            }
-                                            
-                                            return (
-                                                <>
-                                                    <tr className="border-b border-gray-200">
-                                                        <td className="py-3 pl-2">
-                                                            <div className="font-bold">ค่าที่พัก (Accommodation)</div>
-                                                            <div className="text-sm text-gray-500 whitespace-pre-wrap">{viewBooking.rooms}</div>
-                                                        </td>
-                                                        <td className="text-center">1</td>
-                                                        <td className="text-right pr-2">{(parseInt(viewBooking.price) - (viewBooking.food && viewBooking.food !== '-' ? 0 : 0)).toLocaleString()}</td> 
-                                                    </tr>
-                                                    {viewBooking.food && viewBooking.food !== '-' && (
-                                                         <tr className="border-b border-gray-200">
-                                                            <td className="py-3 pl-2">
-                                                                <div className="font-bold">ค่าอาหารและบริการเสริม (Food & Services)</div>
-                                                                <div className="text-sm text-gray-500">{viewBooking.food}</div>
-                                                            </td>
-                                                            <td className="text-center">1</td>
-                                                            <td className="text-right pr-2">-</td> 
-                                                        </tr>
-                                                    )}
-                                                </>
-                                            );
-                                        })()}
-                                    </tbody>
-                                    <tfoot>
-                                        <tr>
-                                            <td colSpan="2" className="text-right pt-4 font-bold">รวมเป็นเงิน (Total)</td>
-                                            <td className="text-right pt-4 font-bold pr-2">{parseInt(viewBooking.price).toLocaleString()} บาท</td>
-                                        </tr>
-                                        <tr>
-                                            <td colSpan="2" className="text-right text-red-600">หัก มัดจำ (Deposit)</td>
-                                            <td className="text-right text-red-600 pr-2">-{parseInt(viewBooking.deposit).toLocaleString()} บาท</td>
-                                        </tr>
-                                        <tr className="text-lg">
-                                            <td colSpan="2" className="text-right font-bold pt-2 border-t border-gray-800">ยอดคงเหลือ (Balance)</td>
-                                            <td className="text-right font-bold pt-2 border-t border-gray-800 pr-2 text-green-700">{(parseInt(viewBooking.price) - parseInt(viewBooking.deposit)).toLocaleString()} บาท</td>
-                                        </tr>
-                                    </tfoot>
-                                </table>
-
-                                <div className="absolute bottom-20 left-0 w-full flex justify-between px-10">
-                                    <div className="text-center">
-                                        <p className="border-b border-black w-40 mb-2"></p>
-                                        <p>ผู้รับเงิน</p>
-                                        <p className="text-xs text-gray-500">วันที่: ...../...../.......</p>
-                                    </div>
-                                    <div className="text-center">
-                                        <p className="border-b border-black w-40 mb-2"></p>
-                                        <p>ผู้จ่ายเงิน</p>
-                                        <p className="text-xs text-gray-500">วันที่: ...../...../.......</p>
-                                    </div>
-                                </div>
-                                <div className="absolute bottom-5 w-full text-center text-xs text-gray-400">
-                                    <p>ขอบคุณที่ใช้บริการ ขนำลุงดำ แคมป์ปิ้ง</p>
                                 </div>
                             </div>
                         )}
+
+                        {/* RECEIPT MODAL */}
+                        {showReceipt && selectedBooking && (
+                            <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4 overflow-y-auto">
+                                <div className="bg-white w-auto rounded shadow-2xl relative">
+                                    <button onClick={() => setShowReceipt(false)} className="absolute top-2 right-2 text-gray-500 hover:text-red-500 z-10 p-2">
+                                        <i className="fas fa-times text-2xl"></i>
+                                    </button>
+                                    
+                                    <div className="p-4 bg-gray-100 flex justify-end gap-2 rounded-t">
+                                        <button onClick={printReceipt} className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700">
+                                            <i className="fas fa-print mr-2"></i> พิมพ์ใบเสร็จ
+                                        </button>
+                                    </div>
+
+                                    {/* Receipt Content Area (A4 Width) */}
+                                    <div id="receipt-content" className="bg-white p-10 text-gray-800 relative" style={{ width: '210mm', minHeight: '297mm' }}>
+                                        
+                                        {/* Header */}
+                                        <div className="flex justify-between items-start mb-8 border-b pb-6">
+                                            <div className="flex gap-4">
+                                                {/* Logo */}
+                                                <div className="w-20 h-20 bg-gray-200 rounded-full overflow-hidden flex-shrink-0 border border-gray-300">
+                                                    {siteSettings.logoUrl && siteSettings.logoUrl !== 'Error' ? (
+                                                        <img src={siteSettings.logoUrl} alt="Logo" className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">NO LOGO</div>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <h1 className="text-2xl font-bold text-green-800">ขนำลุงดำ แคมป์ปิ้ง</h1>
+                                                    <p className="text-sm text-gray-600">ที่พักและลานกางเต็นท์ ท่ามกลางธรรมชาติ</p>
+                                                    <p className="text-sm font-bold mt-1">โทร / พร้อมเพย์: {SHOP_PHONE}</p>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <h2 className="text-3xl font-bold text-gray-900">ใบเสร็จรับเงิน</h2>
+                                                <p className="text-sm text-gray-500 uppercase tracking-widest">RECEIPT</p>
+                                                <div className="mt-4 text-sm">
+                                                    <p><b>เลขที่:</b> {selectedBooking.id}</p>
+                                                    <p><b>วันที่:</b> {new Date().toLocaleDateString('th-TH')}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Customer Info */}
+                                        <div className="flex justify-between mb-8 text-sm bg-gray-50 p-4 rounded border">
+                                            <div>
+                                                <h3 className="font-bold mb-2 text-gray-700 border-b pb-1">ข้อมูลลูกค้า (Customer)</h3>
+                                                <p><b>ชื่อ:</b> {selectedBooking.name}</p>
+                                                <p><b>เบอร์โทร:</b> {selectedBooking.phone}</p>
+                                                <p><b>LINE ID:</b> {selectedBooking.lineProfile !== '-' ? selectedBooking.lineProfile : '-'}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <h3 className="font-bold mb-2 text-gray-700 border-b pb-1">รายละเอียดการเข้าพัก</h3>
+                                                <p><b>เช็คอิน:</b> {selectedBooking.checkIn}</p>
+                                                <p><b>เช็คเอาท์:</b> {selectedBooking.checkOut}</p>
+                                                <p><b>จำนวนคน:</b> {selectedBooking.totalGuests} ท่าน</p>
+                                            </div>
+                                        </div>
+
+                                        {/* Items Table */}
+                                        <table className="w-full mb-8 border-collapse">
+                                            <thead>
+                                                <tr className="bg-gray-800 text-white text-sm">
+                                                    <th className="py-3 px-4 text-left rounded-tl">ลำดับ</th>
+                                                    <th className="py-3 px-4 text-left">รายการ (Description)</th>
+                                                    <th className="py-3 px-4 text-center">จำนวน</th>
+                                                    <th className="py-3 px-4 text-right">ราคา/หน่วย</th>
+                                                    <th className="py-3 px-4 text-right rounded-tr">รวมเงิน</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="text-sm text-gray-700">
+                                                {/* Parse Cart Data */}
+                                                {(() => {
+                                                    let items = [];
+                                                    try {
+                                                        items = JSON.parse(selectedBooking.cart);
+                                                    } catch(e) {}
+                                                    
+                                                    // Add Food items if separate logic needed, or just combine
+                                                    // Assuming 'cart' contains everything. If food is separate text, handle it.
+                                                    // Based on Code.gs, cart has all items.
+                                                    
+                                                    if (items.length === 0) {
+                                                        return <tr><td colSpan="5" className="text-center py-4">ไม่มีรายการระบุ</td></tr>;
+                                                    }
+
+                                                    return items.map((item, idx) => (
+                                                        <tr key={idx} className="border-b hover:bg-gray-50">
+                                                            <td className="py-3 px-4">{idx + 1}</td>
+                                                            <td className="py-3 px-4">
+                                                                <span className="font-semibold">{item.name}</span>
+                                                                {item.type !== 'food' && <span className="text-gray-500 text-xs ml-2">({item.guests} คน)</span>}
+                                                            </td>
+                                                            <td className="py-3 px-4 text-center">
+                                                                {item.type === 'food' ? item.qty : 1}
+                                                            </td>
+                                                            <td className="py-3 px-4 text-right">
+                                                                {/* Price logic per item might be complex if tiered. Showing Estimate/Total per line if available */}
+                                                                {/* Since backend calculates total, we display line summary or just total at bottom if line price unknown. 
+                                                                    However, let's try to show sensible defaults. */}
+                                                                - 
+                                                            </td>
+                                                            <td className="py-3 px-4 text-right font-medium">-</td> 
+                                                            {/* Note: Google Sheet Logic calculates total in backend. Frontend cart JSON might not have individual calculated price. 
+                                                                If you want per-row price, backend needs to send it. For now, we show list and Total at bottom. */}
+                                                        </tr>
+                                                    ));
+                                                })()}
+                                            </tbody>
+                                            <tfoot>
+                                                <tr>
+                                                    <td colSpan="3"></td>
+                                                    <td className="py-3 px-4 text-right font-bold text-gray-800 border-t">ยอดสุทธิ</td>
+                                                    <td className="py-3 px-4 text-right font-bold text-xl text-green-700 border-t">
+                                                        {parseInt(selectedBooking.price).toLocaleString()} บาท
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colSpan="3"></td>
+                                                    <td className="py-2 px-4 text-right text-gray-600">มัดจำแล้ว</td>
+                                                    <td className="py-2 px-4 text-right text-red-600">
+                                                        - {parseInt(selectedBooking.deposit).toLocaleString()} บาท
+                                                    </td>
+                                                </tr>
+                                                <tr className="bg-gray-50">
+                                                    <td colSpan="3"></td>
+                                                    <td className="py-3 px-4 text-right font-bold text-gray-800 border-t border-b">ยอดค้างชำระ</td>
+                                                    <td className="py-3 px-4 text-right font-bold text-gray-800 border-t border-b">
+                                                        {(parseInt(selectedBooking.price) - parseInt(selectedBooking.deposit)).toLocaleString()} บาท
+                                                    </td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+
+                                        {/* Signature Section */}
+                                        <div className="absolute bottom-10 left-0 w-full px-10">
+                                            <div className="flex justify-between items-end">
+                                                <div className="text-center">
+                                                    <div className="border-b border-black w-48 mb-2"></div>
+                                                    <p className="font-medium">ผู้รับเงิน (Payee)</p>
+                                                    <p className="text-xs text-gray-500">วันที่: ...../...../.......</p>
+                                                </div>
+                                                <div className="text-center">
+                                                    <div className="border-b border-black w-48 mb-2"></div>
+                                                    <p className="font-medium">ผู้จ่ายเงิน (Payer)</p>
+                                                    <p className="text-xs text-gray-500">วันที่: ...../...../.......</p>
+                                                </div>
+                                            </div>
+                                            <div className="text-center mt-8 text-xs text-gray-400">
+                                                <p>ขอบคุณที่ใช้บริการ ขนำลุงดำ แคมป์ปิ้ง</p>
+                                                <p>System Generated by Khnam Lung Dam Booking System</p>
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                     </div>
                 </div>
             );
