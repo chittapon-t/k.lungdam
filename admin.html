@@ -374,7 +374,7 @@
                                 <div className="flex flex-col md:flex-row gap-4 mb-4 items-center justify-between">
                                     <div className="flex gap-2 overflow-x-auto pb-2 w-full md:w-auto">
                                         {['all', 'pending', 'confirmed', 'upcoming', 'history'].map(f => (
-                                            <button key={f} onClick={() => setFilter(f)} className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${filter === f ? 'bg-gray-800 text-white shadow' : 'bg-white text-gray-600 border hover:bg-gray-50'}`}>{f === 'all' ? 'ทั้งหมด' : (f === 'pending' ? 'รอตรวจสอบ' : (f === 'upcoming' ? 'เร็วๆ นี้' : 'ประวัติ')))}</button>
+                                            <button key={f} onClick={() => setFilter(f)} className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${filter === f ? 'bg-gray-800 text-white shadow' : 'bg-white text-gray-600 border hover:bg-gray-50'}`}>{f === 'all' ? 'ทั้งหมด' : (f === 'pending' ? 'รอตรวจสอบ' : (f === 'confirmed' ? 'ยืนยันแล้ว' : (f === 'upcoming' ? 'เร็วๆ นี้' : 'ประวัติ')))}</button>
                                         ))}
                                     </div>
                                     
