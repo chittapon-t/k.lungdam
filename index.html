@@ -102,7 +102,7 @@
 
         const DEFAULT_CONFIG = {
             headerTitle: 'ขนำลุงดำ - Khanamlungdam',
-            headerDesc: '🏡 ขนำลุงดำ ดั้งเดิมมาจากหนำปู่ หรือที่พักตอนปู่มาอยู่ช่วงทำสวนนั้นเอง',
+            headerDesc: '🏡 ขนำลุงดำ ดั้งเดิมมาจากหนำปู่ หรือที่พักตอนปู่มาอยู่ช่วงทำสวนนั้นเอง และค่อยๆ พัฒนาขึ้น แต่ยังคงความอบอุ่น ความรัก เสมือนทุกคนมาเที่ยวบ้านตากอากาศของเพื่อน มีโอกาสเจอสัตว์ แมลงเล็กๆ พื้นที่เป็นสวนผสม ตามเศรษฐกิจพอเพียง ป่า 3 อย่างประโยชน์ 4 อย่าง เงียบสงบ มีลานรอบกองไฟ มีผลไม้ให้กินตามฤดู มีระบบน้ำกรอง ใช้ไฟฟ้าโซลาร์เซลล์ทั้งหมด มีไวไฟ สัญญาณไม่ได้แรงมาก และอาจจะไม่มีสิ่งอำนวยความสะดวกครบครัน แคมป์ปิ้งสไตล์บ้านสวน มีครัวไทยด้วยฟืน มีที่พักหลากหลายแบบ',
             bannerUrl: 'https://img5.pic.in.th/file/secure-sv1/LINE_ALBUM__240916_14dd72f9bd7de4facf.jpg',
             logoUrl: 'https://lh3.googleusercontent.com/pw/AP1GczPi_rYAbsNGi4X96mW5koYl0JJ3BN9ipRf6UgsXAOQgkyhrs2ChGcZlbsuQ3OLJOYnYhSTYJhWUuu2hwWtPqlt4MUfdUDSS3s4RdRLeD36gPLiK-8OhYLXWmqxVLh2eOtkLIx7pQxrQA6ZnqBYHOftH=w913-h913-s-no-gm?authuser=0',
             roomImages: {},
@@ -602,7 +602,7 @@
                                                         </div>
                                                     </div>
                                                     <button onClick={handleCustomerReschedule} disabled={loading} className="w-full bg-orange-600 text-white py-3 rounded-lg font-bold shadow hover:bg-orange-700">
-                                                        {loading ? 'ประมวลผล...' : 'ยืนยันการเลื่อน'}
+                                                        {loading ? 'แอดมินกำลังทำงาน...รอสุกครู่' : 'ยืนยันการเลื่อน'}
                                                     </button>
                                                 </div>
                                             )}
@@ -648,7 +648,7 @@
                                                     )}
 
                                                     <button onClick={handleCustomerAddFood} disabled={loading || (addOnCart.length > 0 && !addOnSlip)} className={`w-full py-3 rounded-lg font-bold shadow transition ${loading || (addOnCart.length > 0 && !addOnSlip) ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'}`}>
-                                                        {loading ? 'กำลังส่งข้อมูล...' : 'ยืนยันการสั่งอาหาร'}
+                                                        {loading ? 'กำลังส่งข้อมูล...ให้แม่ครัว' : 'ยืนยันการสั่งอาหาร'}
                                                     </button>
                                                 </div>
                                             )}
@@ -679,7 +679,7 @@
                                             <label className="block text-gray-700 dark:text-red-300 font-bold mb-1">วันที่ออก</label>
                                             <input type="date" min={dates.checkIn || getTommorow()} className="w-full border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" onChange={e => setDates({...dates, checkOut: e.target.value})} />
                                         </div>
-                                        <button onClick={handleSearch} disabled={loading} className="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition font-bold shadow-lg mt-2">{loading ? 'กำลังโหลด...' : 'ค้นหาที่พักว่าง'}</button>
+                                        <button onClick={handleSearch} disabled={loading} className="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition font-bold shadow-lg mt-2">{loading ? 'กำลังกางเต็นท์...รอแปบ...' : 'ค้นหาที่พักว่าง'}</button>
                                     </div>
                                 </div>
                                 {closedModal && ( <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-6"> <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center relative animate-pop"> <div className="w-16 h-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mx-auto mb-4"> <i className="fas fa-store-slash text-3xl text-red-500 dark:text-red-300"></i> </div> <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">วันปิดให้บริการ</h3> <p className="text-gray-600 dark:text-gray-300 mb-1">วันที่ <strong>{formatThaiDate(closedModal.date)}</strong></p> <p className="text-red-500 dark:text-red-400 font-medium mb-6">"{closedModal.reason}"</p> <button onClick={() => setClosedModal(null)} className="w-full bg-gray-800 dark:bg-gray-600 text-white py-3 rounded-xl font-bold hover:bg-gray-700 transition">เลือกวันใหม่</button> </div> </div> )}
@@ -703,7 +703,7 @@
                                         const isZ8Full = key === 'Z8' && availability.zone8Available <= 0;
                                         const disable = isBooked || isZ8Full;
                                         const inCart = cart.find(c => c.id === key);
-                                        let circleClasses = "w-10 h-10 rounded-full flex items-center justify-center text-center text-[8px] font-bold border-2 shadow-lg p-1 leading-tight transition-all duration-300";
+                                        let circleClasses = "w-12 h-12 rounded-full flex items-center justify-center text-center text-[8px] font-bold border-2 shadow-lg p-1 leading-tight transition-all duration-300";
                                         if (disable) circleClasses += " bg-gray-400 text-white border-gray-500 cursor-not-allowed opacity-80 grayscale";
                                         else if (inCart) circleClasses += " bg-yellow-400 text-black border-yellow-600 scale-110 shadow-xl z-20";
                                         else circleClasses += " bg-white dark:bg-gray-800 text-green-800 dark:text-green-400 border-green-600 hover:scale-110 z-10";
@@ -765,7 +765,7 @@
                                     </div>
                                 </div>
                                 <div className="mb-4">
-                                    <div className="flex gap-2"> <input placeholder="กรอกโค้ดส่วนลด" className="border p-2 rounded flex-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white" onChange={e => setDiscount({...discount, code: e.target.value})} /> <button className="bg-gray-800 dark:bg-gray-600 text-white px-4 rounded" onClick={checkDiscountCode}>ใช้โค้ด</button> </div>
+                                    <div className="flex gap-2"> <input placeholder="กรอกโค้ดส่วนลด" className="border p-2 rounded flex-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white" onChange={e => setDiscount({...discount, code: e.target.value})} /> <button className="bg-gray-800 dark:bg-gray-600 text-white px-4 rounded" onClick={checkDiscountCode}>กดใช้โค้ด</button> </div>
                                     {discount.message && <p className={`text-xs mt-1 ${discount.status==='success'?'text-green-600 dark:text-green-400':'text-red-500 dark:text-red-400'}`}>{discount.message}</p>}
                                 </div>
                                 <div className="space-y-3 mb-6">
@@ -774,12 +774,12 @@
                                 </div>
                                 <div className="text-center mb-6">
                                     <p className="mb-2 font-bold dark:text-white">สแกนจ่ายมัดจำ (พร้อมเพย์)</p>
-                                    {qrUrl ? ( <div className="flex flex-col items-center"> <img src={qrUrl} className="mx-auto border-2 border-gray-200 dark:border-gray-600 rounded-lg mb-3 shadow-sm p-1 bg-white" alt="QR Code" width="200" height="200" /> <p className="text-sm text-blue-600 dark:text-blue-400 font-bold mt-2"> กรุณาแคปหน้าจอ (Screenshot) หรือกดค้างที่รูป<br/>เพื่อบันทึก แล้วนำไปสแกนจ่ายในแอปธนาคาร </p> </div> ) : ( <div className="h-[200px] flex items-center justify-center text-gray-400">กำลังสร้าง QR Code...</div> )}
+                                    {qrUrl ? ( <div className="flex flex-col items-center"> <img src={qrUrl} className="mx-auto border-2 border-gray-200 dark:border-gray-600 rounded-lg mb-3 shadow-sm p-1 bg-white" alt="QR Code" width="200" height="200" /> <p className="text-sm text-blue-600 dark:text-blue-400 font-bold mt-2"> กรุณาแคปหน้าจอหรือกดค้างที่รูปเพื่อบันทึก</p> </div> ) : ( <div className="h-[200px] flex items-center justify-center text-gray-400">กำลังสร้าง QR Code...</div> )}
                                     <div className="mt-4 bg-gray-50 dark:bg-gray-700 p-2 rounded"> <p className="text-sm font-bold text-gray-800 dark:text-white">{PROMPTPAY_NAME}</p> <p className="text-xs text-gray-500 dark:text-gray-400 font-mono tracking-wider">{PROMPTPAY_PHONE}</p> </div>
                                 </div>
                                 <div className="mb-4"> <label className="block mb-1 text-sm dark:text-gray-300">สลิปโอนเงิน <span className="text-red-500">*</span></label> <input type="file" accept="image/*" onChange={async (e) => { const f = e.target.files[0]; if (f) { try { const resizedBase64 = await compressImage(f); setSlipImg(resizedBase64); } catch (err) { alert('ไม่สามารถประมวลผลรูปภาพได้'); } } }} className="w-full text-sm dark:text-gray-300" /> </div>
-                                <div className="flex items-start gap-2 mb-4 text-xs text-gray-600 dark:text-gray-400"> <input type="checkbox" className="mt-1" checked={agreed} onChange={e => setAgreed(e.target.checked)} /> <p>ฉันอ่านระเบียบและยอมรับเงื่อนไขของ ขนำลุงดำ แคมป์ปิ้ง ทุกประการ </p> </div>
-                                <button onClick={handleSubmit} disabled={loading || !canSubmit} className={`w-full p-3 rounded-lg font-bold text-white transition ${loading || !canSubmit ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}>{loading ? 'กำลังบันทึก...' : 'ยืนยันการจอง'}</button>
+                                <div className="flex items-start gap-2 mb-4 text-xs text-gray-600 dark:text-gray-400"> <input type="checkbox" className="mt-1" checked={agreed} onChange={e => setAgreed(e.target.checked)} /> <p>ฉันอ่านกฎระเบียบและยอมรับเงื่อนไขของ ขนำลุงดำ แคมป์ปิ้ง ทุกประการ </p> </div>
+                                <button onClick={handleSubmit} disabled={loading || !canSubmit} className={`w-full p-3 rounded-lg font-bold text-white transition ${loading || !canSubmit ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}>{loading ? 'กำลังเตรียมเต็นท์...' : 'ยืนยันการจอง'}</button>
                             </div>
                         )}
 
@@ -788,11 +788,11 @@
                                 <div className="text-6xl mb-4">🎉</div>
                                 <h2 className="text-2xl font-bold text-green-700 dark:text-green-400 mb-2">จองสำเร็จ!</h2>
                                 <p className="text-gray-600 dark:text-gray-300 mb-4">รหัส: <strong>{bookingResult}</strong></p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">ระบบส่งใบจองให้ทาง LINE แล้วครับ</p>
-                                <p className="text-sm text-gray-600 mb-4">เงื่อนไข : ไม่สามารถคืนมัดจำได้</p>
-                                <p className="text-sm text-gray-600 mb-4">เลื่อนที่พักก่อนเข้าพักไม่น้อยกว่า 7 วัน</p>
-                                <p className="text-sm text-gray-600 mb-4">ยกเว้นโรคระบาดและภัยพิบัติเลื่อนที่พักได้</p>
-                                <button onClick={() => liff.closeWindow()} className="mt-8 bg-gray-800 dark:bg-gray-600 text-white px-6 py-2 rounded-full">ปิดหน้าต่าง</button>
+                                <p className="text-sm text-gray-400 mb-4">ระบบส่งใบจองให้ทาง LINE แล้วครับ</p>
+                                <p className="text-sm text-gray-500 mb-4">เงื่อนไข : ไม่สามารถคืนมัดจำได้</p>
+                                <p className="text-sm text-gray-500 mb-4">เลื่อนที่พักก่อนเข้าพักไม่น้อยกว่า 7 วัน</p>
+                                <p className="text-sm text-gray-500 mb-4">ยกเว้นโรคระบาดและภัยพิบัติเลื่อนที่พักได้</p>
+                                <button onClick={() => liff.closeWindow()} className="mt-8 bg-gray-800 dark:bg-gray-600 text-white px-6 py-2 rounded-full">กดปิดเบาๆ นะ</button>
                             </div>
                         )}
                         
