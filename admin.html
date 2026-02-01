@@ -162,6 +162,7 @@
                     
                     if (filter === 'all') statusMatch = true;
                     else if (filter === 'pending') statusMatch = b.status === 'รอตรวจสอบ';
+                    else if (filter === 'confirmed') statusMatch = b.status === 'ยืนยัน'; // เพิ่มบรรทัดนี้เพื่อให้แสดงรายการที่ยืนยันแล้ว
                     else if (filter === 'upcoming') statusMatch = b.status === 'ยืนยัน' && bCheckIn >= today;
                     else if (filter === 'history') statusMatch = b.status === 'ยืนยัน' && bCheckIn < today;
 
