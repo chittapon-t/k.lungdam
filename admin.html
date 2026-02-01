@@ -265,10 +265,10 @@
             const handleExportPDF = () => {
                 const element = document.getElementById('report-print-area');
                 const opt = { 
-                    margin: 0, 
+                    margin: 0, // ตั้งขอบเป็น 0 แล้วจัด Padding ใน HTML แทน
                     filename: `Report_${new Date().toISOString().split('T')[0]}.pdf`, 
                     image: { type: 'jpeg', quality: 0.98 }, 
-                    html2canvas: { scale: 2 }, 
+                    html2canvas: { scale: 2, useCORS: true }, 
                     jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' } 
                 };
                 html2pdf().set(opt).from(element).save();
@@ -278,10 +278,10 @@
             const handlePrintReceipt = () => {
                 const element = document.getElementById('receipt-print-area');
                 const opt = { 
-                    margin: 0, 
+                    margin: 0, // ตั้งขอบเป็น 0 แล้วจัด Padding ใน HTML แทน
                     filename: `Receipt_${viewBooking.id}.pdf`, 
                     image: { type: 'jpeg', quality: 0.98 }, 
-                    html2canvas: { scale: 2 }, 
+                    html2canvas: { scale: 2, useCORS: true }, 
                     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } 
                 };
                 html2pdf().set(opt).from(element).save();
@@ -335,11 +335,16 @@
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="bg-white p-6 rounded-2xl shadow-sm">
                                         <h3 className="font-bold text-gray-700 mb-6 flex items-center gap-2"><i className="fas fa-chart-bar text-green-500"></i> ยอดจองรายเดือน (ปีนี้)</h3>
-                                        <div className="flex items-end gap-2 h-40">
+                                        <div className="flex gap-2 h-48 pb-2">
                                             {stats.monthlyCounts.map((count, i) => (
-                                                <div key={i} className="flex-1 flex flex-col items-center group relative">
-                                                    <div className="w-full bg-green-100 rounded-t hover:bg-green-400 transition-all duration-300 relative" style={{ height: `${count > 0 ? (count / Math.max(...stats.monthlyCounts)) * 100 : 5}%` }}></div>
-                                                    <div className="absolute -top-6 text-xs font-bold text-green-700 opacity-0 group-hover:opacity-100 transition">{count}</div>
+                                                <div key={i} className="flex-1 flex flex-col justify-end items-center group relative h-full">
+                                                    <div className="absolute mb-1 bottom-full opacity-0 group-hover:opacity-100 transition text-xs font-bold text-green-700 bg-green-50 px-2 py-1 rounded border border-green-200 pointer-events-none z-10 shadow-sm whitespace-nowrap">
+                                                        {count} รายการ
+                                                    </div>
+                                                    <div 
+                                                        className="w-full bg-green-500 rounded-t hover:bg-green-600 transition-all duration-300 relative shadow-sm" 
+                                                        style={{ height: `${count > 0 ? (count / (Math.max(...stats.monthlyCounts) || 1)) * 85 : 2}%` }}
+                                                    ></div>
                                                     <div className="text-[10px] text-gray-400 mt-2">{["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."][i]}</div>
                                                 </div>
                                             ))}
@@ -833,14 +838,14 @@
                         </div>
                     )}
 
-                    {/* --- HIDDEN PRINT TEMPLATES --- */}
-                    <div className="fixed top-0 left-0 -z-50 opacity-0 pointer-events-none">
+                    {/* --- HIDDEN PRINT TEMPLATES (Modified to Fix Blank Page Issue) --- */}
+                    <div style={{ position: 'fixed', left: '-10000px', top: 0 }}>
                         
-                        {/* 1. REPORT TEMPLATE (A4 Landscape: ~297mm width) */}
-                        <div id="report-print-area" className="bg-white text-black p-4" style={{ width: '290mm', minHeight: '200mm' }}>
+                        {/* 1. REPORT TEMPLATE (A4 Landscape: 297mm x 210mm) */}
+                        <div id="report-print-area" className="bg-white text-black" style={{ width: '297mm', minHeight: '210mm', padding: '15mm' }}>
                             <div className="flex justify-between items-center mb-4 border-b-2 border-gray-800 pb-2">
                                 <div className="flex items-center gap-3">
-                                    {siteSettings && siteSettings.logoUrl && <img src={siteSettings.logoUrl} className="w-16 h-16 object-cover rounded-full" />}
+                                    {siteSettings && siteSettings.logoUrl && <img src={siteSettings.logoUrl} className="w-16 h-16 object-cover rounded-full" crossOrigin="anonymous" />}
                                     <div>
                                         <h1 className="text-xl font-bold">{siteSettings && siteSettings.headerTitle}</h1>
                                         <p className="text-xs text-gray-600">รายงานการจองห้องพัก (Booking Report)</p>
@@ -890,15 +895,15 @@
                             </table>
                         </div>
 
-                        {/* 2. RECEIPT TEMPLATE (A4 Portrait: ~210mm width) */}
+                        {/* 2. RECEIPT TEMPLATE (A4 Portrait: 210mm x 297mm) */}
                         {viewBooking && (
-                            <div id="receipt-print-area" className="bg-white text-black p-8 relative" style={{ width: '210mm', minHeight: '290mm' }}>
+                            <div id="receipt-print-area" className="bg-white text-black relative" style={{ width: '210mm', minHeight: '297mm', padding: '20mm' }}>
                                 {/* Header */}
                                 <div className="flex justify-between items-start mb-6 border-b-2 border-gray-800 pb-6">
                                     <div className="flex gap-4">
                                         <div className="w-20 h-20 bg-gray-200 rounded-full overflow-hidden flex-shrink-0 border border-gray-300">
                                             {siteSettings && siteSettings.logoUrl ? (
-                                                <img src={siteSettings.logoUrl} className="w-full h-full object-cover" />
+                                                <img src={siteSettings.logoUrl} className="w-full h-full object-cover" crossOrigin="anonymous" />
                                             ) : <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">LOGO</div>}
                                         </div>
                                         <div>
