@@ -25,8 +25,23 @@
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* Print Specifics */
-        .print-container { background: white; color: black; }
+        /* Loading Overlay */
+        .loading-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(2px);
+            z-index: 9999;
+            display: flex; justify-content: center; align-items: center;
+            flex-direction: column;
+        }
+        .spinner {
+            width: 40px; height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #16a34a;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
@@ -35,7 +50,7 @@
     <script type="text/babel">
         // --- CONFIGURATION ---
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxBfnBBAzldCRb5iH7RCRi7gE0RL4ClsEa7R-p84j3s6S_OpLwhzsE4g9pUC2T8AVNG/exec"; 
-        const SHOP_PHONE = "061-592-4262"; // เบอร์พร้อมเพย์
+        const SHOP_PHONE = "061-592-4262"; 
         
         let ROOM_IDS = ['R1','R2','R3','T1','T2','K1','K2','Z8'];
         let ROOM_NAMES = {
@@ -59,7 +74,7 @@
                         if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; }
                         canvas.width = width; canvas.height = height;
                         const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.7)); 
+                        resolve(canvas.toDataURL('image/jpeg', 0.8)); 
                     };
                     img.onerror = (err) => reject(err);
                 };
@@ -162,7 +177,7 @@
                     
                     if (filter === 'all') statusMatch = true;
                     else if (filter === 'pending') statusMatch = b.status === 'รอตรวจสอบ';
-                    else if (filter === 'confirmed') statusMatch = b.status === 'ยืนยัน'; // เพิ่มบรรทัดนี้เพื่อให้แสดงรายการที่ยืนยันแล้ว
+                    else if (filter === 'confirmed') statusMatch = b.status === 'ยืนยัน'; 
                     else if (filter === 'upcoming') statusMatch = b.status === 'ยืนยัน' && bCheckIn >= today;
                     else if (filter === 'history') statusMatch = b.status === 'ยืนยัน' && bCheckIn < today;
 
@@ -210,9 +225,14 @@
             const updateStatus = (id, newStatus) => {
                 const actionText = newStatus === 'ยกเลิก' ? 'ยกเลิกรายการ' : `เปลี่ยนสถานะเป็น "${newStatus}"`;
                 confirmMsg(`ยืนยันการ${actionText} ใช่หรือไม่?`, () => {
+                    setLoading(true);
                     setBookings(prev => prev.map(b => b.id === id ? {...b, status: newStatus} : b));
-                    fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'updateStatus', bookingId: id, newStatus: newStatus, password: password }) });
-                    if (newStatus === 'ยกเลิก' && viewBooking && viewBooking.id === id) setViewBooking({...viewBooking, status: 'ยกเลิก'});
+                    fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'updateStatus', bookingId: id, newStatus: newStatus, password: password }) })
+                    .then(r => r.json())
+                    .then(res => {
+                         setLoading(false);
+                         if (newStatus === 'ยกเลิก' && viewBooking && viewBooking.id === id) setViewBooking({...viewBooking, status: 'ยกเลิก'});
+                    });
                 });
             };
 
@@ -231,8 +251,9 @@
                 if(!rescheduleData.checkIn || !rescheduleData.checkOut) return alertMsg('กรุณาเลือกวันที่ให้ครบถ้วน');
                 if(rescheduleData.checkIn >= rescheduleData.checkOut) return alertMsg('วันที่ออกต้องอยู่หลังวันที่เข้าพัก');
                 confirmMsg('ยืนยันการเลื่อนวันเข้าพัก?', () => {
+                    setLoading(true);
                     fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'rescheduleBooking', bookingId: rescheduleData.id, newCheckIn: rescheduleData.checkIn, newCheckOut: rescheduleData.checkOut, password: password }) 
-                    }).then(r => r.json()).then(res => { if (res.status === 'success') { successMsg('เลื่อนวันสำเร็จเรียบร้อย'); setRescheduleData(null); setViewBooking(null); fetchData(); } else errorMsg('ไม่สำเร็จ: ' + res.message); });
+                    }).then(r => r.json()).then(res => { setLoading(false); if (res.status === 'success') { successMsg('เลื่อนวันสำเร็จเรียบร้อย'); setRescheduleData(null); setViewBooking(null); fetchData(); } else errorMsg('ไม่สำเร็จ: ' + res.message); });
                 });
             };
 
@@ -248,6 +269,18 @@
                 });
             };
 
+            const handleManualArchive = () => {
+                confirmMsg('ยืนยันการย้ายข้อมูลเก่าไปเก็บ (Archive)?\n(เฉพาะรายการที่ Check-out เกิน 30 วัน)', () => {
+                    setLoading(true);
+                    fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'manualArchive', password: password }) })
+                    .then(r => r.json()).then(res => { 
+                        setLoading(false); 
+                        if(res.status === 'success') { successMsg('จัดเก็บข้อมูลเรียบร้อย'); fetchData(); } 
+                        else errorMsg('Error: ' + res.message); 
+                    });
+                });
+            }
+
             const handleSaveSetting = (type, payload) => {
                 const action = editMode ? 'editSetting' : 'addSetting'; const id = editMode ? editMode.id : null;
                 if ((type !== 'discount') && (!payload.startDate || !payload.endDate)) return alertMsg('กรุณาระบุวันที่เริ่มต้นและสิ้นสุด');
@@ -262,27 +295,26 @@
             const handleMultipleImageUpload = async (files, callback) => { if (!files || files.length === 0) return; try { const promises = Array.from(files).map(file => compressImage(file)); const base64List = await Promise.all(promises); callback(base64List); } catch(e) { errorMsg('Upload Failed'); } };
             const handleExport = () => { const header = ["BookingID", "Date", "Customer", "Phone", "CheckIn", "CheckOut", "Rooms", "Total", "Deposit", "Status"]; const rows = bookings.map(b => [ b.id, b.timestamp, `"${b.name}"`, `'${b.phone}`, b.checkIn, b.checkOut, `"${b.rooms.replace(/"/g, '""')}"`, b.price, b.deposit, b.status ]); const csvContent = [header.join(","), ...rows.map(r => r.join(","))].join("\n"); const blob = new Blob(["\uFEFF"+csvContent], { type: 'text/csv;charset=utf-8;' }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.setAttribute("href", url); link.setAttribute("download", "bookings_lungdam.csv"); document.body.appendChild(link); link.click(); document.body.removeChild(link); };
             
-            // --- UPDATED: PDF EXPORT (Landscape A4 Fixed) ---
+            // --- UPDATED: PDF EXPORT with Better Config ---
             const handleExportPDF = () => {
                 const element = document.getElementById('report-print-area');
                 const opt = { 
-                    margin: 0, // ตั้งขอบเป็น 0 แล้วจัด Padding ใน HTML แทน
+                    margin: 5, 
                     filename: `Report_${new Date().toISOString().split('T')[0]}.pdf`, 
                     image: { type: 'jpeg', quality: 0.98 }, 
-                    html2canvas: { scale: 2, useCORS: true }, 
+                    html2canvas: { scale: 2, logging: true, useCORS: true }, 
                     jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' } 
                 };
                 html2pdf().set(opt).from(element).save();
             };
 
-            // --- UPDATED: RECEIPT PRINT (Portrait A4 Fixed) ---
             const handlePrintReceipt = () => {
                 const element = document.getElementById('receipt-print-area');
                 const opt = { 
-                    margin: 0, // ตั้งขอบเป็น 0 แล้วจัด Padding ใน HTML แทน
+                    margin: 0, 
                     filename: `Receipt_${viewBooking.id}.pdf`, 
                     image: { type: 'jpeg', quality: 0.98 }, 
-                    html2canvas: { scale: 2, useCORS: true }, 
+                    html2canvas: { scale: 2, logging: true, useCORS: true }, 
                     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } 
                 };
                 html2pdf().set(opt).from(element).save();
@@ -293,10 +325,12 @@
             const days = []; for(let i=0; i<firstDayOfMonth; i++) days.push(null); for(let i=1; i<=getDaysInMonth(calendarDate); i++) days.push(i);
             const getBookingsForDate = (day) => { if(!day) return []; const dateStr = `${calendarDate.getFullYear()}-${String(calendarDate.getMonth()+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`; return bookings.filter(b => b.status !== 'ยกเลิก' && b.checkIn <= dateStr && b.checkOut > dateStr); };
 
-            if (!isLoggedIn) return ( <div className="min-h-screen flex items-center justify-center bg-gray-900 px-4 relative"> <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-sm z-10"> <div className="text-center mb-6"><h1 className="text-3xl font-bold text-green-800">Admin Panel</h1><p className="text-gray-500">ขนำลุงดำ แคมป์ปิ้ง</p></div> <form onSubmit={handleLogin} className="space-y-4"> <input type="password" placeholder="รหัสผ่าน" className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" value={password} onChange={e => setPassword(e.target.value)} /> <button disabled={loading} className="w-full bg-gray-800 text-white p-3 rounded-lg hover:bg-gray-700 transition font-bold shadow-lg">{loading ? 'กำลังตรวจสอบ...' : 'เข้าสู่ระบบ'}</button> </form> </div> {modal.isOpen && ( <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60 backdrop-blur-sm transition-opacity"> <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xs overflow-hidden animate-modal"> <div className={`p-6 text-center ${modal.type==='error'?'bg-red-50':''}`}> <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${modal.type==='error'?'bg-red-100 text-red-500':'bg-gray-100 text-gray-500'}`}> <i className={`fas ${modal.type==='error'?'fa-times':'fa-info'} text-2xl`}></i> </div> <h3 className="text-xl font-bold text-gray-800 mb-2">{modal.title}</h3> <p className="text-gray-600 text-sm">{modal.message}</p> </div> <div className="p-4 bg-gray-50"> <button onClick={closeModal} className="w-full py-2.5 bg-gray-800 text-white rounded-xl font-bold hover:bg-gray-700 transition">ตกลง</button> </div> </div> </div> )} </div> );
+            if (!isLoggedIn) return ( <div className="min-h-screen flex items-center justify-center bg-gray-900 px-4 relative"> <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-sm z-10"> <div className="text-center mb-6"><h1 className="text-3xl font-bold text-green-800">Admin Panel</h1><p className="text-gray-500">ขนำลุงดำ แคมป์ปิ้ง</p></div> <form onSubmit={handleLogin} className="space-y-4"> <input type="password" placeholder="รหัสผ่าน" className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" value={password} onChange={e => setPassword(e.target.value)} /> <button disabled={loading} className="w-full bg-gray-800 text-white p-3 rounded-lg hover:bg-gray-700 transition font-bold shadow-lg">{loading ? 'กำลังตรวจสอบ...' : 'เข้าสู่ระบบ'}</button> </form> </div> {loading && <div className="loading-overlay"><div className="spinner"></div></div>} {modal.isOpen && ( <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60 backdrop-blur-sm transition-opacity"> <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xs overflow-hidden animate-modal"> <div className={`p-6 text-center ${modal.type==='error'?'bg-red-50':''}`}> <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${modal.type==='error'?'bg-red-100 text-red-500':'bg-gray-100 text-gray-500'}`}> <i className={`fas ${modal.type==='error'?'fa-times':'fa-info'} text-2xl`}></i> </div> <h3 className="text-xl font-bold text-gray-800 mb-2">{modal.title}</h3> <p className="text-gray-600 text-sm">{modal.message}</p> </div> <div className="p-4 bg-gray-50"> <button onClick={closeModal} className="w-full py-2.5 bg-gray-800 text-white rounded-xl font-bold hover:bg-gray-700 transition">ตกลง</button> </div> </div> </div> )} </div> );
 
             return (
                 <div className="min-h-screen pb-20 bg-gray-100 font-sans">
+                    {loading && <div className="loading-overlay"><div className="spinner mb-2"></div><div className="text-white font-bold text-sm bg-black bg-opacity-50 px-3 py-1 rounded-full">กำลังโหลด...</div></div>}
+                    
                     <nav className="bg-white shadow p-3 sticky top-0 z-20 flex justify-between items-center">
                         <div className="font-bold text-lg text-green-800 flex items-center gap-2"><i className="fas fa-campground"></i> จัดการระบบ</div>
                         <div className="flex gap-2">
@@ -462,6 +496,11 @@
 
                         {activeTab === 'settings' && (
                             <div className="space-y-8 animate-fade-in">
+                                {/* Archive Button Added Here */}
+                                <div className="flex justify-end">
+                                    <button onClick={handleManualArchive} className="bg-gray-700 text-white px-4 py-2 rounded-lg shadow hover:bg-gray-800 text-sm font-bold"><i className="fas fa-archive mr-2"></i> จัดเก็บข้อมูลเก่า (Archive)</button>
+                                </div>
+
                                 {siteSettings && (
                                     <div className="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
                                         <div className="flex justify-between items-center mb-6 border-b pb-4">
@@ -839,10 +878,10 @@
                         </div>
                     )}
 
-                    {/* --- HIDDEN PRINT TEMPLATES (Modified to Fix Blank Page Issue) --- */}
+                    {/* --- HIDDEN PRINT TEMPLATES --- */}
                     <div style={{ position: 'fixed', left: '-10000px', top: 0 }}>
                         
-                        {/* 1. REPORT TEMPLATE (A4 Landscape: 297mm x 210mm) */}
+                        {/* 1. REPORT TEMPLATE */}
                         <div id="report-print-area" className="bg-white text-black" style={{ width: '297mm', minHeight: '210mm', padding: '15mm' }}>
                             <div className="flex justify-between items-center mb-4 border-b-2 border-gray-800 pb-2">
                                 <div className="flex items-center gap-3">
@@ -896,7 +935,7 @@
                             </table>
                         </div>
 
-                        {/* 2. RECEIPT TEMPLATE (A4 Portrait: 210mm x 297mm) */}
+                        {/* 2. RECEIPT TEMPLATE */}
                         {viewBooking && (
                             <div id="receipt-print-area" className="bg-white text-black relative" style={{ width: '210mm', minHeight: '297mm', padding: '20mm' }}>
                                 {/* Header */}
@@ -909,7 +948,6 @@
                                         </div>
                                         <div>
                                             <h1 className="text-2xl font-bold text-green-900">{siteSettings && siteSettings.headerTitle}</h1>
-                                            {/* Removed Shop Description as requested */}
                                             <p className="text-sm font-bold mt-2 text-black"><i className="fas fa-phone-alt mr-1"></i> โทร: {SHOP_PHONE} (พร้อมเพย์)</p>
                                         </div>
                                     </div>
@@ -950,20 +988,6 @@
                                     </thead>
                                     <tbody className="text-sm">
                                         {(() => {
-                                            let items = [];
-                                            try {
-                                                const cart = JSON.parse(viewBooking.cart || '[]');
-                                                items = cart.map(c => ({
-                                                    name: c.name + (c.type==='food' ? ' (อาหาร)' : ' (ที่พัก)'),
-                                                    qty: c.qty || c.guests || 1, 
-                                                    price: (c.price || c.pricePerNight || 0) * (c.qty || 1) 
-                                                }));
-                                            } catch(e) {
-                                                items.push({ name: viewBooking.rooms, qty: 1, price: parseInt(viewBooking.price) });
-                                            }
-                                            
-                                            // Fallback table rows if standard rendering logic fails or is too complex for print
-                                            // Using simplified summary logic for neatness
                                             return (
                                                 <>
                                                     <tr className="border-b border-gray-200">
