@@ -55,6 +55,16 @@
         /* Custom Scrollbar for Modal content if needed */
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(156, 163, 175, 0.5); border-radius: 4px; }
+
+        /* Loading Spinner */
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 3px solid white;
+            width: 20px; height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
@@ -82,7 +92,8 @@
                         if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; }
                         canvas.width = width; canvas.height = height;
                         const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.7)); 
+                        // Quality 0.8 is better for slips
+                        resolve(canvas.toDataURL('image/jpeg', 0.8)); 
                     };
                     img.onerror = (err) => reject(err);
                 };
@@ -552,7 +563,8 @@
                                                 <label className="block text-sm font-bold mb-1">เบอร์โทรศัพท์ที่ใช้จอง</label>
                                                 <input className="w-full border p-2 rounded dark:bg-gray-700" type="tel" placeholder="08xxxxxxxx" value={manageForm.phone} onChange={e => setManageForm({...manageForm, phone: e.target.value})} />
                                             </div>
-                                            <button onClick={handleFindBooking} disabled={loading} className="w-full bg-blue-600 text-white p-3 rounded-lg font-bold shadow hover:bg-blue-700 transition">
+                                            <button onClick={handleFindBooking} disabled={loading} className="w-full bg-blue-600 text-white p-3 rounded-lg font-bold shadow hover:bg-blue-700 transition flex justify-center items-center gap-2">
+                                                {loading && <div className="spinner"></div>}
                                                 {loading ? 'กำลังตรวจสอบ...' : 'ค้นหาข้อมูล'}
                                             </button>
                                         </div>
@@ -601,8 +613,9 @@
                                                             <input type="date" min={rescheduleDates.checkIn || getTommorow()} className="w-full border p-2 rounded dark:bg-gray-700" onChange={e => setRescheduleDates({...rescheduleDates, checkOut: e.target.value})} />
                                                         </div>
                                                     </div>
-                                                    <button onClick={handleCustomerReschedule} disabled={loading} className="w-full bg-orange-600 text-white py-3 rounded-lg font-bold shadow hover:bg-orange-700">
-                                                        {loading ? 'แอดมินกำลังทำงาน...รอสุกครู่' : 'ยืนยันการเลื่อน'}
+                                                    <button onClick={handleCustomerReschedule} disabled={loading} className="w-full bg-orange-600 text-white py-3 rounded-lg font-bold shadow hover:bg-orange-700 flex justify-center items-center gap-2">
+                                                        {loading && <div className="spinner"></div>}
+                                                        {loading ? 'กำลังทำงาน...' : 'ยืนยันการเลื่อน'}
                                                     </button>
                                                 </div>
                                             )}
@@ -647,8 +660,9 @@
                                                         </div>
                                                     )}
 
-                                                    <button onClick={handleCustomerAddFood} disabled={loading || (addOnCart.length > 0 && !addOnSlip)} className={`w-full py-3 rounded-lg font-bold shadow transition ${loading || (addOnCart.length > 0 && !addOnSlip) ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'}`}>
-                                                        {loading ? 'กำลังส่งข้อมูล...ให้แม่ครัว' : 'ยืนยันการสั่งอาหาร'}
+                                                    <button onClick={handleCustomerAddFood} disabled={loading || (addOnCart.length > 0 && !addOnSlip)} className={`w-full py-3 rounded-lg font-bold shadow transition flex justify-center items-center gap-2 ${loading || (addOnCart.length > 0 && !addOnSlip) ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'}`}>
+                                                        {loading && <div className="spinner"></div>}
+                                                        {loading ? 'กำลังส่งข้อมูล...' : 'ยืนยันการสั่งอาหาร'}
                                                     </button>
                                                 </div>
                                             )}
@@ -679,7 +693,10 @@
                                             <label className="block text-gray-700 dark:text-red-300 font-bold mb-1">วันที่ออก</label>
                                             <input type="date" min={dates.checkIn || getTommorow()} className="w-full border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" onChange={e => setDates({...dates, checkOut: e.target.value})} />
                                         </div>
-                                        <button onClick={handleSearch} disabled={loading} className="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition font-bold shadow-lg mt-2">{loading ? 'กำลังกางเต็นท์...รอแปบ...' : 'ค้นหาที่พักว่าง'}</button>
+                                        <button onClick={handleSearch} disabled={loading} className="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition font-bold shadow-lg mt-2 flex justify-center items-center gap-2">
+                                            {loading && <div className="spinner"></div>}
+                                            {loading ? 'กำลังตรวจสอบ...' : 'ค้นหาที่พักว่าง'}
+                                        </button>
                                     </div>
                                 </div>
                                 {closedModal && ( <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-6"> <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center relative animate-pop"> <div className="w-16 h-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mx-auto mb-4"> <i className="fas fa-store-slash text-3xl text-red-500 dark:text-red-300"></i> </div> <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">วันปิดให้บริการ</h3> <p className="text-gray-600 dark:text-gray-300 mb-1">วันที่ <strong>{formatThaiDate(closedModal.date)}</strong></p> <p className="text-red-500 dark:text-red-400 font-medium mb-6">"{closedModal.reason}"</p> <button onClick={() => setClosedModal(null)} className="w-full bg-gray-800 dark:bg-gray-600 text-white py-3 rounded-xl font-bold hover:bg-gray-700 transition">เลือกวันใหม่</button> </div> </div> )}
@@ -779,7 +796,10 @@
                                 </div>
                                 <div className="mb-4"> <label className="block mb-1 text-sm dark:text-gray-300">สลิปโอนเงิน <span className="text-red-500">*</span></label> <input type="file" accept="image/*" onChange={async (e) => { const f = e.target.files[0]; if (f) { try { const resizedBase64 = await compressImage(f); setSlipImg(resizedBase64); } catch (err) { alert('ไม่สามารถประมวลผลรูปภาพได้'); } } }} className="w-full text-sm dark:text-gray-300" /> </div>
                                 <div className="flex items-start gap-2 mb-4 text-xs text-gray-600 dark:text-gray-400"> <input type="checkbox" className="mt-1" checked={agreed} onChange={e => setAgreed(e.target.checked)} /> <p>ฉันอ่านกฎระเบียบและยอมรับเงื่อนไขของ ขนำลุงดำ แคมป์ปิ้ง ทุกประการ </p> </div>
-                                <button onClick={handleSubmit} disabled={loading || !canSubmit} className={`w-full p-3 rounded-lg font-bold text-white transition ${loading || !canSubmit ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}>{loading ? 'กำลังเตรียมเต็นท์...' : 'ยืนยันการจอง'}</button>
+                                <button onClick={handleSubmit} disabled={loading || !canSubmit} className={`w-full p-3 rounded-lg font-bold text-white transition flex justify-center items-center gap-2 ${loading || !canSubmit ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}>
+                                    {loading && <div className="spinner"></div>}
+                                    {loading ? 'กำลังเตรียมเต็นท์...' : 'ยืนยันการจอง'}
+                                </button>
                             </div>
                         )}
 
