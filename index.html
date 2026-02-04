@@ -381,7 +381,19 @@
                     cart, pricing, discountCode: discount.code, slipImage: slipImg
                 };
                 fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) })
-                .then(r => r.json()).then(res => { if (res.status === 'success') { setBookingResult(res.bookingId); setStep(5); } else { alert('Error: ' + res.message); } setLoading(false); }).catch(e => { alert('Failed: ' + e); setLoading(false); });
+                .then(r => r.json())
+                .then(res => { 
+                    if (res.status === 'success') { 
+                        setBookingResult(res.bookingId); 
+                        setStep(5); 
+                    } else { 
+                        setModalAlert({ show: true, type: 'error', title: 'ผิดพลาด', text: res.message });
+                    } 
+                    setLoading(false); 
+                }).catch(e => { 
+                    setModalAlert({ show: true, type: 'error', title: 'Error', text: 'Failed: ' + e }); 
+                    setLoading(false); 
+                });
             };
 
             const handleDownloadQr = () => {
