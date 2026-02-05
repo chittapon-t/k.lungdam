@@ -25,14 +25,12 @@
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* --- PRINT STYLES (แก้ไขใหม่: แยกส่วนพิมพ์ชัดเจน) --- */
+        /* --- PRINT STYLES --- */
         @media print {
-            /* ซ่อน UI หน้าจอทั้งหมดที่มีคลาส no-print */
             .no-print, .no-print * {
                 display: none !important;
             }
 
-            /* ตั้งค่าพื้นฐานหน้ากระดาษ */
             body, html {
                 margin: 0;
                 padding: 0;
@@ -41,7 +39,6 @@
                 overflow: visible !important;
             }
 
-            /* บังคับแสดงส่วน Print Container */
             #print-container {
                 position: absolute !important;
                 left: 0 !important;
@@ -58,7 +55,6 @@
                 visibility: visible !important;
             }
 
-            /* จัดรูปแบบใบเสร็จ A4 */
             #receipt-print-area {
                 width: 210mm;
                 min-height: 297mm;
@@ -69,7 +65,6 @@
                 print-color-adjust: exact;
             }
             
-            /* ซ่อน Report Template เมื่อพิมพ์ใบเสร็จ */
             #report-print-area { display: none; }
         }
     </style>
@@ -949,15 +944,15 @@
                                                 <img 
                                                     src={siteSettings.logoUrl} 
                                                     className="w-full h-full object-contain" 
-                                                    crossOrigin="anonymous" 
-                                                    referrerPolicy="no-referrer"
+                                                    alt="Logo"
+                                                    // Removed crossOrigin and referrerPolicy to fix display issues
                                                     onError={(e) => e.target.style.display = 'none'} 
                                                 />
                                             ) : <span className="text-gray-400 text-xs">NO LOGO</span>}
                                         </div>
                                         <div>
                                             <h1 className="text-2xl font-bold text-green-900">{siteSettings && siteSettings.headerTitle}</h1>
-                                            {/* เพิ่มที่อยู่ร้านตามคำขอ */}
+                                            {/* Description removed */}
                                             <p className="text-sm text-gray-600">หมู่ที่ 3 ต.ฉลุง อ.หาดใหญ่ จ.สงขลา 90110</p>
                                             <p className="text-sm font-bold mt-2 text-black"><i className="fas fa-phone-alt mr-1"></i> โทร: {SHOP_PHONE} (พร้อมเพย์)</p>
                                         </div>
