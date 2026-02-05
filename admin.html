@@ -11,8 +11,6 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    
-    <!-- HTML2PDF (ลบออกได้เลยเพราะใช้ window.print แทนแล้ว) -->
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap');
@@ -24,6 +22,11 @@
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
         
+        /* ซ่อนส่วนพิมพ์ในหน้าจอปกติ */
+        #print-container {
+            display: none;
+        }
+
         /* --- PRINT STYLES --- */
         @media print {
             .no-print, .no-print * {
