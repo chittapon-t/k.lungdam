@@ -278,15 +278,33 @@
             // --- UPDATED: RECEIPT PRINT (Portrait A4 Fixed) ---
             const handlePrintReceipt = () => {
                 const element = document.getElementById('receipt-print-area');
+                // Allow logo to load
+                const images = element.getElementsByTagName('img');
+                if (images.length > 0) {
+                    // Try to force load
+                    const img = images[0];
+                    if (!img.complete) {
+                        img.onload = () => {
+                            generatePDF(element);
+                        };
+                    } else {
+                        generatePDF(element);
+                    }
+                } else {
+                    generatePDF(element);
+                }
+            };
+
+            const generatePDF = (element) => {
                 const opt = { 
-                    margin: 0, // ตั้งขอบเป็น 0 แล้วจัด Padding ใน HTML แทน
+                    margin: 0, 
                     filename: `Receipt_${viewBooking.id}.pdf`, 
                     image: { type: 'jpeg', quality: 0.98 }, 
-                    html2canvas: { scale: 2, useCORS: true }, 
+                    html2canvas: { scale: 2, useCORS: true, allowTaint: true }, 
                     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } 
                 };
                 html2pdf().set(opt).from(element).save();
-            };
+            }
 
             const getDaysInMonth = (date) => new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
             const firstDayOfMonth = new Date(calendarDate.getFullYear(), calendarDate.getMonth(), 1).getDay();
@@ -915,7 +933,7 @@
                                         </div>
                                         <div>
                                             <h1 className="text-2xl font-bold text-green-900">{siteSettings && siteSettings.headerTitle}</h1>
-                                            <p className="text-sm text-gray-600 mt-1">{siteSettings && siteSettings.headerDesc}</p>
+                                            {/* Description removed as requested */}
                                             <p className="text-sm font-bold mt-2 text-black"><i className="fas fa-phone-alt mr-1"></i> โทร: {SHOP_PHONE} (พร้อมเพย์)</p>
                                         </div>
                                     </div>
