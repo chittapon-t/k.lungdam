@@ -203,9 +203,14 @@
                             liff.getProfile().then(profile => {
                                 setCustomer(prev => ({...prev, userId: profile.userId, lineDisplayName: profile.displayName}));
                             });
+                        } else {
+                            // Fix: ถ้าไม่ได้ Login ให้สั่ง Login เลย (แก้ไขปัญหาหน้า UID:-)
+                            liff.login();
                         }
                     }).catch(err => { console.error('LIFF Error', err); setIsLiffReady(true); });
                 } else { setIsLiffReady(true); }
+                
+                // Fetch other configs
                 fetch(`${GOOGLE_SCRIPT_URL}?action=getMapConfig`).then(r => r.json()).then(res => { if (res.status === 'success') setPinPos(res.data); });
                 fetch(`${GOOGLE_SCRIPT_URL}?action=getSettings`).then(r => r.json()).then(res => { if (res.status === 'success') setSystemSettings({ closed: res.closed, special: res.special }); });
                 fetch(`${GOOGLE_SCRIPT_URL}?action=getSiteSettings`).then(r => r.json()).then(res => { if (res.status === 'success') setSiteConfig(prev => ({ ...prev, ...res.data })); });
@@ -360,7 +365,8 @@
                                                         <div className="text-center py-10">
                                                             <div className="text-4xl mb-4">⚠️</div>
                                                             <p className="text-gray-500">ไม่พบข้อมูลผู้ใช้ LINE</p>
-                                                            <p className="text-xs text-gray-400 mt-2">กรุณาเปิดผ่านแอป LINE</p>
+                                                            <p className="text-xs text-gray-400 mt-2">กรุณาเปิดผ่านแอป LINE หรือ</p>
+                                                            <button onClick={() => liff.login()} className="mt-4 bg-green-500 text-white px-6 py-2 rounded-full font-bold shadow hover:bg-green-600 transition">เข้าสู่ระบบ LINE</button>
                                                         </div>
                                                     ) : (
                                                         bookingList.length > 0 ? (
