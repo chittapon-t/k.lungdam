@@ -147,7 +147,6 @@
             const [addOnCart, setAddOnCart] = React.useState([]); 
             const [addOnSlip, setAddOnSlip] = React.useState(null);
             const [addOnQr, setAddOnQr] = React.useState(null);
-            // We need to keep manageForm for backward compatibility if backend uses it, though we now use manageData directly
             const [manageForm, setManageForm] = React.useState({ bookingId: '', phone: '' });
 
             // Popup States
@@ -214,25 +213,29 @@
             // AUTO FETCH BOOKINGS FOR MANAGE MODE
             React.useEffect(() => {
                 if (mode === 'manage' && isLiffReady && customer.userId && !manageData) {
-                    setLoading(true);
-                    fetch(GOOGLE_SCRIPT_URL, {
-                        method: 'POST',
-                        body: JSON.stringify({ action: 'findBooking', userId: customer.userId })
-                    })
-                    .then(r => r.json())
-                    .then(res => {
-                        setLoading(false);
-                        if(res.status === 'success' && res.bookings && res.bookings.length > 0) {
-                            setBookingList(res.bookings);
-                        } else {
-                            setBookingList([]);
-                        }
-                    })
-                    .catch(() => setLoading(false));
+                    fetchUserBookings();
                 }
             }, [mode, isLiffReady, customer.userId, manageData]);
 
             // --- Handlers ---
+            const fetchUserBookings = () => {
+                setLoading(true);
+                fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'findBooking', userId: customer.userId })
+                })
+                .then(r => r.json())
+                .then(res => {
+                    setLoading(false);
+                    if(res.status === 'success' && res.bookings && res.bookings.length > 0) {
+                        setBookingList(res.bookings);
+                    } else {
+                        setBookingList([]);
+                    }
+                })
+                .catch(() => setLoading(false));
+            };
+
             const handleSearch = () => {
                 if (!dates.checkIn || !dates.checkOut) { setSearchError('กรุณาเลือกวันเข้าพักและวันที่ออกให้ครบถ้วนครับ'); return; }
                 if (dates.checkIn >= dates.checkOut) { setSearchError('วันเช็คเอาท์ต้องอยู่หลังจากวันเช็คอินครับ'); return; }
@@ -304,14 +307,42 @@
                 .then(r => r.json()).then(res => { setLoading(false); if(res.status === 'success') { setModalAlert({ show: true, type: 'success', title: 'สำเร็จ!', text: 'สั่งอาหารเรียบร้อย' }); setManageData(null); setAddOnCart([]); setAddOnSlip(null); setMode('booking'); } else { setModalAlert({ show: true, type: 'error', title: 'ไม่สำเร็จ', text: res.message }); } }).catch(e => { setLoading(false); setModalAlert({ show: true, type: 'error', title: 'Error', text: e }); });
             };
 
+            // --- FLOATING MENU ACTIONS ---
+            const handleMenuAction = (action) => {
+                if (action === 'toggle') {
+                    setMode(mode === 'booking' ? 'manage' : 'booking');
+                    setStep(1); setManageData(null); setManageTab('info');
+                    setAddOnCart([]); setAddOnSlip(null);
+                } else if (action === 'reschedule' || action === 'food') {
+                    setMode('manage');
+                    if (bookingList.length > 0) {
+                        selectBookingToManage(bookingList[0], action);
+                    } else if (bookingList.length === 0 && customer.userId) {
+                        setModalAlert({ show: true, type: 'info', title: 'ไม่พบรายการจอง', text: 'ไม่พบประวัติการจองที่สามารถดำเนินการได้' });
+                    }
+                }
+            };
+
             return (
                 <div className={isDark ? "dark" : ""}>
                     <div className="min-h-screen bg-[#f3f4f6] dark:bg-gray-900 text-gray-800 dark:text-gray-100 transition-colors duration-300">
-                        {/* THEME TOGGLE */}
-                        <button onClick={() => setIsDark(!isDark)} className="fixed top-4 right-4 z-50 bg-white dark:bg-gray-700 p-2 rounded-full shadow-lg border border-gray-200 dark:border-gray-600 w-10 h-10 flex items-center justify-center transition-transform hover:scale-110"> {isDark ? '☀️' : '🌙'} </button>
                         
-                        {/* MODE TOGGLE */}
-                        <button onClick={() => { setMode(mode === 'booking' ? 'manage' : 'booking'); setStep(1); setManageData(null); setManageTab('info'); }} className="fixed top-16 right-4 z-50 bg-white dark:bg-gray-700 p-2 rounded-full shadow-lg border border-gray-200 dark:border-gray-600 w-10 h-10 flex items-center justify-center transition-transform hover:scale-110 text-gray-800 dark:text-white"> {mode === 'booking' ? <i className="fas fa-search"></i> : <i className="fas fa-home"></i>} </button>
+                        {/* --- FLOATING SIDEBAR MENU (RIGHT) --- */}
+                        <div className="fixed top-1/2 right-4 transform -translate-y-1/2 z-50 flex flex-col gap-3">
+                            <button onClick={() => setIsDark(!isDark)} className="bg-white dark:bg-gray-700 p-2 rounded-full shadow-lg border border-gray-200 dark:border-gray-600 w-10 h-10 flex items-center justify-center hover:scale-110 transition">{isDark ? '☀️' : '🌙'}</button>
+                            
+                            <button onClick={() => handleMenuAction('toggle')} className="bg-white dark:bg-gray-700 p-2 rounded-full shadow-lg border border-gray-200 dark:border-gray-600 w-10 h-10 flex items-center justify-center hover:scale-110 transition text-gray-800 dark:text-white relative group">
+                                {mode === 'booking' ? <i className="fas fa-search"></i> : <i className="fas fa-home"></i>}
+                            </button>
+
+                            <button onClick={() => handleMenuAction('reschedule')} className="bg-white dark:bg-gray-700 p-2 rounded-full shadow-lg border border-gray-200 dark:border-gray-600 w-10 h-10 flex items-center justify-center hover:scale-110 transition text-orange-500">
+                                <i className="fas fa-calendar-alt"></i>
+                            </button>
+
+                            <button onClick={() => handleMenuAction('food')} className="bg-white dark:bg-gray-700 p-2 rounded-full shadow-lg border border-gray-200 dark:border-gray-600 w-10 h-10 flex items-center justify-center hover:scale-110 transition text-green-500">
+                                <i className="fas fa-utensils"></i>
+                            </button>
+                        </div>
 
                         {/* --- MANAGE MODE --- */}
                         {mode === 'manage' && (
@@ -326,21 +357,13 @@
                                     {!manageData ? (
                                         <div className="animate-pop">
                                             {loading ? (
-                                                /* --- CAMPING THEMED LOADING POPUP (INLINE) --- */
                                                 <div className="flex flex-col items-center justify-center py-10">
-                                                    <div className="relative mb-6">
-                                                        <div className="w-20 h-20 rounded-full border-4 border-gray-200 dark:border-gray-700 border-t-green-500 rounded-full animate-spin"></div>
-                                                        <div className="absolute inset-0 flex items-center justify-center">
-                                                            <i className="fas fa-campground text-orange-500 text-2xl animate-bounce"></i>
-                                                        </div>
-                                                    </div>
+                                                    <div className="w-12 h-12 border-4 border-gray-200 dark:border-gray-700 border-t-green-500 rounded-full animate-spin mb-4"></div>
                                                     <p className="text-gray-500 dark:text-gray-400 animate-pulse">กำลังค้นหาข้อมูล...</p>
                                                 </div>
                                             ) : (
                                                 !isLiffReady ? (
-                                                    <div className="text-center py-10">
-                                                        <p className="text-gray-500">Connecting to LINE...</p>
-                                                    </div>
+                                                    <div className="text-center py-10"><p className="text-gray-500">Connecting to LINE...</p></div>
                                                 ) : (
                                                     !customer.userId ? (
                                                         <div className="text-center py-10">
@@ -354,7 +377,6 @@
                                                                 <p className="text-sm text-gray-500 text-center mb-4">พบ {bookingList.length} รายการจอง</p>
                                                                 {bookingList.map(b => (
                                                                     <div key={b.id} className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition">
-                                                                        {/* Card Header / Info - Click to View Details */}
                                                                         <div onClick={() => selectBookingToManage(b, 'info')} className="p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600 transition">
                                                                             <div className="flex justify-between items-start mb-2">
                                                                                  <span className="font-bold text-blue-600 dark:text-blue-400 text-lg">{b.id}</span>
@@ -365,15 +387,9 @@
                                                                                 <div className="flex items-center"><i className="fas fa-home w-5 text-center mr-2 text-gray-400"></i> {b.rooms}</div>
                                                                             </div>
                                                                         </div>
-
-                                                                        {/* Action Buttons Row */}
                                                                         <div className="flex border-t border-gray-100 dark:border-gray-600 divide-x divide-gray-100 dark:divide-gray-600 bg-gray-50 dark:bg-gray-800">
-                                                                            <button onClick={() => selectBookingToManage(b, 'reschedule')} className="flex-1 py-3 text-sm font-bold text-orange-600 hover:bg-orange-50 dark:hover:bg-gray-700 transition flex items-center justify-center gap-2">
-                                                                                <i className="fas fa-calendar-alt"></i> เลื่อนวัน
-                                                                            </button>
-                                                                            <button onClick={() => selectBookingToManage(b, 'food')} className="flex-1 py-3 text-sm font-bold text-green-600 hover:bg-green-50 dark:hover:bg-gray-700 transition flex items-center justify-center gap-2">
-                                                                                <i className="fas fa-utensils"></i> สั่งอาหาร
-                                                                            </button>
+                                                                            <button onClick={() => selectBookingToManage(b, 'reschedule')} className="flex-1 py-3 text-sm font-bold text-orange-600 hover:bg-orange-50 dark:hover:bg-gray-700 transition flex items-center justify-center gap-2"><i className="fas fa-calendar-alt"></i> เลื่อนวัน</button>
+                                                                            <button onClick={() => selectBookingToManage(b, 'food')} className="flex-1 py-3 text-sm font-bold text-green-600 hover:bg-green-50 dark:hover:bg-gray-700 transition flex items-center justify-center gap-2"><i className="fas fa-utensils"></i> สั่งอาหาร</button>
                                                                         </div>
                                                                     </div>
                                                                 ))}
@@ -392,15 +408,10 @@
                                         </div>
                                     ) : (
                                         <div className="animate-pop">
-                                            {/* Header with Back Button */}
                                             <div className="flex items-center mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">
-                                                <button onClick={() => setManageData(null)} className="mr-3 text-gray-500 hover:text-blue-600 p-1">
-                                                    <i className="fas fa-arrow-left text-lg"></i>
-                                                </button>
+                                                <button onClick={() => setManageData(null)} className="mr-3 text-gray-500 hover:text-blue-600 p-1"><i className="fas fa-arrow-left text-lg"></i></button>
                                                 <span className="font-bold text-gray-700 dark:text-gray-200">รายการ: {manageData.id}</span>
                                             </div>
-
-                                            {/* TAB NAVIGATION */}
                                             <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4">
                                                 <button onClick={() => setManageTab('info')} className={`flex-1 py-2 text-sm font-bold ${manageTab === 'info' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}>ข้อมูล</button>
                                                 <button onClick={() => setManageTab('reschedule')} className={`flex-1 py-2 text-sm font-bold ${manageTab === 'reschedule' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-gray-500'}`}>เลื่อนวัน</button>
@@ -414,80 +425,40 @@
                                                     <div className="text-sm space-y-2 text-gray-700 dark:text-gray-300">
                                                         <div className="flex justify-between"><span>เข้าพัก:</span> <b>{formatThaiDate(manageData.checkIn)}</b></div>
                                                         <div className="flex justify-between"><span>ออก:</span> <b>{formatThaiDate(manageData.checkOut)}</b></div>
-                                                        <div className="flex justify-between"><span>จำนวนผู้เข้าพัก:</span> <b>{manageData.guests} คน</b></div>
-                                                        <div className="flex justify-between"><span>ห้องพัก:</span> <span>{manageData.rooms}</span></div>
+                                                        <div className="flex justify-between"><span>ผู้เข้าพัก:</span> <b>{manageData.guests} คน</b></div>
+                                                        <div className="flex justify-between"><span>ห้อง:</span> <span className="text-right">{manageData.rooms}</span></div>
                                                     </div>
-                                                    
-                                                    {/* แสดงรายการอาหารที่สั่งไปแล้ว */}
-                                                    <div className="mt-4 pt-4 border-t border-blue-200 dark:border-blue-700">
-                                                        <h4 className="font-bold text-sm text-blue-800 dark:text-blue-300 mb-2">อาหารที่สั่งแล้ว</h4>
-                                                        <p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-line">{manageData.food}</p>
-                                                    </div>
+                                                    <div className="mt-4 pt-4 border-t border-blue-200 dark:border-blue-700"><h4 className="font-bold text-sm text-blue-800 dark:text-blue-300 mb-2">อาหารที่สั่งแล้ว</h4><p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-line">{manageData.food}</p></div>
                                                 </div>
                                             )}
 
                                             {manageTab === 'reschedule' && (
                                                 <div className="space-y-3 animate-pop">
-                                                    <div className="bg-yellow-50 dark:bg-yellow-900/20 text-xs p-2 rounded mb-4 text-yellow-800 dark:text-yellow-200 border border-yellow-200 dark:border-yellow-800">
-                                                        ⚠️ เงื่อนไข: ต้องเลื่อนล่วงหน้าอย่างน้อย 7 วัน และห้องพักต้องว่างในวันที่เลือกใหม่
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-xs font-bold mb-1 text-gray-700 dark:text-gray-300">เช็คอินใหม่</label>
-                                                        <input type="date" min={getTommorow()} className="w-full border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" onChange={e => setRescheduleDates({...rescheduleDates, checkIn: e.target.value})} />
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-xs font-bold mb-1 text-gray-700 dark:text-gray-300">เช็คเอาท์ใหม่</label>
-                                                        <input type="date" min={rescheduleDates.checkIn || getTommorow()} className="w-full border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" onChange={e => setRescheduleDates({...rescheduleDates, checkOut: e.target.value})} />
-                                                    </div>
-                                                    <button onClick={handleCustomerReschedule} disabled={loading} className="w-full bg-orange-600 text-white py-3 rounded-lg font-bold shadow hover:bg-orange-700 transition mt-4">
-                                                        {loading ? 'กำลังทำงาน...' : 'ยืนยันการเลื่อน'}
-                                                    </button>
+                                                    <div className="bg-yellow-50 dark:bg-yellow-900/20 text-xs p-2 rounded mb-4 text-yellow-800 dark:text-yellow-200 border border-yellow-200 dark:border-yellow-800">⚠️ เงื่อนไข: ต้องเลื่อนล่วงหน้าอย่างน้อย 7 วัน และห้องพักต้องว่างในวันที่เลือกใหม่</div>
+                                                    <div><label className="block text-xs font-bold mb-1 text-gray-700 dark:text-gray-300">เช็คอินใหม่</label><input type="date" min={getTommorow()} className="w-full border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" onChange={e => setRescheduleDates({...rescheduleDates, checkIn: e.target.value})} /></div>
+                                                    <div><label className="block text-xs font-bold mb-1 text-gray-700 dark:text-gray-300">เช็คเอาท์ใหม่</label><input type="date" min={rescheduleDates.checkIn || getTommorow()} className="w-full border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" onChange={e => setRescheduleDates({...rescheduleDates, checkOut: e.target.value})} /></div>
+                                                    <button onClick={handleCustomerReschedule} disabled={loading} className="w-full bg-orange-600 text-white py-3 rounded-lg font-bold shadow hover:bg-orange-700 transition mt-4">{loading ? 'กำลังทำงาน...' : 'ยืนยันการเลื่อน'}</button>
                                                 </div>
                                             )}
 
                                             {manageTab === 'food' && (
                                                 <div className="space-y-4 animate-pop">
-                                                    <div className="bg-green-50 dark:bg-green-900/20 text-xs p-2 rounded mb-4 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-800">
-                                                        🍽️ เงื่อนไข: สั่งล่วงหน้าอย่างน้อย 1 วันก่อนเข้าพัก
-                                                    </div>
+                                                    <div className="bg-green-50 dark:bg-green-900/20 text-xs p-2 rounded mb-4 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-800">🍽️ เงื่อนไข: สั่งล่วงหน้าอย่างน้อย 1 วันก่อนเข้าพัก</div>
                                                     <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto custom-scrollbar">
                                                         {siteConfig.foodMenu.map(f => {
                                                             const inCart = addOnCart.find(c => c.id === f.id);
-                                                            return (
-                                                                <div key={f.id} onClick={() => openFoodModal(f)} className={`cursor-pointer rounded-lg overflow-hidden border-2 transition-all shadow-sm relative ${inCart ? 'border-green-500 bg-green-50 dark:bg-green-900 dark:border-green-500' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700'}`}>
-                                                                    <img src={f.img} className="w-full h-20 object-cover" />
-                                                                    <div className="p-1">
-                                                                        <h4 className="font-bold text-xs line-clamp-1">{f.name}</h4>
-                                                                        <div className="flex justify-between items-center mt-1">
-                                                                            <span className="text-green-600 text-xs font-bold">{f.price}.-</span>
-                                                                            {inCart && <span className="bg-green-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">x{inCart.qty}</span>}
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            );
+                                                            return <div key={f.id} onClick={() => openFoodModal(f)} className={`cursor-pointer rounded-lg overflow-hidden border-2 transition-all shadow-sm relative ${inCart ? 'border-green-500 bg-green-50 dark:bg-green-900 dark:border-green-500' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700'}`}><img src={f.img} className="w-full h-20 object-cover"/><div className="p-1"><h4 className="font-bold text-xs line-clamp-1">{f.name}</h4><div className="flex justify-between items-center mt-1"><span className="text-green-600 text-xs font-bold">{f.price}.-</span>{inCart && <span className="bg-green-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">x{inCart.qty}</span>}</div></div></div>;
                                                         })}
                                                     </div>
-                                                    
                                                     {addOnCart.length > 0 && (
                                                         <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded mb-4">
                                                             <h4 className="font-bold text-xs mb-2">รายการที่เลือก ({addOnCart.length})</h4>
                                                             {addOnCart.map((c,i)=><div key={i} className="flex justify-between text-xs mt-1"><span>{c.name} x{c.qty}</span><button onClick={()=>setAddOnCart(addOnCart.filter((_,idx)=>idx!==i))} className="text-red-500">ลบ</button></div>)}
                                                             <div className="mt-2 pt-2 border-t text-right font-bold text-sm text-green-600 mb-2">รวม {addOnCart.reduce((sum,c)=>sum+(c.price*c.qty),0).toLocaleString()} บ.</div>
-                                                            
-                                                            {/* PAYMENT SECTION */}
-                                                            <div className="bg-white dark:bg-gray-800 p-3 rounded border border-gray-200 dark:border-gray-600">
-                                                                <p className="text-xs font-bold mb-2 text-center">สแกนจ่ายเพื่อยืนยันออเดอร์</p>
-                                                                {addOnQr && <img src={addOnQr} className="mx-auto w-32 h-32 mb-2 border p-1" />}
-                                                                <div className="text-[10px] text-center mb-2 text-gray-500">{PROMPTPAY_NAME} - {PROMPTPAY_PHONE}</div>
-                                                                <input type="file" accept="image/*" onChange={async (e) => { const f = e.target.files[0]; if (f) { try { const resizedBase64 = await compressImage(f); setAddOnSlip(resizedBase64); } catch (err) { alert('Upload Error'); } } }} className="text-xs w-full mb-1" />
-                                                                {!addOnSlip && <div className="text-red-500 text-[10px] text-center">* กรุณาแนบสลิปโอนเงิน</div>}
-                                                            </div>
+                                                            <div className="bg-white dark:bg-gray-800 p-3 rounded border border-gray-200 dark:border-gray-600"><p className="text-xs font-bold mb-2 text-center">สแกนจ่ายเพื่อยืนยันออเดอร์</p>{addOnQr && <img src={addOnQr} className="mx-auto w-32 h-32 mb-2 border p-1" />}<div className="text-[10px] text-center mb-2 text-gray-500">{PROMPTPAY_NAME} - {PROMPTPAY_PHONE}</div><input type="file" accept="image/*" onChange={async (e) => { const f = e.target.files[0]; if (f) { try { const resizedBase64 = await compressImage(f); setAddOnSlip(resizedBase64); } catch (err) { alert('Upload Error'); } } }} className="text-xs w-full mb-1" />{!addOnSlip && <div className="text-red-500 text-[10px] text-center">* กรุณาแนบสลิปโอนเงิน</div>}</div>
                                                         </div>
                                                     )}
-
-                                                    <button onClick={handleCustomerAddFood} disabled={loading || (addOnCart.length > 0 && !addOnSlip)} className={`w-full py-3 rounded-lg font-bold shadow transition ${loading || (addOnCart.length > 0 && !addOnSlip) ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'}`}>
-                                                        {loading ? 'กำลังส่งข้อมูล...ให้แม่ครัว' : 'ยืนยันการสั่งอาหาร'}
-                                                    </button>
+                                                    <button onClick={handleCustomerAddFood} disabled={loading || (addOnCart.length > 0 && !addOnSlip)} className={`w-full py-3 rounded-lg font-bold shadow transition ${loading || (addOnCart.length > 0 && !addOnSlip) ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'}`}>{loading ? 'กำลังส่งข้อมูล...ให้แม่ครัว' : 'ยืนยันการสั่งอาหาร'}</button>
                                                 </div>
                                             )}
                                         </div>
@@ -499,85 +470,38 @@
                         {/* --- MODE: BOOKING (Existing Steps) --- */}
                         {mode === 'booking' && step === 1 && (
                             <div className="max-w-md mx-auto bg-white dark:bg-gray-800 shadow-xl rounded-xl mt-4 border dark:border-gray-700 overflow-hidden">
-                                <div className="h-48 relative">
-                                     <img src={siteConfig.bannerUrl} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
-                                     <div className="absolute inset-0 bg-black bg-opacity-10"></div>
-                                </div>
+                                <div className="h-48 relative"><img src={siteConfig.bannerUrl} referrerPolicy="no-referrer" className="w-full h-full object-cover" /><div className="absolute inset-0 bg-black bg-opacity-10"></div></div>
                                 <div className="p-6 -mt-24 relative z-10">
                                     <img src={siteConfig.logoUrl} referrerPolicy="no-referrer" className="w-48 h-48 mx-auto rounded-full border-4 border-white dark:border-gray-800 object-cover bg-white shadow-lg mb-4"/>
                                     <h1 className="text-xl text-center mb-2 text-green-800 dark:text-green-400 font-bold">{siteConfig.headerTitle}</h1>
                                     <p className="block text-center mb-4 text-gray-700 dark:text-gray-300 text-sm whitespace-pre-line">{siteConfig.headerDesc}</p>
-                                    
                                     <div className="space-y-4">
-                                        <div>
-                                            <label className="block text-gray-700 dark:text-green-400 font-bold mb-1">วันที่เข้าพัก</label>
-                                            <input type="date" min={getTommorow()} className="w-full border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" onChange={e => setDates({...dates, checkIn: e.target.value})} />
-                                        </div>
-                                        <div>
-                                            <label className="block text-gray-700 dark:text-red-300 font-bold mb-1">วันที่ออก</label>
-                                            <input type="date" min={dates.checkIn || getTommorow()} className="w-full border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" onChange={e => setDates({...dates, checkOut: e.target.value})} />
-                                        </div>
+                                        <div><label className="block text-gray-700 dark:text-green-400 font-bold mb-1">วันที่เข้าพัก</label><input type="date" min={getTommorow()} className="w-full border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" onChange={e => setDates({...dates, checkIn: e.target.value})} /></div>
+                                        <div><label className="block text-gray-700 dark:text-red-300 font-bold mb-1">วันที่ออก</label><input type="date" min={dates.checkIn || getTommorow()} className="w-full border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" onChange={e => setDates({...dates, checkOut: e.target.value})} /></div>
                                         <button onClick={handleSearch} disabled={loading} className="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition font-bold shadow-lg mt-2">{loading ? 'กำลังตรวจสอบ...' : 'ค้นหาที่พักว่าง'}</button>
                                     </div>
                                 </div>
-                                {closedModal && ( <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-6"> <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center relative animate-pop"> <div className="w-16 h-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mx-auto mb-4"> <i className="fas fa-store-slash text-3xl text-red-500 dark:text-red-300"></i> </div> <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">วันปิดให้บริการ</h3> <p className="text-gray-600 dark:text-gray-300 mb-1">วันที่ <strong>{formatThaiDate(closedModal.date)}</strong></p> <p className="text-red-500 dark:text-red-400 font-medium mb-6">"{closedModal.reason}"</p> <button onClick={() => setClosedModal(null)} className="w-full bg-gray-800 dark:bg-gray-600 text-white py-3 rounded-xl font-bold hover:bg-gray-700 transition">เลือกวันใหม่</button> </div> </div> )}
-                                {searchError && ( <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-6"> <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center relative animate-pop"> <div className="w-16 h-16 bg-yellow-100 dark:bg-yellow-900 rounded-full flex items-center justify-center mx-auto mb-4"> <i className="fas fa-exclamation-triangle text-3xl text-yellow-500 dark:text-yellow-300"></i> </div> <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">แจ้งเตือน</h3> <p className="text-gray-600 dark:text-gray-300 mb-6">{searchError}</p> <button onClick={() => setSearchError(null)} className="w-full bg-gray-800 dark:bg-gray-600 text-white py-3 rounded-xl font-bold hover:bg-gray-700 transition">ตกลง</button> </div> </div> )}
                             </div>
                         )}
-
+                        {/* Other booking steps remain the same... just ensure they are included as in previous complete code */}
                         {mode === 'booking' && step === 2 && (
                             <div className="max-w-4xl mx-auto p-4 relative">
-                                <div className="flex justify-between items-center mb-4">
-                                    <div className="flex items-center gap-2">
-                                        <button onClick={()=>setStep(1)} className="text-gray-500 dark:text-gray-300 hover:text-green-600 font-bold"><i className="fas fa-chevron-left"></i> ย้อนกลับ</button>
-                                        <h2 className="text-xl font-bold dark:text-white">เลือกที่พัก</h2>
-                                    </div>
-                                </div>
+                                <div className="flex justify-between items-center mb-4"><div className="flex items-center gap-2"><button onClick={()=>setStep(1)} className="text-gray-500 dark:text-gray-300 hover:text-green-600 font-bold"><i className="fas fa-chevron-left"></i> ย้อนกลับ</button><h2 className="text-xl font-bold dark:text-white">เลือกที่พัก</h2></div></div>
                                 <div className="map-container bg-blue-100 dark:bg-gray-700 mb-6" style={{paddingBottom: '100%'}}>
                                     <img src="https://img2.pic.in.th/3d539b84-44ce-4336-ad90-bd2f84b13eca.jpg" referrerpolicy="no-referrer" className="absolute top-0 left-0 w-full h-full object-cover" />
                                     {Object.keys(pinPos).map(key => {
                                         if (!roomConfig[key]) return null;
-                                        const isBooked = availability.bookedRooms.includes(key);
-                                        const isZ8Full = key === 'Z8' && availability.zone8Available <= 0;
-                                        const disable = isBooked || isZ8Full;
-                                        const inCart = cart.find(c => c.id === key);
+                                        const isBooked = availability.bookedRooms.includes(key); const isZ8Full = key === 'Z8' && availability.zone8Available <= 0; const disable = isBooked || isZ8Full; const inCart = cart.find(c => c.id === key);
                                         let circleClasses = "w-12 h-12 rounded-full flex items-center justify-center text-center text-[8px] font-bold border-2 shadow-lg p-1 leading-tight transition-all duration-300";
-                                        if (disable) circleClasses += " bg-gray-400 text-white border-gray-500 cursor-not-allowed opacity-80 grayscale";
-                                        else if (inCart) circleClasses += " bg-yellow-400 text-black border-yellow-600 scale-110 shadow-xl z-20";
-                                        else circleClasses += " bg-white dark:bg-gray-800 text-green-800 dark:text-green-400 border-green-600 hover:scale-110 z-10";
+                                        if (disable) circleClasses += " bg-gray-400 text-white border-gray-500 cursor-not-allowed opacity-80 grayscale"; else if (inCart) circleClasses += " bg-yellow-400 text-black border-yellow-600 scale-110 shadow-xl z-20"; else circleClasses += " bg-white dark:bg-gray-800 text-green-800 dark:text-green-400 border-green-600 hover:scale-110 z-10";
                                         return ( <div key={key} className="absolute transform -translate-x-1/2 -translate-y-1/2 map-pin-responsive" style={{left: `${pinPos[key].x}%`, top: `${pinPos[key].y}%`}} onClick={() => { if(disable) return; if(inCart) setCart(cart.filter(c => c.id !== key)); else openRoomModal(key); }}> <div className={circleClasses}> <div> {roomConfig[key].name} {key==='Z8' && <div className="text-[9px] font-normal">({availability.zone8Available})</div>} </div> </div> </div> )
                                     })}
                                 </div>
-                                {selectedRoomId && roomConfig[selectedRoomId] && (
-                                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-sm relative">
-                                            <div className="relative w-full h-48 mb-4 rounded-lg overflow-hidden bg-gray-200">
-                                                <img src={(siteConfig.roomImages[selectedRoomId]||[])[currentImgIdx] || "https://via.placeholder.com/600x400?text=No+Image"} className="w-full h-full object-cover transition-opacity duration-300" />
-                                                {(siteConfig.roomImages[selectedRoomId]||[]).length > 1 && ( <> <button onClick={prevImage} className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-1 rounded-full hover:bg-opacity-70"><i className="fas fa-chevron-left"></i></button> <button onClick={nextImage} className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-1 rounded-full hover:bg-opacity-70"><i className="fas fa-chevron-right"></i></button> </> )}
-                                            </div>
-                                            <h3 className="text-xl font-bold mb-2 text-green-800 dark:text-green-400">{roomConfig[selectedRoomId].name}</h3>
-                                            <p className="text-gray-500 dark:text-gray-300 text-sm mb-4"> {siteConfig.roomDescriptions?.[selectedRoomId] || "ไม่มีคำอธิบาย"} </p>
-                                            <div className="flex items-center justify-between mb-6 bg-gray-100 dark:bg-gray-700 p-3 rounded-lg">
-                                                <button onClick={() => setGuestCount(Math.max((roomConfig[selectedRoomId].min||1), guestCount - 1))} className="w-10 h-10 bg-white dark:bg-gray-600 rounded shadow text-xl font-bold text-green-600 dark:text-green-400">-</button>
-                                                <div className="text-center"> <div className="text-2xl font-bold dark:text-white">{guestCount}</div> <div className="text-xs text-gray-500 dark:text-gray-400">คน</div> </div>
-                                                <button onClick={() => { let limit = roomConfig[selectedRoomId].maxCap; if(selectedRoomId === 'Z8') limit = availability.zone8Available; setGuestCount(Math.min(limit, guestCount + 1)); }} className="w-10 h-10 bg-white dark:bg-gray-600 rounded shadow text-xl font-bold text-green-600 dark:text-green-400">+</button>
-                                            </div>
-                                            <div className="flex gap-2"> <button onClick={() => setSelectedRoomId(null)} className="flex-1 py-3 text-gray-500 bg-gray-200 dark:bg-gray-600 dark:text-gray-300 rounded-lg font-bold">ยกเลิก</button> <button onClick={confirmRoomSelection} className="flex-1 py-3 text-white bg-green-600 hover:bg-green-700 rounded-lg font-bold shadow-lg">ยืนยัน</button> </div>
-                                        </div>
-                                    </div>
-                                )}
-                                <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow mb-4">
-                                    <h3 className="font-bold mb-4 dark:text-white text-lg">🍽️ สั่งอาหารล่วงหน้า</h3>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        {siteConfig.foodMenu.map(f => {
-                                            const inCart = cart.find(c => c.id === f.id);
-                                            return ( <div key={f.id} onClick={() => { if(inCart) setCart(cart.filter(c => c.id !== f.id)); else openFoodModal(f); }} className={`cursor-pointer rounded-lg overflow-hidden border-2 transition-all shadow-sm relative ${inCart ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900 dark:border-yellow-500' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 hover:border-green-400'}`} > <img src={f.img} className="w-full h-24 object-cover" /> <div className="p-2"> <h4 className="font-bold text-sm text-gray-800 dark:text-white line-clamp-1">{f.name}</h4> {f.desc && <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1 my-1">{f.desc}</p>} <div className="flex justify-between items-center mt-1"> <span className="text-green-600 dark:text-green-400 text-sm font-bold">{f.price}.-</span> {inCart && <span className="bg-yellow-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">x{inCart.qty}</span>} </div> </div> {inCart && <div className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs shadow"><i className="fas fa-times"></i></div>} </div> );
-                                        })}
-                                    </div>
-                                </div>
+                                {selectedRoomId && roomConfig[selectedRoomId] && ( <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"> <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-sm relative"> <div className="relative w-full h-48 mb-4 rounded-lg overflow-hidden bg-gray-200"> <img src={(siteConfig.roomImages[selectedRoomId]||[])[currentImgIdx] || "https://via.placeholder.com/600x400?text=No+Image"} className="w-full h-full object-cover transition-opacity duration-300" /> {(siteConfig.roomImages[selectedRoomId]||[]).length > 1 && ( <> <button onClick={prevImage} className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-1 rounded-full hover:bg-opacity-70"><i className="fas fa-chevron-left"></i></button> <button onClick={nextImage} className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-1 rounded-full hover:bg-opacity-70"><i className="fas fa-chevron-right"></i></button> </> )} </div> <h3 className="text-xl font-bold mb-2 text-green-800 dark:text-green-400">{roomConfig[selectedRoomId].name}</h3> <p className="text-gray-500 dark:text-gray-300 text-sm mb-4"> {siteConfig.roomDescriptions?.[selectedRoomId] || "ไม่มีคำอธิบาย"} </p> <div className="flex items-center justify-between mb-6 bg-gray-100 dark:bg-gray-700 p-3 rounded-lg"> <button onClick={() => setGuestCount(Math.max((roomConfig[selectedRoomId].min||1), guestCount - 1))} className="w-10 h-10 bg-white dark:bg-gray-600 rounded shadow text-xl font-bold text-green-600 dark:text-green-400">-</button> <div className="text-center"> <div className="text-2xl font-bold dark:text-white">{guestCount}</div> <div className="text-xs text-gray-500 dark:text-gray-400">คน</div> </div> <button onClick={() => { let limit = roomConfig[selectedRoomId].maxCap; if(selectedRoomId === 'Z8') limit = availability.zone8Available; setGuestCount(Math.min(limit, guestCount + 1)); }} className="w-10 h-10 bg-white dark:bg-gray-600 rounded shadow text-xl font-bold text-green-600 dark:text-green-400">+</button> </div> <div className="flex gap-2"> <button onClick={() => setSelectedRoomId(null)} className="flex-1 py-3 text-gray-500 bg-gray-200 dark:bg-gray-600 dark:text-gray-300 rounded-lg font-bold">ยกเลิก</button> <button onClick={confirmRoomSelection} className="flex-1 py-3 text-white bg-green-600 hover:bg-green-700 rounded-lg font-bold shadow-lg">ยืนยัน</button> </div> </div> </div> )}
+                                <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow mb-4"><h3 className="font-bold mb-4 dark:text-white text-lg">🍽️ สั่งอาหารล่วงหน้า</h3><div className="grid grid-cols-2 gap-3">{siteConfig.foodMenu.map(f => { const inCart = cart.find(c => c.id === f.id); return ( <div key={f.id} onClick={() => { if(inCart) setCart(cart.filter(c => c.id !== f.id)); else openFoodModal(f); }} className={`cursor-pointer rounded-lg overflow-hidden border-2 transition-all shadow-sm relative ${inCart ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900 dark:border-yellow-500' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 hover:border-green-400'}`} > <img src={f.img} className="w-full h-24 object-cover" /> <div className="p-2"> <h4 className="font-bold text-sm text-gray-800 dark:text-white line-clamp-1">{f.name}</h4> {f.desc && <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1 my-1">{f.desc}</p>} <div className="flex justify-between items-center mt-1"> <span className="text-green-600 dark:text-green-400 text-sm font-bold">{f.price}.-</span> {inCart && <span className="bg-yellow-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">x{inCart.qty}</span>} </div> </div> {inCart && <div className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs shadow"><i className="fas fa-times"></i></div>} </div> ); })}</div></div>
                                 {selectedFood && ( <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"> <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-sm relative animate-pop"> <img src={selectedFood.img} className="w-full h-40 object-cover rounded-lg mb-4 shadow-md" /> <h3 className="text-xl font-bold mb-1 text-green-800 dark:text-green-400">{selectedFood.name}</h3> {selectedFood.desc && <p className="text-gray-600 dark:text-gray-300 text-sm mb-2">{selectedFood.desc}</p>} <p className="text-gray-500 dark:text-gray-400 text-sm mb-4 font-bold">ราคาชุดละ {selectedFood.price} บาท</p> <div className="flex items-center justify-center gap-4 mb-6"> <button onClick={() => setFoodCount(Math.max(1, foodCount - 1))} className="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-full text-xl font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-200">-</button> <span className="text-2xl font-bold w-10 text-center dark:text-white">{foodCount}</span> <button onClick={() => setFoodCount(foodCount + 1)} className="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-full text-xl font-bold text-green-600 hover:bg-green-100">+</button> </div> <div className="flex gap-2"> <button onClick={() => setSelectedFood(null)} className="flex-1 py-3 text-gray-500 bg-gray-200 dark:bg-gray-600 dark:text-gray-300 rounded-lg font-bold">ยกเลิก</button> <button onClick={confirmFoodSelection} className="flex-1 py-3 text-white bg-green-600 hover:bg-green-700 rounded-lg font-bold shadow-lg">ยืนยัน ({selectedFood.price * foodCount}.-)</button> </div> </div> </div> )}
                                 <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded mb-4"><h3 className="font-bold dark:text-white">🛒 ตะกร้า ({cart.length})</h3> {cart.map((c,i)=><div key={i} className="flex justify-between text-sm mt-1 dark:text-gray-200"><span>{c.name} {c.type==='food'?`x${c.qty}`:`(${c.guests} คน)`}</span><button onClick={()=>setCart(cart.filter((_,idx)=>idx!==i))} className="text-red-500">ลบ</button></div>)} </div>
-                                <button onClick={() => { const hasRoom = cart.some(c => c.type !== 'food'); if (!hasRoom) { setShowRoomRequiredModal(true); return; } setStep(3); }} className="w-full bg-green-600 text-white p-3 rounded-lg font-bold"> ดำเนินการต่อ </button>
+                                <button onClick={() => { if (!cart.some(c => c.type !== 'food')) { setShowRoomRequiredModal(true); return; } setStep(3); }} className="w-full bg-green-600 text-white p-3 rounded-lg font-bold"> ดำเนินการต่อ </button>
                             </div>
                         )}
 
@@ -588,15 +512,15 @@
                                     <p><strong>เข้าพัก:</strong> {formatThaiDate(dates.checkIn)} - {formatThaiDate(dates.checkOut)} ({calculateNights()} คืน)</p>
                                     <hr className="dark:border-gray-600"/>
                                     {cart.map((c, i) => <div key={i} className="flex justify-between"><span>{c.name}</span><span>{c.type==='food' ? c.price*c.qty : (c.id === 'Z8' ? c.pricePerNight * calculateNights() * c.guests : c.pricePerNight*calculateNights())} บ.</span></div>)}
-                                    {pricing.discount > 0 && <div className="flex justify-between text-red-500"><span>ส่วนลด</span><span>-{pricing.discount} บ.</span></div>}
+                                    {pricing.discount > 0 && <div className="flex justify-between text-red-500 font-bold"><span>ส่วนลด</span><span>-{pricing.discount} บ.</span></div>}
                                     <div className="flex justify-between font-bold text-lg"><span>สุทธิ</span><span>{pricing.netTotal} บ.</span></div>
-                                    <div className="bg-yellow-100 p-2 rounded text-center"><span className="block text-sm text-yellow-800">มัดจำที่ต้องโอน</span><span className="text-2xl font-bold text-red-600">{pricing.deposit} บาท</span></div>
+                                    <div className="bg-yellow-100 dark:bg-yellow-900 p-2 rounded text-center border border-yellow-300 dark:border-yellow-700 mt-2"><span className="block text-sm text-yellow-800 dark:text-yellow-200">ยอดมัดจำที่ต้องโอน</span><span className="text-2xl font-bold text-red-600 dark:text-red-400">{pricing.deposit} บาท</span></div>
                                 </div>
-                                <div className="mb-4 flex gap-2"> <input placeholder="โค้ดส่วนลด" className="border p-2 rounded flex-1" onChange={e => setDiscount({...discount, code: e.target.value})} /> <button className="bg-gray-800 text-white px-4 rounded" onClick={checkDiscountCode}>ใช้</button> </div>
-                                <div className="space-y-3 mb-6"><input placeholder="ชื่อผู้จอง" className="w-full border p-2 rounded" value={customer.name} onChange={e => setCustomer({...customer, name: e.target.value})} /><input placeholder="เบอร์โทรศัพท์" className="w-full border p-2 rounded" type="tel" value={customer.phone} onChange={e => setCustomer({...customer, phone: e.target.value})} /></div>
+                                <div className="mb-4 flex gap-2"> <input placeholder="โค้ดส่วนลด" className="border p-2 rounded flex-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white" onChange={e => setDiscount({...discount, code: e.target.value})} /> <button className="bg-gray-800 dark:bg-gray-600 text-white px-4 rounded" onClick={checkDiscountCode}>ใช้</button> </div>
+                                <div className="space-y-3 mb-6"><input placeholder="ชื่อผู้จอง" className="w-full border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" value={customer.name} onChange={e => setCustomer({...customer, name: e.target.value})} /><input placeholder="เบอร์โทรศัพท์" className="w-full border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" type="tel" value={customer.phone} onChange={e => setCustomer({...customer, phone: e.target.value})} /></div>
                                 <div className="text-center mb-6"> {qrUrl ? <img src={qrUrl} className="mx-auto border-2 rounded-lg mb-3 shadow-sm p-1 bg-white" width="200" /> : <div className="h-[200px] flex items-center justify-center text-gray-400">QR Code...</div> } <p className="text-xs text-gray-500">{PROMPTPAY_NAME} - {PROMPTPAY_PHONE}</p> </div>
-                                <div className="mb-4"><label className="block mb-1 text-sm">สลิปโอนเงิน *</label><input type="file" accept="image/*" onChange={async (e) => { const f = e.target.files[0]; if (f) setSlipImg(await compressImage(f)); }} className="w-full text-sm" /></div>
-                                <div className="flex items-center gap-2 mb-4 text-xs text-gray-600"><input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)} />ยอมรับเงื่อนไขการจอง</div>
+                                <div className="mb-4"><label className="block mb-1 text-sm dark:text-gray-300">สลิปโอนเงิน *</label><input type="file" accept="image/*" onChange={async (e) => { const f = e.target.files[0]; if (f) setSlipImg(await compressImage(f)); }} className="w-full text-sm dark:text-gray-300" /></div>
+                                <div className="flex items-center gap-2 mb-4 text-xs text-gray-600 dark:text-gray-400"><input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)} />ยอมรับเงื่อนไขการจอง</div>
                                 <button onClick={handleSubmit} disabled={loading || !canSubmit} className="w-full p-3 rounded-lg font-bold text-white bg-green-600 disabled:bg-gray-400">ยืนยันการจอง</button>
                             </div>
                         )}
@@ -606,7 +530,7 @@
                                 <div className="text-6xl mb-4">🎉</div>
                                 <h2 className="text-2xl font-bold text-green-700 dark:text-green-400 mb-2">จองสำเร็จ!</h2>
                                 <p className="text-gray-600 dark:text-gray-300 mb-4">รหัส: <strong>{bookingResult}</strong></p>
-                                <button onClick={() => liff.closeWindow()} className="mt-8 bg-gray-800 text-white px-6 py-2 rounded-full">ปิดหน้าต่าง</button>
+                                <button onClick={() => liff.closeWindow()} className="mt-8 bg-gray-800 dark:bg-gray-600 text-white px-6 py-2 rounded-full">ปิดหน้าต่าง</button>
                             </div>
                         )}
 
@@ -632,6 +556,9 @@
                                 <p className="text-sm text-gray-300">กรุณารอสักครู่ ธรรมชาติกำลังเรียกหา 🍃</p>
                             </div>
                         )}
+                        {closedModal && ( <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-6"> <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center relative animate-pop"> <div className="w-16 h-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mx-auto mb-4"> <i className="fas fa-store-slash text-3xl text-red-500 dark:text-red-300"></i> </div> <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">วันปิดให้บริการ</h3> <p className="text-gray-600 dark:text-gray-300 mb-1">วันที่ <strong>{formatThaiDate(closedModal.date)}</strong></p> <p className="text-red-500 dark:text-red-400 font-medium mb-6">"{closedModal.reason}"</p> <button onClick={() => setClosedModal(null)} className="w-full bg-gray-800 dark:bg-gray-600 text-white py-3 rounded-xl font-bold hover:bg-gray-700 transition">เลือกวันใหม่</button> </div> </div> )}
+                        {searchError && ( <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-6"> <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center relative animate-pop"> <div className="w-16 h-16 bg-yellow-100 dark:bg-yellow-900 rounded-full flex items-center justify-center mx-auto mb-4"> <i className="fas fa-exclamation-triangle text-3xl text-yellow-500 dark:text-yellow-300"></i> </div> <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">แจ้งเตือน</h3> <p className="text-gray-600 dark:text-gray-300 mb-6">{searchError}</p> <button onClick={() => setSearchError(null)} className="w-full bg-gray-800 dark:bg-gray-600 text-white py-3 rounded-xl font-bold hover:bg-gray-700 transition">ตกลง</button> </div> </div> )}
+
                     </div>
                 </div>
             );
