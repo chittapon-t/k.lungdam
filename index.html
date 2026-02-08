@@ -10,14 +10,19 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    <!-- Tailwind CSS -->
+    <!-- Tailwind CSS & Config -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script> tailwind.config = { darkMode: 'class' } </script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class', 
+        }
+    </script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     
     <script>
+        // ฟังก์ชันสร้าง Payload PromptPay
         function generatePromptPayPayload(phoneNumber, amount) {
             const target = phoneNumber.replace(/^0/, '66');
             const f01 = '00' + target; 
@@ -30,7 +35,9 @@
             const data = '000201' + '010212' + tag29 + tag53 + tag54 + tag58 + '6304';
             let crc = 0xFFFF;
             for (let i = 0; i < data.length; i++) {
-                let x = ((crc >> 8) ^ data.charCodeAt(i)) & 0xFF; x ^= x >> 4; crc = ((crc << 8) ^ (x << 12) ^ (x << 5) ^ x) & 0xFFFF;
+                let x = ((crc >> 8) ^ data.charCodeAt(i)) & 0xFF;
+                x ^= x >> 4;
+                crc = ((crc << 8) ^ (x << 12) ^ (x << 5) ^ x) & 0xFFFF;
             }
             return data + crc.toString(16).toUpperCase().padStart(4, '0');
         }
@@ -43,7 +50,10 @@
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
         .animate-pop { animation: fadeIn 0.3s ease-out forwards; }
         .map-pin-responsive { transition: transform 0.2s; }
-        @media (max-width: 640px) { .map-pin-responsive { transform: translate(-50%, -50%) scale(0.8) !important; } }
+        @media (max-width: 640px) {
+            .map-pin-responsive { transform: translate(-50%, -50%) scale(0.8) !important; }
+        }
+        /* Custom Scrollbar */
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(156, 163, 175, 0.5); border-radius: 4px; }
     </style>
@@ -58,16 +68,19 @@
         const PROMPTPAY_PHONE = "0615924262";
         const PROMPTPAY_NAME = "อลงกต ทวีผ่อง";
 
+        // --- Helper Functions ---
         const compressImage = async (file) => {
             return new Promise((resolve, reject) => {
                 const maxWidth = 800;
                 const reader = new FileReader();
                 reader.readAsDataURL(file);
                 reader.onload = (event) => {
-                    const img = new Image(); img.src = event.target.result;
+                    const img = new Image();
+                    img.src = event.target.result;
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
-                        let width = img.width; let height = img.height;
+                        let width = img.width;
+                        let height = img.height;
                         if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; }
                         canvas.width = width; canvas.height = height;
                         const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height);
@@ -91,15 +104,22 @@
 
         const DEFAULT_CONFIG = {
             headerTitle: 'ขนำลุงดำ - Khanamlungdam',
-            headerDesc: '🏡 ขนำลุงดำ ดั้งเดิมมาจากหนำปู่ หรือที่พักตอนปู่มาอยู่ช่วงทำสวนนั้นเอง...',
+            headerDesc: '🏡 ขนำลุงดำ ดั้งเดิมมาจากหนำปู่ หรือที่พักตอนปู่มาอยู่ช่วงทำสวนนั้นเอง และค่อยๆ พัฒนาขึ้น แต่ยังคงความอบอุ่น ความรัก เสมือนทุกคนมาเที่ยวบ้านตากอากาศของเพื่อน มีโอกาสเจอสัตว์ แมลงเล็กๆ พื้นที่เป็นสวนผสม ตามเศรษฐกิจพอเพียง ป่า 3 อย่างประโยชน์ 4 อย่าง เงียบสงบ มีลานรอบกองไฟ มีผลไม้ให้กินตามฤดู มีระบบน้ำกรอง ใช้ไฟฟ้าโซลาร์เซลล์ทั้งหมด มีไวไฟ สัญญาณไม่ได้แรงมาก และอาจจะไม่มีสิ่งอำนวยความสะดวกครบครัน แคมป์ปิ้งสไตล์บ้านสวน มีครัวไทยด้วยฟืน มีที่พักหลากหลายแบบ',
             bannerUrl: 'https://img5.pic.in.th/file/secure-sv1/LINE_ALBUM__240916_14dd72f9bd7de4facf.jpg',
             logoUrl: 'https://lh3.googleusercontent.com/pw/AP1GczPi_rYAbsNGi4X96mW5koYl0JJ3BN9ipRf6UgsXAOQgkyhrs2ChGcZlbsuQ3OLJOYnYhSTYJhWUuu2hwWtPqlt4MUfdUDSS3s4RdRLeD36gPLiK-8OhYLXWmqxVLh2eOtkLIx7pQxrQA6ZnqBYHOftH=w913-h913-s-no-gm?authuser=0',
-            roomImages: {}, foodMenu: [], roomDescriptions: {}
+            roomImages: {},
+            foodMenu: [],
+            roomDescriptions: {}
         };
 
-        const DEFAULT_POSITIONS = { 'R1': {x: 20, y: 30}, 'R2': {x: 40, y: 50}, 'R3': {x: 60, y: 50}, 'T1': {x: 25, y: 70}, 'T2': {x: 35, y: 75}, 'K1': {x: 70, y: 70}, 'K2': {x: 80, y: 70}, 'Z8': {x: 50, y: 20} };
+        const DEFAULT_POSITIONS = {
+            'R1': {x: 20, y: 30}, 'R2': {x: 40, y: 50}, 'R3': {x: 60, y: 50},
+            'T1': {x: 25, y: 70}, 'T2': {x: 35, y: 75}, 'K1': {x: 70, y: 70},
+            'K2': {x: 80, y: 70}, 'Z8': {x: 50, y: 20}
+        };
         
         const App = () => {
+            // --- CORE STATES ---
             const [isDark, setIsDark] = React.useState(true);
             const [step, setStep] = React.useState(1);
             const [mode, setMode] = React.useState(() => {
@@ -107,7 +127,7 @@
                 return params.get('mode') === 'manage' ? 'manage' : 'booking';
             }); 
 
-            // Booking States
+            // --- BOOKING STATES ---
             const [dates, setDates] = React.useState({ checkIn: '', checkOut: '' });
             const [availability, setAvailability] = React.useState(null);
             const [loading, setLoading] = React.useState(false);
@@ -116,12 +136,12 @@
             const [isLiffReady, setIsLiffReady] = React.useState(false);
             const [pinPos, setPinPos] = React.useState(DEFAULT_POSITIONS);
             
-            // Data States
+            // --- DATA STATES ---
             const [roomConfig, setRoomConfig] = React.useState({});
             const [systemSettings, setSystemSettings] = React.useState({ closed: [], special: [] });
             const [siteConfig, setSiteConfig] = React.useState(DEFAULT_CONFIG);
 
-            // Payment States
+            // --- PAYMENT & CONFIRMATION STATES ---
             const [discount, setDiscount] = React.useState({ code: '', val: 0, type: '', message: '', status: '' });
             const [checkingDiscount, setCheckingDiscount] = React.useState(false);
             const [slipImg, setSlipImg] = React.useState(null);
@@ -129,7 +149,7 @@
             const [agreed, setAgreed] = React.useState(false);
             const [qrUrl, setQrUrl] = React.useState(null);
             
-            // Modal States
+            // --- MODAL & SELECTION STATES ---
             const [selectedRoomId, setSelectedRoomId] = React.useState(null);
             const [guestCount, setGuestCount] = React.useState(1);
             const [selectedFood, setSelectedFood] = React.useState(null);
@@ -139,7 +159,8 @@
             const [currentImgIdx, setCurrentImgIdx] = React.useState(0);
             const [showRoomRequiredModal, setShowRoomRequiredModal] = React.useState(false);
 
-            // Manage Booking States
+            // --- MANAGE BOOKING STATES ---
+            const [manageForm, setManageForm] = React.useState({ bookingId: '', phone: '' });
             const [manageData, setManageData] = React.useState(null);
             const [bookingList, setBookingList] = React.useState([]); 
             const [rescheduleDates, setRescheduleDates] = React.useState({ checkIn: '', checkOut: '' });
@@ -148,37 +169,80 @@
             const [addOnSlip, setAddOnSlip] = React.useState(null);
             const [addOnQr, setAddOnQr] = React.useState(null);
 
-            // Popup States
+            // --- POPUP STATES ---
             const [modalAlert, setModalAlert] = React.useState({ show: false, type: 'info', title: '', text: '' }); 
             const [modalConfirm, setModalConfirm] = React.useState({ show: false, title: '', text: '', onConfirm: null });
 
-            // --- Helpers ---
-            const getTommorow = () => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0]; };
-            const formatThaiDate = (dateStr) => { if(!dateStr) return "-"; const d = new Date(dateStr); const m = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."]; return `${d.getDate()} ${m[d.getMonth()]} ${d.getFullYear() + 543}`; };
+            // --- HELPERS ---
+            const getTommorow = () => {
+                const d = new Date(); d.setDate(d.getDate() + 1);
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${y}-${m}-${day}`;
+            };
+
+            const formatThaiDate = (dateStr) => {
+                if(!dateStr) return "-";
+                const date = new Date(dateStr);
+                const months = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+                return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear() + 543}`;
+            };
+
             const getClosedDateOverlap = (inDate, outDate) => {
                 let current = new Date(inDate); const end = new Date(outDate);
-                while(current < end) { const dStr = current.toISOString().split('T')[0]; const closed = systemSettings.closed.find(c => c.date === dStr); if (closed) return closed; current.setDate(current.getDate() + 1); }
+                while(current < end) {
+                    const dStr = current.toISOString().split('T')[0];
+                    const closed = systemSettings.closed.find(c => c.date === dStr);
+                    if (closed) return closed;
+                    current.setDate(current.getDate() + 1);
+                }
                 return null;
             };
+
             const checkDateOverlapHighSeason = (inDate, outDate) => {
                 let current = new Date(inDate); const end = new Date(outDate);
-                while(current < end) { const dStr = current.toISOString().split('T')[0]; if (systemSettings.special.some(s => s.date === dStr)) return true; current.setDate(current.getDate() + 1); }
+                while(current < end) {
+                    const dStr = current.toISOString().split('T')[0];
+                    if (systemSettings.special.some(s => s.date === dStr)) return true;
+                    current.setDate(current.getDate() + 1);
+                }
                 return false;
             };
-            const calculateNights = () => { if(!dates.checkIn || !dates.checkOut) return 0; return (new Date(dates.checkOut) - new Date(dates.checkIn)) / (1000 * 3600 * 24); }
+
+            const calculateNights = () => {
+                if(!dates.checkIn || !dates.checkOut) return 0;
+                return (new Date(dates.checkOut) - new Date(dates.checkIn)) / (1000 * 3600 * 24);
+            }
+
             const getPricing = () => {
-                const nights = calculateNights(); let roomTotal = 0; let foodTotal = 0; let z8Total = 0;
-                cart.forEach(item => { if (item.type === 'food') foodTotal += item.price * item.qty; else if (item.id === 'Z8') z8Total += item.pricePerNight * nights * item.guests; else roomTotal += item.pricePerNight * nights; });
-                let discountAmt = 0; if (discount.type === 'FIXED') discountAmt = discount.val; if (discount.type === 'PERCENT') discountAmt = (roomTotal * discount.val) / 100; if (discountAmt > roomTotal) discountAmt = roomTotal; 
-                const totalBefore = roomTotal + z8Total + foodTotal; const netTotal = totalBefore - discountAmt;
-                let deposit = 0; const isHigh = checkDateOverlapHighSeason(dates.checkIn, dates.checkOut);
-                if (isHigh) deposit = netTotal; else { const roomDeposit = (roomTotal - discountAmt) * 0.5; deposit = roomDeposit + z8Total + foodTotal; }
+                const nights = calculateNights();
+                let roomTotal = 0; let foodTotal = 0; let z8Total = 0;
+                cart.forEach(item => {
+                    if (item.type === 'food') foodTotal += item.price * item.qty;
+                    else if (item.id === 'Z8') z8Total += item.pricePerNight * nights * item.guests; 
+                    else roomTotal += item.pricePerNight * nights;
+                });
+                let discountAmt = 0;
+                if (discount.type === 'FIXED') discountAmt = discount.val;
+                if (discount.type === 'PERCENT') discountAmt = (roomTotal * discount.val) / 100;
+                if (discountAmt > roomTotal) discountAmt = roomTotal; 
+                const totalBefore = roomTotal + z8Total + foodTotal;
+                const netTotal = totalBefore - discountAmt;
+                let deposit = 0;
+                const isHigh = checkDateOverlapHighSeason(dates.checkIn, dates.checkOut);
+                if (isHigh) deposit = netTotal;
+                else {
+                    const roomDeposit = (roomTotal - discountAmt) * 0.5;
+                    deposit = roomDeposit + z8Total + foodTotal;
+                }
                 return { total: totalBefore, discount: discountAmt, netTotal: netTotal, deposit: Math.ceil(deposit), isHighSeason: isHigh };
             };
+
             const pricing = React.useMemo(() => getPricing(), [cart, dates, discount, systemSettings]);
             const canSubmit = customer.name && customer.phone && slipImg && agreed;
 
-            // --- Effects ---
+            // --- EFFECTS ---
             React.useEffect(() => {
                 if (LIFF_ID) {
                     liff.init({ liffId: LIFF_ID }).then(() => {
@@ -210,19 +274,28 @@
                 }
             }, [addOnCart, mode, manageTab]);
 
-            // AUTO FETCH BOOKINGS FOR MANAGE MODE
+            // Auto Fetch Booking Logic
             React.useEffect(() => {
                 if (mode === 'manage' && isLiffReady && customer.userId && !manageData) {
                     setLoading(true);
-                    fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'findBooking', userId: customer.userId }) })
-                    .then(r => r.json()).then(res => {
+                    fetch(GOOGLE_SCRIPT_URL, {
+                        method: 'POST',
+                        body: JSON.stringify({ action: 'findBooking', userId: customer.userId })
+                    })
+                    .then(r => r.json())
+                    .then(res => {
                         setLoading(false);
-                        if(res.status === 'success' && res.bookings && res.bookings.length > 0) { setBookingList(res.bookings); } else { setBookingList([]); }
-                    }).catch(() => setLoading(false));
+                        if(res.status === 'success' && res.bookings && res.bookings.length > 0) {
+                            setBookingList(res.bookings);
+                        } else {
+                            setBookingList([]);
+                        }
+                    })
+                    .catch(() => setLoading(false));
                 }
             }, [mode, isLiffReady, customer.userId, manageData]);
 
-            // --- Handlers ---
+            // --- HANDLERS ---
             const handleSearch = () => {
                 if (!dates.checkIn || !dates.checkOut) { setSearchError('กรุณาเลือกวันเข้าพักและวันที่ออกให้ครบถ้วนครับ'); return; }
                 if (dates.checkIn >= dates.checkOut) { setSearchError('วันเช็คเอาท์ต้องอยู่หลังจากวันเช็คอินครับ'); return; }
@@ -230,115 +303,277 @@
                 setLoading(true);
                 fetch(`${GOOGLE_SCRIPT_URL}?action=getAvailability&checkIn=${dates.checkIn}&checkOut=${dates.checkOut}`).then(r => r.json()).then(data => { setAvailability(data); setStep(2); setLoading(false); }).catch(e => { alert('Error: ' + e); setLoading(false); });
             };
-            const openRoomModal = (roomId) => { const room = roomConfig[roomId]; if (!room) return; if(roomId === 'Z8') setGuestCount(1); else setGuestCount(room.min || 1); setCurrentImgIdx(0); setSelectedRoomId(roomId); };
+
+            const openRoomModal = (roomId) => {
+                const room = roomConfig[roomId]; if (!room) return;
+                if(roomId === 'Z8') setGuestCount(1); else setGuestCount(room.min || 1);
+                setCurrentImgIdx(0); setSelectedRoomId(roomId);
+            };
+
             const openFoodModal = (food) => { setSelectedFood(food); setFoodCount(1); };
+
             const confirmFoodSelection = () => {
-                const targetCart = mode === 'manage' ? addOnCart : cart; const setTargetCart = mode === 'manage' ? setAddOnCart : setCart;
+                const targetCart = mode === 'manage' ? addOnCart : cart;
+                const setTargetCart = mode === 'manage' ? setAddOnCart : setCart;
                 const exist = targetCart.find(c => c.id === selectedFood.id);
-                if (exist) setTargetCart(targetCart.map(c => c.id === selectedFood.id ? { ...c, qty: c.qty + foodCount } : c)); else setTargetCart([...targetCart, { ...selectedFood, type: 'food', qty: foodCount }]);
+                if (exist) setTargetCart(targetCart.map(c => c.id === selectedFood.id ? { ...c, qty: c.qty + foodCount } : c));
+                else setTargetCart([...targetCart, { ...selectedFood, type: 'food', qty: foodCount }]);
                 setSelectedFood(null);
             };
+
             const nextImage = () => { if(!selectedRoomId) return; const images = siteConfig.roomImages[selectedRoomId] || []; setCurrentImgIdx((prev) => (prev + 1) % images.length); };
             const prevImage = () => { if(!selectedRoomId) return; const images = siteConfig.roomImages[selectedRoomId] || []; setCurrentImgIdx((prev) => (prev - 1 + images.length) % images.length); };
+
             const confirmRoomSelection = () => {
                 const roomId = selectedRoomId; const guests = guestCount; const roomInfo = roomConfig[roomId];
-                if (roomId === 'Z8') { const currentZ8 = cart.filter(c => c.id === 'Z8').reduce((sum, c) => sum + c.guests, 0); if (currentZ8 + guests > availability.zone8Available) { alert(`ลานกางเต็นท์ว่างอีก ${availability.zone8Available - currentZ8} ท่าน`); return; } }
-                let price = 0; if (roomId === 'Z8') { price = roomInfo.pricing.priceHead; } else { const tier = roomInfo.pricing.tiers.find(t => guests <= t.max); if (!tier) { const maxTier = roomInfo.pricing.tiers[roomInfo.pricing.tiers.length - 1]; price = maxTier.price; } else { price = tier.price; } }
-                setCart([...cart, { id: roomId, name: roomInfo.name, type: roomInfo.type, guests, pricePerNight: price, nights: calculateNights() }]); setSelectedRoomId(null);
+                if (roomId === 'Z8') {
+                    const currentZ8 = cart.filter(c => c.id === 'Z8').reduce((sum, c) => sum + c.guests, 0);
+                    if (currentZ8 + guests > availability.zone8Available) { alert(`ลานกางเต็นท์ว่างอีก ${availability.zone8Available - currentZ8} ท่าน`); return; }
+                }
+                let price = 0;
+                if (roomId === 'Z8') { price = roomInfo.pricing.priceHead; } else { const tier = roomInfo.pricing.tiers.find(t => guests <= t.max); if (!tier) { const maxTier = roomInfo.pricing.tiers[roomInfo.pricing.tiers.length - 1]; price = maxTier.price; } else { price = tier.price; } }
+                setCart([...cart, { id: roomId, name: roomInfo.name, type: roomInfo.type, guests, pricePerNight: price, nights: calculateNights() }]);
+                setSelectedRoomId(null);
             };
+
             const checkDiscountCode = () => { 
-                if(!discount.code) return; setCheckingDiscount(true); 
-                fetch(`${GOOGLE_SCRIPT_URL}?action=checkDiscount&code=${discount.code}`).then(r=>r.json()).then(d => { setCheckingDiscount(false); if(d.status === 'success') setDiscount({...discount, val: parseInt(d.value), type: d.type, message: `ใช้โค้ดสำเร็จ ลด ${d.value} ${d.type==='PERCENT'?'%':'บาท'}`, status: 'success'}); else setDiscount({...discount, val: 0, type: '', message: 'ไม่พบโค้ดส่วนลดนี้', status: 'error'}); }).catch(() => { setCheckingDiscount(false); setDiscount({...discount, val: 0, type: '', message: 'เกิดข้อผิดพลาด', status: 'error'}); }); 
+                if(!discount.code) return; 
+                setCheckingDiscount(true); 
+                fetch(`${GOOGLE_SCRIPT_URL}?action=checkDiscount&code=${discount.code}`)
+                    .then(r=>r.json())
+                    .then(d => { 
+                        setCheckingDiscount(false);
+                        if(d.status === 'success') setDiscount({...discount, val: parseInt(d.value), type: d.type, message: `ใช้โค้ดสำเร็จ ลด ${d.value} ${d.type==='PERCENT'?'%':'บาท'}`, status: 'success'}); 
+                        else setDiscount({...discount, val: 0, type: '', message: 'ไม่พบโค้ดส่วนลดนี้', status: 'error'}); 
+                    })
+                    .catch(() => {
+                        setCheckingDiscount(false);
+                        setDiscount({...discount, val: 0, type: '', message: 'เกิดข้อผิดพลาดในการตรวจสอบ', status: 'error'});
+                    }); 
             };
+
             const handleSubmit = () => {
-                if (!canSubmit) return; setLoading(true);
-                const payload = { action: 'saveBooking', customer, checkIn: dates.checkIn, checkOut: dates.checkOut, totalGuests: cart.filter(c => c.type !== 'food').reduce((s, c) => s + c.guests, 0), cart, pricing, discountCode: discount.code, slipImage: slipImg };
-                fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) }).then(r => r.json()).then(res => { if (res.status === 'success') { setBookingResult(res.bookingId); setStep(5); } else { alert('Error: ' + res.message); } setLoading(false); }).catch(e => { alert('Failed: ' + e); setLoading(false); });
+                if (!canSubmit) return;
+                setLoading(true);
+                const payload = {
+                    action: 'saveBooking',
+                    customer, checkIn: dates.checkIn, checkOut: dates.checkOut,
+                    totalGuests: cart.filter(c => c.type !== 'food').reduce((s, c) => s + c.guests, 0),
+                    cart, pricing, discountCode: discount.code, slipImage: slipImg
+                };
+                fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) })
+                .then(r => r.json()).then(res => { if (res.status === 'success') { setBookingResult(res.bookingId); setStep(5); } else { alert('Error: ' + res.message); } setLoading(false); }).catch(e => { alert('Failed: ' + e); setLoading(false); });
             };
-            const selectBookingToManage = (booking) => { setManageData(booking); setManageTab('info'); }
+
+            const handleDownloadQr = () => {
+                if(!qrUrl) return;
+                try { const blob = base64ToBlob(qrUrl); const url = window.URL.createObjectURL(blob); const link = document.createElement('a'); link.style.display = 'none'; link.href = url; link.download = 'payment-qr.png'; document.body.appendChild(link); link.click(); setTimeout(() => { document.body.removeChild(link); window.URL.revokeObjectURL(url); }, 100); } catch (e) { alert('ไม่สามารถดาวน์โหลดได้อัตโนมัติ กรุณากดค้างที่รูปเพื่อบันทึก'); }
+            };
+
+            // --- MANAGE BOOKING HANDLERS ---
             
+            const selectBookingToManage = (booking) => {
+                setManageData(booking);
+                setManageForm({ bookingId: booking.id, phone: booking.phone });
+                setManageTab('info');
+            }
+
             const handleCustomerReschedule = () => {
                 if(!rescheduleDates.checkIn || !rescheduleDates.checkOut) return setModalAlert({ show: true, type: 'warning', title: 'แจ้งเตือน', text: 'กรุณาเลือกวันเข้าพักและวันออกใหม่' });
+
+                // --- NEW CONDITION: Forbid selecting today or past dates ---
                 if(rescheduleDates.checkIn < getTommorow()) return setModalAlert({ show: true, type: 'warning', title: 'แจ้งเตือน', text: 'ไม่สามารถเลือกวันที่ปัจจุบันหรือย้อนหลังได้' });
+                
                 if(rescheduleDates.checkIn >= rescheduleDates.checkOut) return setModalAlert({ show: true, type: 'warning', title: 'แจ้งเตือน', text: 'วันเช็คเอาท์ต้องอยู่หลังวันเช็คอิน' });
                 
-                // Check 7 Days Condition
-                const today = new Date(); today.setHours(0,0,0,0);
-                const currentCheckIn = new Date(manageData.checkIn); currentCheckIn.setHours(0,0,0,0);
-                const diffTime = currentCheckIn.getTime() - today.getTime();
-                const diffDays = Math.ceil(diffTime / (1000 * 3600 * 24));
-                if (diffDays < 7) return setModalAlert({ show: true, type: 'warning', title: 'ไม่สามารถเลื่อนได้', text: `ต้องทำการเลื่อนล่วงหน้าอย่างน้อย 7 วัน (เหลืออีก ${diffDays} วัน)` });
-
-                setModalConfirm({ show: true, title: 'ยืนยันการเลื่อนวัน', text: `เปลี่ยนเป็น\n${formatThaiDate(rescheduleDates.checkIn)} - ${formatThaiDate(rescheduleDates.checkOut)}`, onConfirm: () => { setModalConfirm({ ...modalConfirm, show: false }); executeReschedule(); } });
+                setModalConfirm({
+                    show: true,
+                    title: 'ยืนยันการเลื่อนวัน',
+                    text: `เปลี่ยนเป็น\n${formatThaiDate(rescheduleDates.checkIn)} - ${formatThaiDate(rescheduleDates.checkOut)}`,
+                    onConfirm: () => {
+                        setModalConfirm({ ...modalConfirm, show: false });
+                        executeReschedule();
+                    }
+                });
             };
+
             const executeReschedule = () => {
                 setLoading(true);
-                fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'customerReschedule', bookingId: manageData.id, phone: manageData.phone, newCheckIn: rescheduleDates.checkIn, newCheckOut: rescheduleDates.checkOut }) })
-                .then(r => r.json()).then(res => { setLoading(false); if(res.status === 'success') { setModalAlert({ show: true, type: 'success', title: 'สำเร็จ!', text: 'เลื่อนวันเรียบร้อย' }); setManageData(null); setMode('booking'); } else { setModalAlert({ show: true, type: 'error', title: 'ไม่สำเร็จ', text: res.message }); } }).catch(e => { setLoading(false); setModalAlert({ show: true, type: 'error', title: 'Error', text: e }); });
+                fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        action: 'customerReschedule',
+                        bookingId: manageData.id,
+                        phone: manageForm.phone,
+                        newCheckIn: rescheduleDates.checkIn,
+                        newCheckOut: rescheduleDates.checkOut
+                    })
+                })
+                .then(r => r.json())
+                .then(res => {
+                    setLoading(false);
+                    if(res.status === 'success') {
+                        setModalAlert({ show: true, type: 'success', title: 'สำเร็จ!', text: 'เลื่อนวันเข้าพักเรียบร้อย ระบบได้ส่งใบนัดหมายใหม่ทาง LINE แล้วครับ' });
+                        setManageData(null);
+                        setManageForm({bookingId: '', phone: ''});
+                        setMode('booking');
+                    } else {
+                        setModalAlert({ show: true, type: 'error', title: 'ไม่สำเร็จ', text: res.message });
+                    }
+                })
+                .catch(e => { 
+                    setLoading(false); 
+                    setModalAlert({ show: true, type: 'error', title: 'Error', text: 'เกิดข้อผิดพลาด: ' + e });
+                });
             };
+
             const handleCustomerAddFood = () => {
                 if(addOnCart.length === 0) return setModalAlert({ show: true, type: 'warning', title: 'แจ้งเตือน', text: 'กรุณาเลือกอาหาร' });
                 if(!addOnSlip) return setModalAlert({ show: true, type: 'warning', title: 'แจ้งเตือน', text: 'กรุณาแนบสลิป' });
                 
-                const today = new Date(); today.setHours(0,0,0,0);
-                const currentCheckIn = new Date(manageData.checkIn); currentCheckIn.setHours(0,0,0,0);
-                const diffTime = currentCheckIn.getTime() - today.getTime();
-                const diffDays = Math.ceil(diffTime / (1000 * 3600 * 24));
-                if (diffDays < 1) return setModalAlert({ show: true, type: 'warning', title: 'ไม่สามารถสั่งเพิ่มได้', text: 'ต้องสั่งอาหารล่วงหน้าอย่างน้อย 1 วันก่อนเข้าพัก' });
-
-                setModalConfirm({ show: true, title: 'ยืนยันการสั่งอาหาร', text: `รายการ:\n${addOnCart.map(i => '- '+i.name).join('\n')}`, onConfirm: () => { setModalConfirm({ ...modalConfirm, show: false }); executeAddFood(); } });
+                setModalConfirm({
+                    show: true,
+                    title: 'ยืนยันการสั่งอาหาร',
+                    text: `รายการ:\n${addOnCart.map(i => '- ' + i.name + ' x' + i.qty).join('\n')}`,
+                    onConfirm: () => {
+                        setModalConfirm({ ...modalConfirm, show: false });
+                        executeAddFood();
+                    }
+                });
             };
+
             const executeAddFood = () => {
                 setLoading(true);
-                fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'customerAddFood', bookingId: manageData.id, phone: manageData.phone, newFoodItems: addOnCart, slipImage: addOnSlip }) })
-                .then(r => r.json()).then(res => { setLoading(false); if(res.status === 'success') { setModalAlert({ show: true, type: 'success', title: 'สำเร็จ!', text: 'สั่งอาหารเรียบร้อย' }); setManageData(null); setAddOnCart([]); setAddOnSlip(null); setMode('booking'); } else { setModalAlert({ show: true, type: 'error', title: 'ไม่สำเร็จ', text: res.message }); } }).catch(e => { setLoading(false); setModalAlert({ show: true, type: 'error', title: 'Error', text: e }); });
+                fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        action: 'customerAddFood',
+                        bookingId: manageData.id,
+                        phone: manageForm.phone,
+                        newFoodItems: addOnCart,
+                        slipImage: addOnSlip // Send slip
+                    })
+                })
+                .then(r => r.json())
+                .then(res => {
+                    setLoading(false);
+                    if(res.status === 'success') {
+                        setModalAlert({ show: true, type: 'success', title: 'สำเร็จ!', text: 'สั่งอาหารเรียบร้อย' });
+                        setManageData(null);
+                        setManageForm({bookingId: '', phone: ''});
+                        setAddOnCart([]);
+                        setAddOnSlip(null);
+                        setMode('booking');
+                    } else {
+                        setModalAlert({ show: true, type: 'error', title: 'ไม่สำเร็จ', text: res.message });
+                    }
+                })
+                .catch(e => { 
+                    setLoading(false); 
+                    setModalAlert({ show: true, type: 'error', title: 'Error', text: 'เกิดข้อผิดพลาด: ' + e });
+                });
             };
 
             return (
                 <div className={isDark ? "dark" : ""}>
                     <div className="min-h-screen bg-[#f3f4f6] dark:bg-gray-900 text-gray-800 dark:text-gray-100 transition-colors duration-300">
-                        {/* THEME & MODE BUTTONS */}
-                        <button onClick={() => setIsDark(!isDark)} className="fixed top-4 right-4 z-50 bg-white dark:bg-gray-700 p-2 rounded-full shadow-lg border border-gray-200 dark:border-gray-600 w-10 h-10 flex items-center justify-center transition-transform hover:scale-110"> {isDark ? '☀️' : '🌙'} </button>
-                        <button onClick={() => { setMode(mode === 'booking' ? 'manage' : 'booking'); setStep(1); setManageData(null); setManageTab('info'); }} className="fixed top-16 right-4 z-50 bg-white dark:bg-gray-700 p-2 rounded-full shadow-lg border border-gray-200 dark:border-gray-600 w-10 h-10 flex items-center justify-center transition-transform hover:scale-110 text-gray-800 dark:text-white"> {mode === 'booking' ? <i className="fas fa-search"></i> : <i className="fas fa-home"></i>} </button>
+                        {/* FIXED FLOATING BUTTONS (Top Right) */}
+                        <button 
+                            onClick={() => setIsDark(!isDark)} 
+                            className="fixed top-4 right-4 z-50 bg-white dark:bg-gray-700 p-2 rounded-full shadow-lg border border-gray-200 dark:border-gray-600 w-10 h-10 flex items-center justify-center transition-transform hover:scale-110"
+                        >
+                            {isDark ? '☀️' : '🌙'}
+                        </button>
 
-                        {/* --- MANAGE MODE --- */}
+                        <button 
+                            onClick={() => {
+                                setMode(mode === 'booking' ? 'manage' : 'booking');
+                                setStep(1);
+                                setManageData(null);
+                                setManageTab('info');
+                                setAddOnCart([]);
+                                setAddOnSlip(null);
+                            }}
+                            className="fixed top-16 right-4 z-50 bg-white dark:bg-gray-700 p-2 rounded-full shadow-lg border border-gray-200 dark:border-gray-600 w-10 h-10 flex items-center justify-center transition-transform hover:scale-110 text-gray-800 dark:text-white"
+                        >
+                             {mode === 'booking' ? <i className="fas fa-search"></i> : <i className="fas fa-home"></i>}
+                        </button>
+
+                        {/* --- MODE: MANAGE BOOKING --- */}
                         {mode === 'manage' && (
                             <div className="max-w-md mx-auto p-4 pt-16">
                                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 min-h-[300px]">
                                     <h2 className="text-xl font-bold mb-4 text-center text-blue-600 dark:text-blue-400">จัดการการจอง / สั่งอาหาร</h2>
+                                    
                                     {!manageData ? (
                                         <div className="animate-pop">
-                                            {loading ? <div className="text-center py-10"><div className="w-12 h-12 border-4 border-gray-200 border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div><p className="text-gray-500 animate-pulse">กำลังค้นหาข้อมูล...</p></div> : 
-                                            !isLiffReady ? <div className="text-center py-10"><p className="text-gray-500">Connecting to LINE...</p></div> :
-                                            !customer.userId ? <div className="text-center py-10"><div className="text-4xl mb-4">⚠️</div><p className="text-gray-500">ไม่พบข้อมูลผู้ใช้ LINE</p><p className="text-xs text-gray-400 mt-2">กรุณาเปิดผ่านแอป LINE</p></div> :
-                                            bookingList.length > 0 ? (
-                                                <div className="space-y-3">
-                                                    <p className="text-sm text-gray-500 text-center mb-4">พบ {bookingList.length} รายการจอง</p>
-                                                    {bookingList.map(b => (
-                                                        <div key={b.id} onClick={() => selectBookingToManage(b)} className="border border-gray-200 dark:border-gray-700 p-4 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer transition shadow-sm relative group">
-                                                            <div className="absolute top-4 right-4 text-gray-300 group-hover:text-blue-500"><i className="fas fa-chevron-right"></i></div>
-                                                            <div className="font-bold text-blue-600 dark:text-blue-400 text-lg mb-1">{b.id}</div>
-                                                            <div className="text-sm text-gray-600 dark:text-gray-300"><i className="fas fa-calendar-day mr-2 w-4 text-center"></i>{formatThaiDate(b.checkIn)}</div>
-                                                            <div className="text-sm text-gray-600 dark:text-gray-300 mt-1"><i className="fas fa-home mr-2 w-4 text-center"></i>{b.rooms}</div>
-                                                            <div className="mt-2 inline-block px-2 py-1 text-xs rounded bg-green-100 text-green-700 font-bold">{b.status}</div>
+                                            {loading ? (
+                                                /* --- CAMPING THEMED LOADING POPUP (INLINE) --- */
+                                                <div className="flex flex-col items-center justify-center py-10">
+                                                    <div className="relative mb-6">
+                                                        <div className="w-20 h-20 rounded-full border-4 border-gray-200 dark:border-gray-700 border-t-green-500 rounded-full animate-spin"></div>
+                                                        <div className="absolute inset-0 flex items-center justify-center">
+                                                            <i className="fas fa-campground text-orange-500 text-2xl animate-bounce"></i>
                                                         </div>
-                                                    ))}
+                                                    </div>
+                                                    <p className="text-gray-500 dark:text-gray-400 animate-pulse">กำลังค้นหาข้อมูล...</p>
                                                 </div>
                                             ) : (
-                                                <div className="text-center py-10"><div className="text-6xl mb-4">🔍</div><p className="text-gray-500">ไม่พบประวัติการจอง</p></div>
+                                                !isLiffReady ? (
+                                                    <div className="text-center py-10">
+                                                        <p className="text-gray-500">Connecting to LINE...</p>
+                                                    </div>
+                                                ) : (
+                                                    !customer.userId ? (
+                                                        <div className="text-center py-10">
+                                                            <div className="text-4xl mb-4">⚠️</div>
+                                                            <p className="text-gray-500">ไม่พบข้อมูลผู้ใช้ LINE</p>
+                                                            <p className="text-xs text-gray-400 mt-2">กรุณาเปิดผ่านแอป LINE</p>
+                                                        </div>
+                                                    ) : (
+                                                        bookingList.length > 0 ? (
+                                                            <div className="space-y-3">
+                                                                <p className="text-sm text-gray-500 text-center mb-4">พบ {bookingList.length} รายการจอง</p>
+                                                                {bookingList.map(b => (
+                                                                    <div key={b.id} onClick={() => selectBookingToManage(b)} className="border border-gray-200 dark:border-gray-700 p-4 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer transition shadow-sm relative group">
+                                                                        <div className="absolute top-4 right-4 text-gray-300 group-hover:text-blue-500"><i className="fas fa-chevron-right"></i></div>
+                                                                        <div className="font-bold text-blue-600 dark:text-blue-400 text-lg mb-1">{b.id}</div>
+                                                                        <div className="text-sm text-gray-600 dark:text-gray-300"><i className="fas fa-calendar-day mr-2 w-4 text-center"></i>{formatThaiDate(b.checkIn)}</div>
+                                                                        <div className="text-sm text-gray-600 dark:text-gray-300 mt-1"><i className="fas fa-home mr-2 w-4 text-center"></i>{b.rooms}</div>
+                                                                        <div className="mt-2 inline-block px-2 py-1 text-xs rounded bg-green-100 text-green-700 font-bold">{b.status}</div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        ) : (
+                                                            <div className="text-center py-10">
+                                                                <div className="text-6xl mb-4">🔍</div>
+                                                                <p className="text-gray-500">ไม่พบประวัติการจอง</p>
+                                                                <p className="text-xs text-gray-400 mt-2">หากเพิ่งจอง กรุณารอแอดมินยืนยันสักครู่</p>
+                                                            </div>
+                                                        )
+                                                    )
+                                                )
                                             )}
                                         </div>
                                     ) : (
                                         <div className="animate-pop">
+                                            {/* Header with Back Button */}
                                             <div className="flex items-center mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">
-                                                <button onClick={() => setManageData(null)} className="mr-3 text-gray-500 hover:text-blue-600"><i className="fas fa-arrow-left"></i></button>
+                                                {bookingList.length > 0 && (
+                                                    <button onClick={() => setManageData(null)} className="mr-3 text-gray-500 hover:text-blue-600">
+                                                        <i className="fas fa-arrow-left"></i>
+                                                    </button>
+                                                )}
                                                 <span className="font-bold text-gray-700 dark:text-gray-200">รายการ: {manageData.id}</span>
                                             </div>
+
+                                            {/* TAB NAVIGATION */}
                                             <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4">
                                                 <button onClick={() => setManageTab('info')} className={`flex-1 py-2 text-sm font-bold ${manageTab === 'info' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}>ข้อมูล</button>
                                                 <button onClick={() => setManageTab('reschedule')} className={`flex-1 py-2 text-sm font-bold ${manageTab === 'reschedule' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-gray-500'}`}>เลื่อนวัน</button>
                                                 <button onClick={() => setManageTab('food')} className={`flex-1 py-2 text-sm font-bold ${manageTab === 'food' ? 'text-green-600 border-b-2 border-green-600' : 'text-gray-500'}`}>สั่งอาหาร</button>
                                             </div>
+
                                             {manageTab === 'info' && (
                                                 <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 p-4 rounded-lg mb-6">
                                                     <div className="text-center mb-2"><span className="bg-blue-600 text-white px-2 py-1 rounded text-xs">{manageData.status}</span></div>
@@ -346,38 +581,82 @@
                                                     <div className="text-sm space-y-2">
                                                         <div className="flex justify-between"><span>เข้าพัก:</span> <b>{formatThaiDate(manageData.checkIn)}</b></div>
                                                         <div className="flex justify-between"><span>ออก:</span> <b>{formatThaiDate(manageData.checkOut)}</b></div>
-                                                        <div className="flex justify-between"><span>ผู้เข้าพัก:</span> <b>{manageData.guests} คน</b></div>
-                                                        <div className="flex justify-between"><span>ห้อง:</span> <span>{manageData.rooms}</span></div>
+                                                        <div className="flex justify-between"><span>จำนวนผู้เข้าพัก:</span> <b>{manageData.guests} คน</b></div>
+                                                        <div className="flex justify-between"><span>ห้องพัก:</span> <span>{manageData.rooms}</span></div>
                                                     </div>
-                                                    <div className="mt-4 pt-4 border-t border-blue-200 dark:border-blue-700"><h4 className="font-bold text-sm text-blue-800 dark:text-blue-300 mb-2">อาหารที่สั่งแล้ว</h4><p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-line">{manageData.food}</p></div>
+                                                    
+                                                    {/* แสดงรายการอาหารที่สั่งไปแล้ว */}
+                                                    <div className="mt-4 pt-4 border-t border-blue-200 dark:border-blue-700">
+                                                        <h4 className="font-bold text-sm text-blue-800 dark:text-blue-300 mb-2">รายการอาหารที่สั่งแล้ว</h4>
+                                                        <p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-line">{manageData.food}</p>
+                                                    </div>
                                                 </div>
                                             )}
+
                                             {manageTab === 'reschedule' && (
-                                                <div className="space-y-3">
-                                                    <div className="bg-yellow-50 text-xs p-2 rounded text-yellow-800">⚠️ ต้องเลื่อนล่วงหน้าอย่างน้อย 7 วัน</div>
-                                                    <input type="date" min={getTommorow()} className="w-full border p-2 rounded dark:bg-gray-700" onChange={e => setRescheduleDates({...rescheduleDates, checkIn: e.target.value})} />
-                                                    <input type="date" min={rescheduleDates.checkIn || getTommorow()} className="w-full border p-2 rounded dark:bg-gray-700" onChange={e => setRescheduleDates({...rescheduleDates, checkOut: e.target.value})} />
-                                                    <button onClick={handleCustomerReschedule} disabled={loading} className="w-full bg-orange-600 text-white py-3 rounded-lg font-bold shadow hover:bg-orange-700">{loading ? 'กำลังทำงาน...' : 'ยืนยันการเลื่อน'}</button>
+                                                <div>
+                                                    <div className="bg-yellow-50 dark:bg-yellow-900/20 text-xs p-2 rounded mb-4 text-yellow-800 dark:text-yellow-200">
+                                                        ⚠️ เงื่อนไข: ต้องเลื่อนล่วงหน้าอย่างน้อย 7 วัน และห้องพักต้องว่างในวันที่เลือกใหม่
+                                                    </div>
+                                                    <div className="space-y-3 mb-6">
+                                                        <div>
+                                                            <label className="block text-xs font-bold mb-1">เช็คอินใหม่</label>
+                                                            <input type="date" min={getTommorow()} className="w-full border p-2 rounded dark:bg-gray-700" onChange={e => setRescheduleDates({...rescheduleDates, checkIn: e.target.value})} />
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-xs font-bold mb-1">เช็คเอาท์ใหม่</label>
+                                                            <input type="date" min={rescheduleDates.checkIn || getTommorow()} className="w-full border p-2 rounded dark:bg-gray-700" onChange={e => setRescheduleDates({...rescheduleDates, checkOut: e.target.value})} />
+                                                        </div>
+                                                    </div>
+                                                    <button onClick={handleCustomerReschedule} disabled={loading} className="w-full bg-orange-600 text-white py-3 rounded-lg font-bold shadow hover:bg-orange-700">
+                                                        {loading ? 'แอดมินกำลังทำงาน...รอสุกครู่' : 'ยืนยันการเลื่อน'}
+                                                    </button>
                                                 </div>
                                             )}
+
                                             {manageTab === 'food' && (
-                                                <div className="space-y-4">
-                                                    <div className="bg-green-50 text-xs p-2 rounded text-green-800">🍽️ สั่งล่วงหน้าอย่างน้อย 1 วัน</div>
-                                                    <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto custom-scrollbar">
+                                                <div>
+                                                    <div className="bg-green-50 dark:bg-green-900/20 text-xs p-2 rounded mb-4 text-green-800 dark:text-green-200">
+                                                        🍽️ เงื่อนไข: สั่งล่วงหน้าอย่างน้อย 1 วันก่อนเข้าพัก
+                                                    </div>
+                                                    <div className="grid grid-cols-2 gap-2 mb-4 max-h-60 overflow-y-auto custom-scrollbar">
                                                         {siteConfig.foodMenu.map(f => {
                                                             const inCart = addOnCart.find(c => c.id === f.id);
-                                                            return <div key={f.id} onClick={() => openFoodModal(f)} className={`cursor-pointer border rounded-lg overflow-hidden ${inCart ? 'bg-green-100 border-green-500' : 'bg-white border-gray-200'}`}><img src={f.img} className="w-full h-20 object-cover"/><div className="p-1"><div className="text-xs font-bold truncate">{f.name}</div><div className="text-xs text-green-600 font-bold">{f.price}.- {inCart && `x${inCart.qty}`}</div></div></div>;
+                                                            return (
+                                                                <div key={f.id} onClick={() => openFoodModal(f)} className={`cursor-pointer rounded-lg overflow-hidden border-2 transition-all shadow-sm relative ${inCart ? 'border-green-500 bg-green-50 dark:bg-green-900 dark:border-green-500' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700'}`}>
+                                                                    <img src={f.img} className="w-full h-20 object-cover" />
+                                                                    <div className="p-1">
+                                                                        <h4 className="font-bold text-xs line-clamp-1">{f.name}</h4>
+                                                                        <div className="flex justify-between items-center mt-1">
+                                                                            <span className="text-green-600 text-xs font-bold">{f.price}.-</span>
+                                                                            {inCart && <span className="bg-green-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">x{inCart.qty}</span>}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            );
                                                         })}
                                                     </div>
+                                                    
                                                     {addOnCart.length > 0 && (
-                                                        <div className="bg-gray-100 p-3 rounded">
-                                                            <h4 className="font-bold text-xs mb-2">รายการที่เลือก</h4>
-                                                            {addOnCart.map((c,i)=><div key={i} className="flex justify-between text-xs"><span>{c.name} x{c.qty}</span><button onClick={()=>setAddOnCart(addOnCart.filter((_,idx)=>idx!==i))} className="text-red-500">ลบ</button></div>)}
-                                                            <div className="mt-2 pt-2 border-t text-right font-bold text-sm">รวม {addOnCart.reduce((s,c)=>s+(c.price*c.qty),0).toLocaleString()} บ.</div>
-                                                            <div className="bg-white p-2 rounded mt-2 border text-center"><p className="text-xs font-bold mb-1">สแกนจ่าย</p>{addOnQr && <img src={addOnQr} className="mx-auto w-24 h-24" />}<input type="file" onChange={async(e)=>{ const f=e.target.files[0]; if(f) setAddOnSlip(await compressImage(f)); }} className="text-xs w-full mt-2"/></div>
+                                                        <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded mb-4">
+                                                            <h4 className="font-bold text-xs mb-2">รายการที่เลือก ({addOnCart.length})</h4>
+                                                            {addOnCart.map((c,i)=><div key={i} className="flex justify-between text-xs mt-1"><span>{c.name} x{c.qty}</span><button onClick={()=>setAddOnCart(addOnCart.filter((_,idx)=>idx!==i))} className="text-red-500">ลบ</button></div>)}
+                                                            <div className="mt-2 pt-2 border-t text-right font-bold text-sm text-green-600 mb-2">รวม {addOnCart.reduce((sum,c)=>sum+(c.price*c.qty),0).toLocaleString()} บ.</div>
+                                                            
+                                                            {/* PAYMENT SECTION */}
+                                                            <div className="bg-white dark:bg-gray-800 p-3 rounded border border-gray-200 dark:border-gray-600">
+                                                                <p className="text-xs font-bold mb-2 text-center">สแกนจ่ายเพื่อยืนยันออเดอร์</p>
+                                                                {addOnQr && <img src={addOnQr} className="mx-auto w-32 h-32 mb-2 border p-1" />}
+                                                                <div className="text-[10px] text-center mb-2 text-gray-500">{PROMPTPAY_NAME} - {PROMPTPAY_PHONE}</div>
+                                                                <input type="file" accept="image/*" onChange={async (e) => { const f = e.target.files[0]; if (f) { try { const resizedBase64 = await compressImage(f); setAddOnSlip(resizedBase64); } catch (err) { alert('Upload Error'); } } }} className="text-xs w-full mb-1" />
+                                                                {!addOnSlip && <div className="text-red-500 text-[10px] text-center">* กรุณาแนบสลิปโอนเงิน</div>}
+                                                            </div>
                                                         </div>
                                                     )}
-                                                    <button onClick={handleCustomerAddFood} disabled={loading || !addOnSlip} className="w-full bg-green-600 text-white py-3 rounded-lg font-bold shadow disabled:bg-gray-400">ยืนยันสั่งอาหาร</button>
+
+                                                    <button onClick={handleCustomerAddFood} disabled={loading || (addOnCart.length > 0 && !addOnSlip)} className={`w-full py-3 rounded-lg font-bold shadow transition ${loading || (addOnCart.length > 0 && !addOnSlip) ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'}`}>
+                                                        {loading ? 'กำลังส่งข้อมูล...ให้แม่ครัว' : 'ยืนยันการสั่งอาหาร'}
+                                                    </button>
                                                 </div>
                                             )}
                                         </div>
@@ -386,18 +665,28 @@
                             </div>
                         )}
 
-                        {/* --- BOOKING MODE --- */}
+                        {/* --- MODE: BOOKING (Existing Steps) --- */}
                         {mode === 'booking' && step === 1 && (
                             <div className="max-w-md mx-auto bg-white dark:bg-gray-800 shadow-xl rounded-xl mt-4 border dark:border-gray-700 overflow-hidden">
-                                <div className="h-48 relative"><img src={siteConfig.bannerUrl} referrerPolicy="no-referrer" className="w-full h-full object-cover" /><div className="absolute inset-0 bg-black bg-opacity-10"></div></div>
+                                <div className="h-48 relative">
+                                     <img src={siteConfig.bannerUrl} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                                     <div className="absolute inset-0 bg-black bg-opacity-10"></div>
+                                </div>
                                 <div className="p-6 -mt-24 relative z-10">
                                     <img src={siteConfig.logoUrl} referrerPolicy="no-referrer" className="w-48 h-48 mx-auto rounded-full border-4 border-white dark:border-gray-800 object-cover bg-white shadow-lg mb-4"/>
                                     <h1 className="text-xl text-center mb-2 text-green-800 dark:text-green-400 font-bold">{siteConfig.headerTitle}</h1>
                                     <p className="block text-center mb-4 text-gray-700 dark:text-gray-300 text-sm whitespace-pre-line">{siteConfig.headerDesc}</p>
+                                    
                                     <div className="space-y-4">
-                                        <div><label className="block text-gray-700 dark:text-green-400 font-bold mb-1">วันที่เข้าพัก</label><input type="date" min={getTommorow()} className="w-full border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" onChange={e => setDates({...dates, checkIn: e.target.value})} /></div>
-                                        <div><label className="block text-gray-700 dark:text-red-300 font-bold mb-1">วันที่ออก</label><input type="date" min={dates.checkIn || getTommorow()} className="w-full border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" onChange={e => setDates({...dates, checkOut: e.target.value})} /></div>
-                                        <button onClick={handleSearch} disabled={loading} className="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition font-bold shadow-lg mt-2">{loading ? 'กำลังตรวจสอบ...' : 'ค้นหาที่พักว่าง'}</button>
+                                        <div>
+                                            <label className="block text-gray-700 dark:text-green-400 font-bold mb-1">วันที่เข้าพัก</label>
+                                            <input type="date" min={getTommorow()} className="w-full border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" onChange={e => setDates({...dates, checkIn: e.target.value})} />
+                                        </div>
+                                        <div>
+                                            <label className="block text-gray-700 dark:text-red-300 font-bold mb-1">วันที่ออก</label>
+                                            <input type="date" min={dates.checkIn || getTommorow()} className="w-full border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" onChange={e => setDates({...dates, checkOut: e.target.value})} />
+                                        </div>
+                                        <button onClick={handleSearch} disabled={loading} className="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition font-bold shadow-lg mt-2">{loading ? 'กำลังกางเต็นท์...รอแปบ...' : 'ค้นหาที่พักว่าง'}</button>
                                     </div>
                                 </div>
                                 {closedModal && ( <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-6"> <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center relative animate-pop"> <div className="w-16 h-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mx-auto mb-4"> <i className="fas fa-store-slash text-3xl text-red-500 dark:text-red-300"></i> </div> <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">วันปิดให้บริการ</h3> <p className="text-gray-600 dark:text-gray-300 mb-1">วันที่ <strong>{formatThaiDate(closedModal.date)}</strong></p> <p className="text-red-500 dark:text-red-400 font-medium mb-6">"{closedModal.reason}"</p> <button onClick={() => setClosedModal(null)} className="w-full bg-gray-800 dark:bg-gray-600 text-white py-3 rounded-xl font-bold hover:bg-gray-700 transition">เลือกวันใหม่</button> </div> </div> )}
@@ -407,42 +696,97 @@
 
                         {mode === 'booking' && step === 2 && (
                             <div className="max-w-4xl mx-auto p-4 relative">
-                                <div className="flex justify-between items-center mb-4"><div className="flex items-center gap-2"><button onClick={()=>setStep(1)} className="text-gray-500 font-bold"><i className="fas fa-chevron-left"></i> ย้อนกลับ</button><h2 className="text-xl font-bold dark:text-white">เลือกที่พัก</h2></div></div>
+                                <div className="flex justify-between items-center mb-4">
+                                    <div className="flex items-center gap-2">
+                                        <button onClick={()=>setStep(1)} className="text-gray-500 dark:text-gray-300 hover:text-green-600 font-bold"><i className="fas fa-chevron-left"></i> ย้อนกลับ</button>
+                                        <h2 className="text-xl font-bold dark:text-white">เลือกที่พัก</h2>
+                                    </div>
+                                </div>
                                 <div className="map-container bg-blue-100 dark:bg-gray-700 mb-6" style={{paddingBottom: '100%'}}>
                                     <img src="https://img2.pic.in.th/3d539b84-44ce-4336-ad90-bd2f84b13eca.jpg" referrerpolicy="no-referrer" className="absolute top-0 left-0 w-full h-full object-cover" />
                                     {Object.keys(pinPos).map(key => {
                                         if (!roomConfig[key]) return null;
-                                        const isBooked = availability.bookedRooms.includes(key); const isZ8Full = key === 'Z8' && availability.zone8Available <= 0; const disable = isBooked || isZ8Full; const inCart = cart.find(c => c.id === key);
+                                        const isBooked = availability.bookedRooms.includes(key);
+                                        const isZ8Full = key === 'Z8' && availability.zone8Available <= 0;
+                                        const disable = isBooked || isZ8Full;
+                                        const inCart = cart.find(c => c.id === key);
                                         let circleClasses = "w-12 h-12 rounded-full flex items-center justify-center text-center text-[8px] font-bold border-2 shadow-lg p-1 leading-tight transition-all duration-300";
-                                        if (disable) circleClasses += " bg-gray-400 text-white border-gray-500 cursor-not-allowed opacity-80 grayscale"; else if (inCart) circleClasses += " bg-yellow-400 text-black border-yellow-600 scale-110 shadow-xl z-20"; else circleClasses += " bg-white dark:bg-gray-800 text-green-800 dark:text-green-400 border-green-600 hover:scale-110 z-10";
+                                        if (disable) circleClasses += " bg-gray-400 text-white border-gray-500 cursor-not-allowed opacity-80 grayscale";
+                                        else if (inCart) circleClasses += " bg-yellow-400 text-black border-yellow-600 scale-110 shadow-xl z-20";
+                                        else circleClasses += " bg-white dark:bg-gray-800 text-green-800 dark:text-green-400 border-green-600 hover:scale-110 z-10";
                                         return ( <div key={key} className="absolute transform -translate-x-1/2 -translate-y-1/2 map-pin-responsive" style={{left: `${pinPos[key].x}%`, top: `${pinPos[key].y}%`}} onClick={() => { if(disable) return; if(inCart) setCart(cart.filter(c => c.id !== key)); else openRoomModal(key); }}> <div className={circleClasses}> <div> {roomConfig[key].name} {key==='Z8' && <div className="text-[9px] font-normal">({availability.zone8Available})</div>} </div> </div> </div> )
                                     })}
                                 </div>
-                                {selectedRoomId && roomConfig[selectedRoomId] && ( <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"> <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-sm relative"> <div className="relative w-full h-48 mb-4 rounded-lg overflow-hidden bg-gray-200"> <img src={(siteConfig.roomImages[selectedRoomId]||[])[currentImgIdx] || "https://via.placeholder.com/600x400?text=No+Image"} className="w-full h-full object-cover transition-opacity duration-300" /> {(siteConfig.roomImages[selectedRoomId]||[]).length > 1 && ( <> <button onClick={prevImage} className="absolute left-2 top-1/2 bg-black/50 text-white p-1 rounded-full"><i className="fas fa-chevron-left"></i></button> <button onClick={nextImage} className="absolute right-2 top-1/2 bg-black/50 text-white p-1 rounded-full"><i className="fas fa-chevron-right"></i></button> </> )} </div> <h3 className="text-xl font-bold mb-2 dark:text-white">{roomConfig[selectedRoomId].name}</h3> <p className="text-gray-500 text-sm mb-4">{siteConfig.roomDescriptions?.[selectedRoomId]}</p> <div className="flex justify-between mb-4 bg-gray-100 p-2 rounded"> <button onClick={()=>setGuestCount(Math.max(roomConfig[selectedRoomId].min||1, guestCount-1))}>-</button> <span className="font-bold">{guestCount} คน</span> <button onClick={()=>setGuestCount(Math.min(roomConfig[selectedRoomId].maxCap, guestCount+1))}>+</button> </div> <div className="flex gap-2"> <button onClick={()=>setSelectedRoomId(null)} className="flex-1 bg-gray-200 py-2 rounded">ยกเลิก</button> <button onClick={confirmRoomSelection} className="flex-1 bg-green-600 text-white py-2 rounded">เลือกห้องนี้</button> </div> </div> </div> )}
-                                <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow mb-4"><h3 className="font-bold mb-4 dark:text-white text-lg">🍽️ สั่งอาหารล่วงหน้า</h3><div className="grid grid-cols-2 gap-3">{siteConfig.foodMenu.map(f => { const inCart = cart.find(c => c.id === f.id); return ( <div key={f.id} onClick={() => { if(inCart) setCart(cart.filter(c => c.id !== f.id)); else openFoodModal(f); }} className={`cursor-pointer rounded-lg overflow-hidden border-2 ${inCart ? 'border-yellow-500 bg-yellow-50' : 'border-gray-200 bg-white'}`} > <img src={f.img} className="w-full h-24 object-cover" /> <div className="p-2"> <div className="text-sm font-bold truncate">{f.name}</div> <div className="text-xs text-green-600 font-bold mt-1">{f.price}.- {inCart && `x${inCart.qty}`}</div> </div> </div> ); })}</div></div>
-                                {selectedFood && ( <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"> <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-sm relative animate-pop"> <img src={selectedFood.img} className="w-full h-40 object-cover rounded-lg mb-4" /> <h3 className="text-xl font-bold mb-1 text-green-800">{selectedFood.name}</h3> <p className="text-gray-500 text-sm mb-4">{selectedFood.price} บาท</p> <div className="flex items-center justify-center gap-4 mb-6"> <button onClick={() => setFoodCount(Math.max(1, foodCount - 1))} className="w-10 h-10 bg-gray-100 rounded-full font-bold">-</button> <span className="text-2xl font-bold">{foodCount}</span> <button onClick={() => setFoodCount(foodCount + 1)} className="w-10 h-10 bg-gray-100 rounded-full font-bold">+</button> </div> <div className="flex gap-2"> <button onClick={() => setSelectedFood(null)} className="flex-1 py-3 bg-gray-200 rounded-lg">ยกเลิก</button> <button onClick={confirmFoodSelection} className="flex-1 py-3 bg-green-600 text-white rounded-lg">ยืนยัน</button> </div> </div> </div> )}
+                                {selectedRoomId && roomConfig[selectedRoomId] && (
+                                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-sm relative">
+                                            <div className="relative w-full h-48 mb-4 rounded-lg overflow-hidden bg-gray-200">
+                                                <img src={(siteConfig.roomImages[selectedRoomId]||[])[currentImgIdx] || "https://via.placeholder.com/600x400?text=No+Image"} className="w-full h-full object-cover transition-opacity duration-300" />
+                                                {(siteConfig.roomImages[selectedRoomId]||[]).length > 1 && ( <> <button onClick={prevImage} className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-1 rounded-full hover:bg-opacity-70"><i className="fas fa-chevron-left"></i></button> <button onClick={nextImage} className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-1 rounded-full hover:bg-opacity-70"><i className="fas fa-chevron-right"></i></button> </> )}
+                                            </div>
+                                            <h3 className="text-xl font-bold mb-2 text-green-800 dark:text-green-400">{roomConfig[selectedRoomId].name}</h3>
+                                            <p className="text-gray-500 dark:text-gray-300 text-sm mb-4"> {siteConfig.roomDescriptions?.[selectedRoomId] || "ไม่มีคำอธิบาย"} </p>
+                                            <div className="flex items-center justify-between mb-6 bg-gray-100 dark:bg-gray-700 p-3 rounded-lg">
+                                                <button onClick={() => setGuestCount(Math.max((roomConfig[selectedRoomId].min||1), guestCount - 1))} className="w-10 h-10 bg-white dark:bg-gray-600 rounded shadow text-xl font-bold text-green-600 dark:text-green-400">-</button>
+                                                <div className="text-center"> <div className="text-2xl font-bold dark:text-white">{guestCount}</div> <div className="text-xs text-gray-500 dark:text-gray-400">คน</div> </div>
+                                                <button onClick={() => { let limit = roomConfig[selectedRoomId].maxCap; if(selectedRoomId === 'Z8') limit = availability.zone8Available; setGuestCount(Math.min(limit, guestCount + 1)); }} className="w-10 h-10 bg-white dark:bg-gray-600 rounded shadow text-xl font-bold text-green-600 dark:text-green-400">+</button>
+                                            </div>
+                                            <div className="flex gap-2"> <button onClick={() => setSelectedRoomId(null)} className="flex-1 py-3 text-gray-500 bg-gray-200 dark:bg-gray-600 dark:text-gray-300 rounded-lg font-bold">ยกเลิก</button> <button onClick={confirmRoomSelection} className="flex-1 py-3 text-white bg-green-600 hover:bg-green-700 rounded-lg font-bold shadow-lg">ยืนยัน</button> </div>
+                                        </div>
+                                    </div>
+                                )}
+                                <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow mb-4">
+                                    <h3 className="font-bold mb-4 dark:text-white text-lg">🍽️ สั่งอาหารล่วงหน้า</h3>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {siteConfig.foodMenu.map(f => {
+                                            const inCart = cart.find(c => c.id === f.id);
+                                            return ( <div key={f.id} onClick={() => { if(inCart) setCart(cart.filter(c => c.id !== f.id)); else openFoodModal(f); }} className={`cursor-pointer rounded-lg overflow-hidden border-2 transition-all shadow-sm relative ${inCart ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900 dark:border-yellow-500' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 hover:border-green-400'}`} > <img src={f.img} className="w-full h-24 object-cover" /> <div className="p-2"> <h4 className="font-bold text-sm text-gray-800 dark:text-white line-clamp-1">{f.name}</h4> {f.desc && <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1 my-1">{f.desc}</p>} <div className="flex justify-between items-center mt-1"> <span className="text-green-600 dark:text-green-400 text-sm font-bold">{f.price}.-</span> {inCart && <span className="bg-yellow-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">x{inCart.qty}</span>} </div> </div> {inCart && <div className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs shadow"><i className="fas fa-times"></i></div>} </div> );
+                                        })}
+                                    </div>
+                                </div>
+                                {selectedFood && ( <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"> <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-sm relative animate-pop"> <img src={selectedFood.img} className="w-full h-40 object-cover rounded-lg mb-4 shadow-md" /> <h3 className="text-xl font-bold mb-1 text-green-800 dark:text-green-400">{selectedFood.name}</h3> {selectedFood.desc && <p className="text-gray-600 dark:text-gray-300 text-sm mb-2">{selectedFood.desc}</p>} <p className="text-gray-500 dark:text-gray-400 text-sm mb-4 font-bold">ราคาชุดละ {selectedFood.price} บาท</p> <div className="flex items-center justify-center gap-4 mb-6"> <button onClick={() => setFoodCount(Math.max(1, foodCount - 1))} className="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-full text-xl font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-200">-</button> <span className="text-2xl font-bold w-10 text-center dark:text-white">{foodCount}</span> <button onClick={() => setFoodCount(foodCount + 1)} className="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-full text-xl font-bold text-green-600 hover:bg-green-100">+</button> </div> <div className="flex gap-2"> <button onClick={() => setSelectedFood(null)} className="flex-1 py-3 text-gray-500 bg-gray-200 dark:bg-gray-600 dark:text-gray-300 rounded-lg font-bold">ยกเลิก</button> <button onClick={confirmFoodSelection} className="flex-1 py-3 text-white bg-green-600 hover:bg-green-700 rounded-lg font-bold shadow-lg">ยืนยัน ({selectedFood.price * foodCount}.-)</button> </div> </div> </div> )}
                                 <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded mb-4"><h3 className="font-bold dark:text-white">🛒 ตะกร้า ({cart.length})</h3> {cart.map((c,i)=><div key={i} className="flex justify-between text-sm mt-1 dark:text-gray-200"><span>{c.name} {c.type==='food'?`x${c.qty}`:`(${c.guests} คน)`}</span><button onClick={()=>setCart(cart.filter((_,idx)=>idx!==i))} className="text-red-500">ลบ</button></div>)} </div>
-                                <button onClick={() => { if (!cart.some(c => c.type !== 'food')) { setShowRoomRequiredModal(true); return; } setStep(3); }} className="w-full bg-green-600 text-white p-3 rounded-lg font-bold"> ดำเนินการต่อ </button>
+                                <button onClick={() => { const hasRoom = cart.some(c => c.type !== 'food'); if (!hasRoom) { setShowRoomRequiredModal(true); return; } setStep(3); }} className="w-full bg-green-600 text-white p-3 rounded-lg font-bold"> ดำเนินการต่อ </button>
                             </div>
                         )}
 
                         {mode === 'booking' && step === 3 && (
                             <div className="max-w-md mx-auto p-6 bg-white dark:bg-gray-800 shadow-xl rounded-xl">
-                                <div className="flex items-center gap-2 mb-4"><button onClick={()=>setStep(2)} className="text-gray-500 font-bold text-sm"><i className="fas fa-chevron-left"></i> ย้อนกลับ</button><h2 className="text-xl font-bold dark:text-white">สรุปยอด</h2></div>
+                                <div className="flex items-center gap-2 mb-4">
+                                    <button onClick={()=>setStep(2)} className="text-gray-500 dark:text-gray-300 hover:text-green-600 font-bold text-sm"><i className="fas fa-chevron-left"></i> ย้อนกลับ</button>
+                                    <h2 className="text-xl font-bold dark:text-white">สรุปยอดและชำระเงิน</h2>
+                                </div>
                                 <div className="space-y-2 mb-4 text-sm dark:text-gray-200">
-                                    <p><strong>เข้าพัก:</strong> {formatThaiDate(dates.checkIn)} - {formatThaiDate(dates.checkOut)} ({calculateNights()} คืน)</p>
+                                    <p><strong>เข้าพัก:</strong> {formatThaiDate(dates.checkIn)}</p>
+                                    <p><strong>คืนห้อง:</strong> {formatThaiDate(dates.checkOut)}</p>
+                                    <p><strong>จำนวน:</strong> {calculateNights()} คืน</p>
+                                    {pricing.isHighSeason && <div className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 p-1 rounded">ℹ️ ช่วงเทศกาล/วันพิเศษ คิดมัดจำ 100%</div>}
                                     <hr className="dark:border-gray-600"/>
                                     {cart.map((c, i) => <div key={i} className="flex justify-between"><span>{c.name}</span><span>{c.type==='food' ? c.price*c.qty : (c.id === 'Z8' ? c.pricePerNight * calculateNights() * c.guests : c.pricePerNight*calculateNights())} บ.</span></div>)}
-                                    {pricing.discount > 0 && <div className="flex justify-between text-red-500"><span>ส่วนลด</span><span>-{pricing.discount} บ.</span></div>}
+                                    <hr className="dark:border-gray-600"/>
+                                    {pricing.discount > 0 && <div className="flex justify-between text-red-500 font-bold"><span>ส่วนลดที่พัก</span><span>-{pricing.discount} บ.</span></div>}
                                     <div className="flex justify-between font-bold text-lg"><span>สุทธิ</span><span>{pricing.netTotal} บ.</span></div>
-                                    <div className="bg-yellow-100 p-2 rounded text-center"><span className="block text-sm text-yellow-800">มัดจำที่ต้องโอน</span><span className="text-2xl font-bold text-red-600">{pricing.deposit} บาท</span></div>
+                                    <div className="bg-yellow-100 dark:bg-yellow-900 p-2 rounded text-center border border-yellow-300 dark:border-yellow-700 mt-2">
+                                        <span className="block text-sm text-yellow-800 dark:text-yellow-200">ยอดมัดจำที่ต้องโอน</span>
+                                        <span className="text-2xl font-bold text-red-600 dark:text-red-400">{pricing.deposit} บาท</span>
+                                    </div>
                                 </div>
-                                <div className="mb-4 flex gap-2"> <input placeholder="โค้ดส่วนลด" className="border p-2 rounded flex-1" onChange={e => setDiscount({...discount, code: e.target.value})} /> <button className="bg-gray-800 text-white px-4 rounded" onClick={checkDiscountCode}>ใช้</button> </div>
-                                <div className="space-y-3 mb-6"><input placeholder="ชื่อผู้จอง" className="w-full border p-2 rounded" value={customer.name} onChange={e => setCustomer({...customer, name: e.target.value})} /><input placeholder="เบอร์โทรศัพท์" className="w-full border p-2 rounded" type="tel" value={customer.phone} onChange={e => setCustomer({...customer, phone: e.target.value})} /></div>
-                                <div className="text-center mb-6"> {qrUrl ? <img src={qrUrl} className="mx-auto border-2 rounded-lg mb-3 shadow-sm p-1 bg-white" width="200" /> : <div className="h-[200px] flex items-center justify-center text-gray-400">QR Code...</div> } <p className="text-xs text-gray-500">{PROMPTPAY_NAME} - {PROMPTPAY_PHONE}</p> </div>
-                                <div className="mb-4"><label className="block mb-1 text-sm">สลิปโอนเงิน *</label><input type="file" accept="image/*" onChange={async (e) => { const f = e.target.files[0]; if (f) setSlipImg(await compressImage(f)); }} className="w-full text-sm" /></div>
-                                <div className="flex items-center gap-2 mb-4 text-xs text-gray-600"><input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)} />ยอมรับเงื่อนไขการจอง</div>
-                                <button onClick={handleSubmit} disabled={loading || !canSubmit} className="w-full p-3 rounded-lg font-bold text-white bg-green-600 disabled:bg-gray-400">ยืนยันการจอง</button>
+                                <div className="mb-4">
+                                    <div className="flex gap-2"> <input placeholder="กรอกโค้ดส่วนลด" className="border p-2 rounded flex-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white" onChange={e => setDiscount({...discount, code: e.target.value})} /> <button className="bg-gray-800 dark:bg-gray-600 text-white px-4 rounded" onClick={checkDiscountCode}>กดใช้โค้ด</button> </div>
+                                    {discount.message && <p className={`text-xs mt-1 ${discount.status==='success'?'text-green-600 dark:text-green-400':'text-red-500 dark:text-red-400'}`}>{discount.message}</p>}
+                                </div>
+                                <div className="space-y-3 mb-6">
+                                    <input placeholder="ชื่อผู้จอง" className="w-full border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" value={customer.name} onChange={e => setCustomer({...customer, name: e.target.value})} />
+                                    <input placeholder="เบอร์โทรศัพท์" className="w-full border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" type="tel" value={customer.phone} onChange={e => setCustomer({...customer, phone: e.target.value})} />
+                                </div>
+                                <div className="text-center mb-6">
+                                    <p className="mb-2 font-bold dark:text-white">สแกนจ่ายมัดจำ (พร้อมเพย์)</p>
+                                    {qrUrl ? ( <div className="flex flex-col items-center"> <img src={qrUrl} className="mx-auto border-2 border-gray-200 dark:border-gray-600 rounded-lg mb-3 shadow-sm p-1 bg-white" alt="QR Code" width="200" height="200" /> <p className="text-sm text-blue-600 dark:text-blue-400 font-bold mt-2"> กรุณาแคปหน้าจอหรือกดค้างที่รูปเพื่อบันทึก</p> </div> ) : ( <div className="h-[200px] flex items-center justify-center text-gray-400">กำลังสร้าง QR Code...</div> )}
+                                    <div className="mt-4 bg-gray-50 dark:bg-gray-700 p-2 rounded"> <p className="text-sm font-bold text-gray-800 dark:text-white">{PROMPTPAY_NAME}</p> <p className="text-xs text-gray-500 dark:text-gray-400 font-mono tracking-wider">{PROMPTPAY_PHONE}</p> </div>
+                                </div>
+                                <div className="mb-4"> <label className="block mb-1 text-sm dark:text-gray-300">สลิปโอนเงิน <span className="text-red-500">*</span></label> <input type="file" accept="image/*" onChange={async (e) => { const f = e.target.files[0]; if (f) { try { const resizedBase64 = await compressImage(f); setSlipImg(resizedBase64); } catch (err) { alert('ไม่สามารถประมวลผลรูปภาพได้'); } } }} className="w-full text-sm dark:text-gray-300" /> </div>
+                                <div className="flex items-start gap-2 mb-4 text-xs text-gray-600 dark:text-gray-400"> <input type="checkbox" className="mt-1" checked={agreed} onChange={e => setAgreed(e.target.checked)} /> <p>ฉันอ่านกฎระเบียบและยอมรับเงื่อนไขของ ขนำลุงดำ แคมป์ปิ้ง ทุกประการ </p> </div>
+                                <button onClick={handleSubmit} disabled={loading || !canSubmit} className={`w-full p-3 rounded-lg font-bold text-white transition ${loading || !canSubmit ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}>{loading ? 'กำลังเตรียมเต็นท์...' : 'ยืนยันการจอง'}</button>
                             </div>
                         )}
 
@@ -451,15 +795,117 @@
                                 <div className="text-6xl mb-4">🎉</div>
                                 <h2 className="text-2xl font-bold text-green-700 dark:text-green-400 mb-2">จองสำเร็จ!</h2>
                                 <p className="text-gray-600 dark:text-gray-300 mb-4">รหัส: <strong>{bookingResult}</strong></p>
-                                <button onClick={() => liff.closeWindow()} className="mt-8 bg-gray-800 text-white px-6 py-2 rounded-full">ปิดหน้าต่าง</button>
+                                <p className="text-sm text-gray-400 mb-4">ระบบส่งใบจองให้ทาง LINE แล้วครับ</p>
+                                <p className="text-sm text-gray-500 mb-4">เงื่อนไข : ไม่สามารถคืนมัดจำได้</p>
+                                <p className="text-sm text-gray-500 mb-4">เลื่อนที่พักก่อนเข้าพักไม่น้อยกว่า 7 วัน</p>
+                                <p className="text-sm text-gray-500 mb-4">ยกเว้นโรคระบาดและภัยพิบัติเลื่อนที่พักได้</p>
+                                <button onClick={() => liff.closeWindow()} className="mt-8 bg-gray-800 dark:bg-gray-600 text-white px-6 py-2 rounded-full">กดปิดเบาๆ นะ</button>
                             </div>
                         )}
 
-                        {/* Modals & Popups */}
-                        {modalAlert.show && <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60"><div className="bg-white p-6 rounded-xl shadow-lg max-w-sm text-center"><h3 className="font-bold text-lg mb-2">{modalAlert.title}</h3><p className="text-gray-600 mb-4">{modalAlert.text}</p><button onClick={()=>setModalAlert({...modalAlert, show: false})} className="bg-blue-600 text-white px-4 py-2 rounded-lg">ตกลง</button></div></div>}
-                        {modalConfirm.show && <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60"><div className="bg-white p-6 rounded-xl shadow-lg max-w-sm text-center"><h3 className="font-bold text-lg mb-2">{modalConfirm.title}</h3><p className="text-gray-600 mb-4 whitespace-pre-line">{modalConfirm.text}</p><div className="flex gap-2 justify-center"><button onClick={()=>setModalConfirm({...modalConfirm, show: false})} className="bg-gray-200 px-4 py-2 rounded-lg">ยกเลิก</button><button onClick={modalConfirm.onConfirm} className="bg-green-600 text-white px-4 py-2 rounded-lg">ยืนยัน</button></div></div></div>}
-                        {checkingDiscount && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"><div className="bg-white p-6 rounded-xl animate-pulse">กำลังตรวจสอบโค้ด...</div></div>}
-                        {loading && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"><div className="bg-white p-6 rounded-xl animate-pulse">กำลังทำงาน...</div></div>}
+                        {/* --- BEAUTIFUL ALERT MODAL --- */}
+                        {modalAlert.show && (
+                            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity">
+                                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-100 animate-pop">
+                                    <div className={`p-6 text-center ${
+                                        modalAlert.type === 'error' ? 'bg-red-50 dark:bg-red-900/30' : 
+                                        modalAlert.type === 'success' ? 'bg-green-50 dark:bg-green-900/30' : 
+                                        modalAlert.type === 'warning' ? 'bg-yellow-50 dark:bg-yellow-900/30' : 'bg-blue-50 dark:bg-blue-900/30'
+                                    }`}>
+                                        <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm ${
+                                            modalAlert.type === 'error' ? 'bg-red-100 text-red-500' : 
+                                            modalAlert.type === 'success' ? 'bg-green-100 text-green-500' : 
+                                            modalAlert.type === 'warning' ? 'bg-yellow-100 text-yellow-500' : 'bg-blue-100 text-blue-500'
+                                        }`}>
+                                            <i className={`fas ${
+                                                modalAlert.type === 'error' ? 'fa-times' : 
+                                                modalAlert.type === 'success' ? 'fa-check' : 
+                                                modalAlert.type === 'warning' ? 'fa-exclamation' : 'fa-info'
+                                            } text-3xl`}></i>
+                                        </div>
+                                        <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">{modalAlert.title}</h3>
+                                        <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed">{modalAlert.text}</p>
+                                    </div>
+                                    <div className="p-4 bg-gray-50 dark:bg-gray-700">
+                                        <button 
+                                            onClick={() => setModalAlert({ ...modalAlert, show: false })} 
+                                            className={`w-full py-3 rounded-xl font-bold text-white shadow-lg transition transform active:scale-95 ${
+                                                modalAlert.type === 'error' ? 'bg-red-500 hover:bg-red-600' : 
+                                                modalAlert.type === 'success' ? 'bg-green-500 hover:bg-green-600' : 
+                                                modalAlert.type === 'warning' ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-600 hover:bg-blue-700'
+                                            }`}
+                                        >
+                                            ตกลง
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* --- BEAUTIFUL CONFIRM MODAL --- */}
+                        {modalConfirm.show && (
+                            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity">
+                                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-100 animate-pop">
+                                    <div className="p-6 text-center bg-white dark:bg-gray-800">
+                                        <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300">
+                                            <i className="fas fa-question text-3xl"></i>
+                                        </div>
+                                        <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">{modalConfirm.title}</h3>
+                                        <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed whitespace-pre-line">{modalConfirm.text}</p>
+                                    </div>
+                                    <div className="p-4 bg-gray-50 dark:bg-gray-700 flex gap-3">
+                                        <button 
+                                            onClick={() => setModalConfirm({ ...modalConfirm, show: false })}
+                                            className="flex-1 py-3 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200 rounded-xl font-bold hover:bg-gray-100 dark:hover:bg-gray-500 transition shadow-sm"
+                                        >
+                                            ยกเลิก
+                                        </button>
+                                        <button 
+                                            onClick={modalConfirm.onConfirm}
+                                            className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow-lg transform active:scale-95"
+                                        >
+                                            ยืนยัน
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* --- NEW: CHECKING DISCOUNT POPUP --- */}
+                        {checkingDiscount && (
+                            <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm transition-opacity">
+                                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-xs p-6 text-center animate-pop">
+                                    <div className="w-12 h-12 border-4 border-gray-200 border-t-green-500 rounded-full animate-spin mx-auto mb-4"></div>
+                                    <h3 className="text-lg font-bold text-gray-800 dark:text-white">กำลังตรวจสอบโค้ด...</h3>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">กรุณารอสักครู่</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* --- CAMPING THEMED LOADING POPUP --- */}
+                        {loading && (
+                            <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center p-4 bg-black/80 backdrop-blur-sm transition-opacity text-white">
+                                <div className="relative mb-6">
+                                    {/* Moon/Sun Circle */}
+                                    <div className="w-24 h-24 rounded-full border-4 border-white/20 border-t-green-400 animate-spin absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></div>
+                                    
+                                    {/* Icons */}
+                                    <div className="flex items-end gap-1 relative z-10">
+                                        <i className="fas fa-tree text-green-500 text-2xl animate-bounce" style={{animationDuration: '1.5s'}}></i>
+                                        <i className="fas fa-campground text-orange-500 text-5xl"></i>
+                                        <i className="fas fa-fire text-red-500 text-xl animate-pulse"></i>
+                                    </div>
+                                </div>
+                                
+                                <h3 className="text-2xl font-bold text-white mb-2 animate-pulse">
+                                    {step === 1 && mode === 'booking' ? 'กำลังหาลานกางเต็นท์...' : 
+                                     step === 3 && mode === 'booking' ? 'กำลังจองที่พัก...' : 
+                                     'กำลังโหลดข้อมูล...'}
+                                </h3>
+                                <p className="text-sm text-gray-300">กรุณารอสักครู่ ธรรมชาติกำลังเรียกหา 🍃</p>
+                            </div>
+                        )}
+
                     </div>
                 </div>
             );
