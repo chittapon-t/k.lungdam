@@ -131,6 +131,7 @@
             const [loading, setLoading] = React.useState(false);
             const [cart, setCart] = React.useState([]);
             const [customer, setCustomer] = React.useState({ name: '', phone: '', userId: '', lineDisplayName: '' });
+            const [isLiffReady, setIsLiffReady] = React.useState(false); // [NEW] Track LIFF state
             const [pinPos, setPinPos] = React.useState(DEFAULT_POSITIONS);
             
             const [roomConfig, setRoomConfig] = React.useState({});
@@ -161,6 +162,7 @@
             // --- MANAGE BOOKING STATES ---
             const [manageForm, setManageForm] = React.useState({ bookingId: '', phone: '' });
             const [manageData, setManageData] = React.useState(null);
+            const [bookingList, setBookingList] = React.useState([]); // [NEW] List of bookings
             const [rescheduleDates, setRescheduleDates] = React.useState({ checkIn: '', checkOut: '' });
             const [manageTab, setManageTab] = React.useState('info'); // 'info', 'reschedule', 'food'
             const [addOnCart, setAddOnCart] = React.useState([]); // For adding food
@@ -168,7 +170,7 @@
             const [addOnQr, setAddOnQr] = React.useState(null);
 
             // --- NEW: BEAUTIFUL POPUP STATES ---
-            const [modalAlert, setModalAlert] = React.useState({ show: false, type: 'info', title: '', text: '' }); // type: success, error, warning, info
+            const [modalAlert, setModalAlert] = React.useState({ show: false, type: 'info', title: '', text: '' }); 
             const [modalConfirm, setModalConfirm] = React.useState({ show: false, title: '', text: '', onConfirm: null });
 
             // Updated getTommorow to use Local Time to prevent timezone issues
@@ -249,12 +251,18 @@
             React.useEffect(() => {
                 if (LIFF_ID) {
                     liff.init({ liffId: LIFF_ID }).then(() => {
+                        setIsLiffReady(true);
                         if (liff.isLoggedIn()) {
                             liff.getProfile().then(profile => {
                                 setCustomer(prev => ({...prev, userId: profile.userId, lineDisplayName: profile.displayName}));
                             });
                         }
-                    }).catch(err => console.error('LIFF Error', err));
+                    }).catch(err => {
+                        console.error('LIFF Error', err);
+                        setIsLiffReady(true); // Still proceed even if LIFF fails
+                    });
+                } else {
+                    setIsLiffReady(true);
                 }
                 
                 fetch(`${GOOGLE_SCRIPT_URL}?action=getMapConfig`)
@@ -315,9 +323,8 @@
 
             // --- AUTO FIND BOOKING FOR MANAGE MODE ---
             React.useEffect(() => {
-                if (mode === 'manage' && customer.userId && !manageData) {
+                if (mode === 'manage' && isLiffReady && customer.userId && !manageData) {
                     setLoading(true);
-                    // Use new feature to find by userId
                     fetch(GOOGLE_SCRIPT_URL, {
                         method: 'POST',
                         body: JSON.stringify({ action: 'findBooking', userId: customer.userId })
@@ -325,20 +332,18 @@
                     .then(r => r.json())
                     .then(res => {
                         setLoading(false);
-                        if(res.status === 'success') {
-                            setManageData(res.booking);
-                            // Set manageForm phone from the result for verification
-                            setManageForm({ bookingId: res.booking.id, phone: res.booking.phone }); 
-                            setManageTab('info');
+                        if(res.status === 'success' && res.bookings && res.bookings.length > 0) {
+                            // If multiple bookings, show list. If one, auto-select? No, showing list is safer.
+                            setBookingList(res.bookings);
                         } else {
-                            // Do nothing here, let the UI show "Not Found" state
+                            setBookingList([]);
                         }
                     })
                     .catch(e => { 
                         setLoading(false); 
                     });
                 }
-            }, [mode, customer.userId]);
+            }, [mode, isLiffReady, customer.userId, manageData]);
 
             const handleSearch = () => {
                 if (!dates.checkIn || !dates.checkOut) { setSearchError('กรุณาเลือกวันเข้าพักและวันที่ออกให้ครบถ้วนครับ'); return; }
@@ -398,7 +403,7 @@
                 fetch(`${GOOGLE_SCRIPT_URL}?action=checkDiscount&code=${discount.code}`)
                     .then(r=>r.json())
                     .then(d => { 
-                        setCheckingDiscount(false);
+                        setCheckingDiscount(false); // Hide Popup
                         if(d.status === 'success') { 
                             setDiscount({...discount, val: parseInt(d.value), type: d.type, message: `ใช้โค้ดสำเร็จ ลด ${d.value} ${d.type==='PERCENT'?'%':'บาท'}`, status: 'success'}); 
                         } else { 
@@ -424,13 +429,14 @@
                 .then(r => r.json()).then(res => { if (res.status === 'success') { setBookingResult(res.bookingId); setStep(5); } else { alert('Error: ' + res.message); } setLoading(false); }).catch(e => { alert('Failed: ' + e); setLoading(false); });
             };
 
-            const handleDownloadQr = () => {
-                if(!qrUrl) return;
-                try { const blob = base64ToBlob(qrUrl); const url = window.URL.createObjectURL(blob); const link = document.createElement('a'); link.style.display = 'none'; link.href = url; link.download = 'payment-qr.png'; document.body.appendChild(link); link.click(); setTimeout(() => { document.body.removeChild(link); window.URL.revokeObjectURL(url); }, 100); } catch (e) { alert('ไม่สามารถดาวน์โหลดได้อัตโนมัติ กรุณากดค้างที่รูปเพื่อบันทึก'); }
-            };
-
             // --- MANAGE BOOKING HANDLERS ---
             
+            const selectBookingToManage = (booking) => {
+                setManageData(booking);
+                setManageForm({ bookingId: booking.id, phone: booking.phone });
+                setManageTab('info');
+            }
+
             const handleCustomerReschedule = () => {
                 if(!rescheduleDates.checkIn || !rescheduleDates.checkOut) {
                     setModalAlert({ show: true, type: 'warning', title: 'แจ้งเตือน', text: 'กรุณาเลือกวันเข้าพักและวันออกใหม่ให้ครบถ้วน' });
@@ -448,13 +454,11 @@
                     return;
                 }
                 
-                // Show Custom Confirm Modal
                 setModalConfirm({
                     show: true,
                     title: 'ยืนยันการเลื่อนวันเข้าพัก',
                     text: `คุณต้องการเปลี่ยนวันเข้าพักเป็น\n${formatThaiDate(rescheduleDates.checkIn)} - ${formatThaiDate(rescheduleDates.checkOut)}\nใช่หรือไม่?`,
                     onConfirm: () => {
-                        // Close Confirm Modal then Execute
                         setModalConfirm({ ...modalConfirm, show: false });
                         executeReschedule();
                     }
@@ -569,29 +573,70 @@
                              {mode === 'booking' ? <i className="fas fa-search"></i> : <i className="fas fa-home"></i>}
                         </button>
 
-                        {/* --- MODE: MANAGE BOOKING --- */}
+                        {/* --- MODE: MANAGE BOOKING (AUTO FETCH) --- */}
                         {mode === 'manage' && (
                             <div className="max-w-md mx-auto p-4 pt-16">
-                                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 min-h-[300px]">
                                     <h2 className="text-xl font-bold mb-4 text-center text-blue-600 dark:text-blue-400">จัดการการจอง / สั่งอาหาร</h2>
                                     
                                     {!manageData ? (
-                                        <div className="text-center py-10">
+                                        /* BOOKING LIST VIEW */
+                                        <div>
                                             {loading ? (
-                                                <div className="flex flex-col items-center">
-                                                    <div className="w-12 h-12 border-4 border-gray-200 border-t-blue-500 rounded-full animate-spin mb-4"></div>
-                                                    <p className="text-gray-500 animate-pulse">กำลังค้นหาข้อมูลการจองของคุณ...</p>
+                                                <div className="text-center py-10">
+                                                    <div className="w-12 h-12 border-4 border-gray-200 border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
+                                                    <p className="text-gray-500 animate-pulse">กำลังค้นหาข้อมูลการจอง...</p>
                                                 </div>
                                             ) : (
-                                                <div>
-                                                    <div className="text-6xl mb-4">🔍</div>
-                                                    <p className="text-gray-500">ไม่พบประวัติการจองที่ยังดำเนินการอยู่</p>
-                                                    <p className="text-xs text-gray-400 mt-2">กรุณาเข้าใช้งานผ่าน LINE ที่ทำการจองไว้</p>
-                                                </div>
+                                                !isLiffReady ? (
+                                                    <div className="text-center py-10">
+                                                        <p className="text-gray-500">กำลังเชื่อมต่อ LINE...</p>
+                                                    </div>
+                                                ) : (
+                                                    !customer.userId ? (
+                                                        <div className="text-center py-10">
+                                                            <div className="text-4xl mb-4">⚠️</div>
+                                                            <p className="text-gray-500">ไม่พบข้อมูลผู้ใช้ LINE</p>
+                                                            <p className="text-xs text-gray-400 mt-2">กรุณาเปิดผ่านแอป LINE</p>
+                                                        </div>
+                                                    ) : (
+                                                        bookingList.length > 0 ? (
+                                                            <div className="space-y-3 animate-pop">
+                                                                <p className="text-sm text-gray-500 text-center mb-4">พบ {bookingList.length} รายการจอง</p>
+                                                                {bookingList.map(b => (
+                                                                    <div key={b.id} onClick={() => selectBookingToManage(b)} className="border border-gray-200 dark:border-gray-700 p-4 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer transition shadow-sm relative group">
+                                                                        <div className="absolute top-4 right-4 text-gray-300 group-hover:text-blue-500"><i className="fas fa-chevron-right"></i></div>
+                                                                        <div className="font-bold text-blue-600 dark:text-blue-400 text-lg mb-1">{b.id}</div>
+                                                                        <div className="text-sm text-gray-600 dark:text-gray-300"><i className="fas fa-calendar-day mr-2 w-4 text-center"></i>{formatThaiDate(b.checkIn)}</div>
+                                                                        <div className="text-sm text-gray-600 dark:text-gray-300 mt-1"><i className="fas fa-home mr-2 w-4 text-center"></i>{b.rooms}</div>
+                                                                        <div className="mt-2 inline-block px-2 py-1 text-xs rounded bg-green-100 text-green-700 font-bold">{b.status}</div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        ) : (
+                                                            <div className="text-center py-10 animate-pop">
+                                                                <div className="text-6xl mb-4">🔍</div>
+                                                                <p className="text-gray-500">ไม่พบประวัติการจองที่ดำเนินการอยู่</p>
+                                                                <p className="text-xs text-gray-400 mt-2">หากเพิ่งจอง กรุณารอแอดมินยืนยันสักครู่</p>
+                                                            </div>
+                                                        )
+                                                    )
+                                                )
                                             )}
                                         </div>
                                     ) : (
+                                        /* SINGLE BOOKING MANAGE VIEW */
                                         <div className="animate-pop">
+                                            {/* Header with Back Button (if multiple bookings) */}
+                                            <div className="flex items-center mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">
+                                                {bookingList.length > 0 && (
+                                                    <button onClick={() => setManageData(null)} className="mr-3 text-gray-500 hover:text-blue-600">
+                                                        <i className="fas fa-arrow-left"></i>
+                                                    </button>
+                                                )}
+                                                <span className="font-bold text-gray-700 dark:text-gray-200">รายการ: {manageData.id}</span>
+                                            </div>
+
                                             {/* TAB NAVIGATION */}
                                             <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4">
                                                 <button onClick={() => setManageTab('info')} className={`flex-1 py-2 text-sm font-bold ${manageTab === 'info' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}>ข้อมูล</button>
@@ -615,8 +660,6 @@
                                                         <h4 className="font-bold text-sm text-blue-800 dark:text-blue-300 mb-2">รายการอาหารที่สั่งแล้ว</h4>
                                                         <p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-line">{manageData.food}</p>
                                                     </div>
-
-                                                    <button onClick={() => setManageData(null)} className="w-full bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 py-2 rounded-lg font-bold mt-4 text-sm">ปิด</button>
                                                 </div>
                                             )}
 
