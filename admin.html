@@ -187,7 +187,7 @@
 
             // --- Room Manager State ---
             const [editingRoom, setEditingRoom] = React.useState(null); 
-            const [roomsMapData, setRoomsMapData] = React.useState([]);
+            const [roomsMapData, setRoomsMapData] = React.useState([]); // combined data for convenience
 
             const [calendarDate, setCalendarDate] = React.useState(new Date());
 
@@ -390,10 +390,11 @@
             const days = []; for(let i=0; i<firstDayOfMonth; i++) days.push(null); for(let i=1; i<=getDaysInMonth(calendarDate); i++) days.push(i);
             const getBookingsForDate = (day) => { if(!day) return []; const dateStr = `${calendarDate.getFullYear()}-${String(calendarDate.getMonth()+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`; return bookings.filter(b => b.status !== 'ยกเลิก' && b.checkIn <= dateStr && b.checkOut > dateStr); };
 
-            // --- Room Manager Logic (Fix: Merge Editing Data Before Save) ---
+            // --- Room Manager Logic (Fix: Merge Editing Data Before Save & Use currentTarget) ---
             const handleMapClick = (e) => {
                 if (!editingRoom) return;
-                const rect = e.target.getBoundingClientRect();
+                // FIX: Use currentTarget to get the container's rect
+                const rect = e.currentTarget.getBoundingClientRect();
                 const x = ((e.clientX - rect.left) / rect.width) * 100;
                 const y = ((e.clientY - rect.top) / rect.height) * 100;
                 setEditingRoom({ ...editingRoom, x: Math.round(x), y: Math.round(y) });
