@@ -10,19 +10,14 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    <!-- Tailwind CSS & Config -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class', 
-        }
-    </script>
+    <script> tailwind.config = { darkMode: 'class' } </script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     
     <script>
-        // ฟังก์ชันสร้าง Payload PromptPay
         function generatePromptPayPayload(phoneNumber, amount) {
             const target = phoneNumber.replace(/^0/, '66');
             const f01 = '00' + target; 
@@ -35,9 +30,7 @@
             const data = '000201' + '010212' + tag29 + tag53 + tag54 + tag58 + '6304';
             let crc = 0xFFFF;
             for (let i = 0; i < data.length; i++) {
-                let x = ((crc >> 8) ^ data.charCodeAt(i)) & 0xFF;
-                x ^= x >> 4;
-                crc = ((crc << 8) ^ (x << 12) ^ (x << 5) ^ x) & 0xFFFF;
+                let x = ((crc >> 8) ^ data.charCodeAt(i)) & 0xFF; x ^= x >> 4; crc = ((crc << 8) ^ (x << 12) ^ (x << 5) ^ x) & 0xFFFF;
             }
             return data + crc.toString(16).toUpperCase().padStart(4, '0');
         }
@@ -50,10 +43,7 @@
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
         .animate-pop { animation: fadeIn 0.3s ease-out forwards; }
         .map-pin-responsive { transition: transform 0.2s; }
-        @media (max-width: 640px) {
-            .map-pin-responsive { transform: translate(-50%, -50%) scale(0.8) !important; }
-        }
-        /* Custom Scrollbar */
+        @media (max-width: 640px) { .map-pin-responsive { transform: translate(-50%, -50%) scale(0.8) !important; } }
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(156, 163, 175, 0.5); border-radius: 4px; }
     </style>
@@ -68,15 +58,13 @@
         const PROMPTPAY_PHONE = "0615924262";
         const PROMPTPAY_NAME = "อลงกต ทวีผ่อง";
 
-        // --- Helper Functions ---
         const compressImage = async (file) => {
             return new Promise((resolve, reject) => {
                 const maxWidth = 800;
                 const reader = new FileReader();
                 reader.readAsDataURL(file);
                 reader.onload = (event) => {
-                    const img = new Image();
-                    img.src = event.target.result;
+                    const img = new Image(); img.src = event.target.result;
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
                         let width = img.width; let height = img.height;
@@ -106,16 +94,10 @@
             headerDesc: '🏡 ขนำลุงดำ ดั้งเดิมมาจากหนำปู่ หรือที่พักตอนปู่มาอยู่ช่วงทำสวนนั้นเอง...',
             bannerUrl: 'https://img5.pic.in.th/file/secure-sv1/LINE_ALBUM__240916_14dd72f9bd7de4facf.jpg',
             logoUrl: 'https://lh3.googleusercontent.com/pw/AP1GczPi_rYAbsNGi4X96mW5koYl0JJ3BN9ipRf6UgsXAOQgkyhrs2ChGcZlbsuQ3OLJOYnYhSTYJhWUuu2hwWtPqlt4MUfdUDSS3s4RdRLeD36gPLiK-8OhYLXWmqxVLh2eOtkLIx7pQxrQA6ZnqBYHOftH=w913-h913-s-no-gm?authuser=0',
-            roomImages: {},
-            foodMenu: [],
-            roomDescriptions: {}
+            roomImages: {}, foodMenu: [], roomDescriptions: {}
         };
 
-        const DEFAULT_POSITIONS = {
-            'R1': {x: 20, y: 30}, 'R2': {x: 40, y: 50}, 'R3': {x: 60, y: 50},
-            'T1': {x: 25, y: 70}, 'T2': {x: 35, y: 75}, 'K1': {x: 70, y: 70},
-            'K2': {x: 80, y: 70}, 'Z8': {x: 50, y: 20}
-        };
+        const DEFAULT_POSITIONS = { 'R1': {x: 20, y: 30}, 'R2': {x: 40, y: 50}, 'R3': {x: 60, y: 50}, 'T1': {x: 25, y: 70}, 'T2': {x: 35, y: 75}, 'K1': {x: 70, y: 70}, 'K2': {x: 80, y: 70}, 'Z8': {x: 50, y: 20} };
         
         const App = () => {
             const [isDark, setIsDark] = React.useState(true);
@@ -125,7 +107,7 @@
                 return params.get('mode') === 'manage' ? 'manage' : 'booking';
             }); 
 
-            // --- BOOKING STATES ---
+            // Booking States
             const [dates, setDates] = React.useState({ checkIn: '', checkOut: '' });
             const [availability, setAvailability] = React.useState(null);
             const [loading, setLoading] = React.useState(false);
@@ -134,12 +116,12 @@
             const [isLiffReady, setIsLiffReady] = React.useState(false);
             const [pinPos, setPinPos] = React.useState(DEFAULT_POSITIONS);
             
-            // --- DATA STATES ---
+            // Data States
             const [roomConfig, setRoomConfig] = React.useState({});
             const [systemSettings, setSystemSettings] = React.useState({ closed: [], special: [] });
             const [siteConfig, setSiteConfig] = React.useState(DEFAULT_CONFIG);
 
-            // --- PAYMENT & CONFIRMATION STATES ---
+            // Payment States
             const [discount, setDiscount] = React.useState({ code: '', val: 0, type: '', message: '', status: '' });
             const [checkingDiscount, setCheckingDiscount] = React.useState(false);
             const [slipImg, setSlipImg] = React.useState(null);
@@ -147,7 +129,7 @@
             const [agreed, setAgreed] = React.useState(false);
             const [qrUrl, setQrUrl] = React.useState(null);
             
-            // --- MODAL & SELECTION STATES ---
+            // Modal States
             const [selectedRoomId, setSelectedRoomId] = React.useState(null);
             const [guestCount, setGuestCount] = React.useState(1);
             const [selectedFood, setSelectedFood] = React.useState(null);
@@ -157,8 +139,7 @@
             const [currentImgIdx, setCurrentImgIdx] = React.useState(0);
             const [showRoomRequiredModal, setShowRoomRequiredModal] = React.useState(false);
 
-            // --- MANAGE BOOKING STATES ---
-            const [manageForm, setManageForm] = React.useState({ bookingId: '', phone: '' });
+            // Manage Booking States
             const [manageData, setManageData] = React.useState(null);
             const [bookingList, setBookingList] = React.useState([]); 
             const [rescheduleDates, setRescheduleDates] = React.useState({ checkIn: '', checkOut: '' });
@@ -167,39 +148,21 @@
             const [addOnSlip, setAddOnSlip] = React.useState(null);
             const [addOnQr, setAddOnQr] = React.useState(null);
 
-            // --- POPUP STATES ---
+            // Popup States
             const [modalAlert, setModalAlert] = React.useState({ show: false, type: 'info', title: '', text: '' }); 
             const [modalConfirm, setModalConfirm] = React.useState({ show: false, title: '', text: '', onConfirm: null });
 
-            // --- HELPERS ---
-            const getTommorow = () => {
-                const d = new Date(); d.setDate(d.getDate() + 1);
-                const y = d.getFullYear(); const m = String(d.getMonth() + 1).padStart(2, '0'); const day = String(d.getDate()).padStart(2, '0');
-                return `${y}-${m}-${day}`;
-            };
-            const formatThaiDate = (dateStr) => {
-                if(!dateStr) return "-";
-                const date = new Date(dateStr);
-                const months = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
-                return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear() + 543}`;
-            };
+            // --- Helpers ---
+            const getTommorow = () => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0]; };
+            const formatThaiDate = (dateStr) => { if(!dateStr) return "-"; const d = new Date(dateStr); const m = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."]; return `${d.getDate()} ${m[d.getMonth()]} ${d.getFullYear() + 543}`; };
             const getClosedDateOverlap = (inDate, outDate) => {
                 let current = new Date(inDate); const end = new Date(outDate);
-                while(current < end) {
-                    const dStr = current.toISOString().split('T')[0];
-                    const closed = systemSettings.closed.find(c => c.date === dStr);
-                    if (closed) return closed;
-                    current.setDate(current.getDate() + 1);
-                }
+                while(current < end) { const dStr = current.toISOString().split('T')[0]; const closed = systemSettings.closed.find(c => c.date === dStr); if (closed) return closed; current.setDate(current.getDate() + 1); }
                 return null;
             };
             const checkDateOverlapHighSeason = (inDate, outDate) => {
                 let current = new Date(inDate); const end = new Date(outDate);
-                while(current < end) {
-                    const dStr = current.toISOString().split('T')[0];
-                    if (systemSettings.special.some(s => s.date === dStr)) return true;
-                    current.setDate(current.getDate() + 1);
-                }
+                while(current < end) { const dStr = current.toISOString().split('T')[0]; if (systemSettings.special.some(s => s.date === dStr)) return true; current.setDate(current.getDate() + 1); }
                 return false;
             };
             const calculateNights = () => { if(!dates.checkIn || !dates.checkOut) return 0; return (new Date(dates.checkOut) - new Date(dates.checkIn)) / (1000 * 3600 * 24); }
@@ -215,6 +178,7 @@
             const pricing = React.useMemo(() => getPricing(), [cart, dates, discount, systemSettings]);
             const canSubmit = customer.name && customer.phone && slipImg && agreed;
 
+            // --- Effects ---
             React.useEffect(() => {
                 if (LIFF_ID) {
                     liff.init({ liffId: LIFF_ID }).then(() => {
@@ -224,8 +188,9 @@
                                 setCustomer(prev => ({...prev, userId: profile.userId, lineDisplayName: profile.displayName}));
                             });
                         }
-                    }).catch(err => { console.error(err); setIsLiffReady(true); });
+                    }).catch(err => { console.error('LIFF Error', err); setIsLiffReady(true); });
                 } else { setIsLiffReady(true); }
+                
                 fetch(`${GOOGLE_SCRIPT_URL}?action=getMapConfig`).then(r => r.json()).then(res => { if (res.status === 'success') setPinPos(res.data); });
                 fetch(`${GOOGLE_SCRIPT_URL}?action=getSettings`).then(r => r.json()).then(res => { if (res.status === 'success') setSystemSettings({ closed: res.closed, special: res.special }); });
                 fetch(`${GOOGLE_SCRIPT_URL}?action=getSiteSettings`).then(r => r.json()).then(res => { if (res.status === 'success') setSiteConfig(prev => ({ ...prev, ...res.data })); });
@@ -245,7 +210,7 @@
                 }
             }, [addOnCart, mode, manageTab]);
 
-            // AUTO FETCH BOOKINGS
+            // AUTO FETCH BOOKINGS FOR MANAGE MODE
             React.useEffect(() => {
                 if (mode === 'manage' && isLiffReady && customer.userId && !manageData) {
                     setLoading(true);
@@ -257,7 +222,7 @@
                 }
             }, [mode, isLiffReady, customer.userId, manageData]);
 
-            // --- HANDLERS ---
+            // --- Handlers ---
             const handleSearch = () => {
                 if (!dates.checkIn || !dates.checkOut) { setSearchError('กรุณาเลือกวันเข้าพักและวันที่ออกให้ครบถ้วนครับ'); return; }
                 if (dates.checkIn >= dates.checkOut) { setSearchError('วันเช็คเอาท์ต้องอยู่หลังจากวันเช็คอินครับ'); return; }
@@ -290,13 +255,14 @@
                 const payload = { action: 'saveBooking', customer, checkIn: dates.checkIn, checkOut: dates.checkOut, totalGuests: cart.filter(c => c.type !== 'food').reduce((s, c) => s + c.guests, 0), cart, pricing, discountCode: discount.code, slipImage: slipImg };
                 fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) }).then(r => r.json()).then(res => { if (res.status === 'success') { setBookingResult(res.bookingId); setStep(5); } else { alert('Error: ' + res.message); } setLoading(false); }).catch(e => { alert('Failed: ' + e); setLoading(false); });
             };
-            const selectBookingToManage = (booking) => { setManageData(booking); setManageForm({ bookingId: booking.id, phone: booking.phone }); setManageTab('info'); }
+            const selectBookingToManage = (booking) => { setManageData(booking); setManageTab('info'); }
             
             const handleCustomerReschedule = () => {
                 if(!rescheduleDates.checkIn || !rescheduleDates.checkOut) return setModalAlert({ show: true, type: 'warning', title: 'แจ้งเตือน', text: 'กรุณาเลือกวันเข้าพักและวันออกใหม่' });
                 if(rescheduleDates.checkIn < getTommorow()) return setModalAlert({ show: true, type: 'warning', title: 'แจ้งเตือน', text: 'ไม่สามารถเลือกวันที่ปัจจุบันหรือย้อนหลังได้' });
                 if(rescheduleDates.checkIn >= rescheduleDates.checkOut) return setModalAlert({ show: true, type: 'warning', title: 'แจ้งเตือน', text: 'วันเช็คเอาท์ต้องอยู่หลังวันเช็คอิน' });
-                // Check if current booking check-in is at least 7 days from now
+                
+                // Check 7 Days Condition
                 const today = new Date(); today.setHours(0,0,0,0);
                 const currentCheckIn = new Date(manageData.checkIn); currentCheckIn.setHours(0,0,0,0);
                 const diffTime = currentCheckIn.getTime() - today.getTime();
@@ -307,14 +273,13 @@
             };
             const executeReschedule = () => {
                 setLoading(true);
-                fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'customerReschedule', bookingId: manageData.id, phone: manageForm.phone, newCheckIn: rescheduleDates.checkIn, newCheckOut: rescheduleDates.checkOut }) })
+                fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'customerReschedule', bookingId: manageData.id, phone: manageData.phone, newCheckIn: rescheduleDates.checkIn, newCheckOut: rescheduleDates.checkOut }) })
                 .then(r => r.json()).then(res => { setLoading(false); if(res.status === 'success') { setModalAlert({ show: true, type: 'success', title: 'สำเร็จ!', text: 'เลื่อนวันเรียบร้อย' }); setManageData(null); setMode('booking'); } else { setModalAlert({ show: true, type: 'error', title: 'ไม่สำเร็จ', text: res.message }); } }).catch(e => { setLoading(false); setModalAlert({ show: true, type: 'error', title: 'Error', text: e }); });
             };
             const handleCustomerAddFood = () => {
                 if(addOnCart.length === 0) return setModalAlert({ show: true, type: 'warning', title: 'แจ้งเตือน', text: 'กรุณาเลือกอาหาร' });
                 if(!addOnSlip) return setModalAlert({ show: true, type: 'warning', title: 'แจ้งเตือน', text: 'กรุณาแนบสลิป' });
                 
-                // Check if current booking check-in is at least 1 day from now
                 const today = new Date(); today.setHours(0,0,0,0);
                 const currentCheckIn = new Date(manageData.checkIn); currentCheckIn.setHours(0,0,0,0);
                 const diffTime = currentCheckIn.getTime() - today.getTime();
@@ -325,13 +290,14 @@
             };
             const executeAddFood = () => {
                 setLoading(true);
-                fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'customerAddFood', bookingId: manageData.id, phone: manageForm.phone, newFoodItems: addOnCart, slipImage: addOnSlip }) })
+                fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'customerAddFood', bookingId: manageData.id, phone: manageData.phone, newFoodItems: addOnCart, slipImage: addOnSlip }) })
                 .then(r => r.json()).then(res => { setLoading(false); if(res.status === 'success') { setModalAlert({ show: true, type: 'success', title: 'สำเร็จ!', text: 'สั่งอาหารเรียบร้อย' }); setManageData(null); setAddOnCart([]); setAddOnSlip(null); setMode('booking'); } else { setModalAlert({ show: true, type: 'error', title: 'ไม่สำเร็จ', text: res.message }); } }).catch(e => { setLoading(false); setModalAlert({ show: true, type: 'error', title: 'Error', text: e }); });
             };
 
             return (
                 <div className={isDark ? "dark" : ""}>
                     <div className="min-h-screen bg-[#f3f4f6] dark:bg-gray-900 text-gray-800 dark:text-gray-100 transition-colors duration-300">
+                        {/* THEME & MODE BUTTONS */}
                         <button onClick={() => setIsDark(!isDark)} className="fixed top-4 right-4 z-50 bg-white dark:bg-gray-700 p-2 rounded-full shadow-lg border border-gray-200 dark:border-gray-600 w-10 h-10 flex items-center justify-center transition-transform hover:scale-110"> {isDark ? '☀️' : '🌙'} </button>
                         <button onClick={() => { setMode(mode === 'booking' ? 'manage' : 'booking'); setStep(1); setManageData(null); setManageTab('info'); }} className="fixed top-16 right-4 z-50 bg-white dark:bg-gray-700 p-2 rounded-full shadow-lg border border-gray-200 dark:border-gray-600 w-10 h-10 flex items-center justify-center transition-transform hover:scale-110 text-gray-800 dark:text-white"> {mode === 'booking' ? <i className="fas fa-search"></i> : <i className="fas fa-home"></i>} </button>
 
@@ -365,7 +331,7 @@
                                     ) : (
                                         <div className="animate-pop">
                                             <div className="flex items-center mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">
-                                                {bookingList.length > 0 && <button onClick={() => setManageData(null)} className="mr-3 text-gray-500 hover:text-blue-600"><i className="fas fa-arrow-left"></i></button>}
+                                                <button onClick={() => setManageData(null)} className="mr-3 text-gray-500 hover:text-blue-600"><i className="fas fa-arrow-left"></i></button>
                                                 <span className="font-bold text-gray-700 dark:text-gray-200">รายการ: {manageData.id}</span>
                                             </div>
                                             <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4">
@@ -380,8 +346,8 @@
                                                     <div className="text-sm space-y-2">
                                                         <div className="flex justify-between"><span>เข้าพัก:</span> <b>{formatThaiDate(manageData.checkIn)}</b></div>
                                                         <div className="flex justify-between"><span>ออก:</span> <b>{formatThaiDate(manageData.checkOut)}</b></div>
-                                                        <div className="flex justify-between"><span>จำนวนผู้เข้าพัก:</span> <b>{manageData.guests} คน</b></div>
-                                                        <div className="flex justify-between"><span>ห้องพัก:</span> <span>{manageData.rooms}</span></div>
+                                                        <div className="flex justify-between"><span>ผู้เข้าพัก:</span> <b>{manageData.guests} คน</b></div>
+                                                        <div className="flex justify-between"><span>ห้อง:</span> <span>{manageData.rooms}</span></div>
                                                     </div>
                                                     <div className="mt-4 pt-4 border-t border-blue-200 dark:border-blue-700"><h4 className="font-bold text-sm text-blue-800 dark:text-blue-300 mb-2">อาหารที่สั่งแล้ว</h4><p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-line">{manageData.food}</p></div>
                                                 </div>
@@ -456,7 +422,7 @@
                                 <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow mb-4"><h3 className="font-bold mb-4 dark:text-white text-lg">🍽️ สั่งอาหารล่วงหน้า</h3><div className="grid grid-cols-2 gap-3">{siteConfig.foodMenu.map(f => { const inCart = cart.find(c => c.id === f.id); return ( <div key={f.id} onClick={() => { if(inCart) setCart(cart.filter(c => c.id !== f.id)); else openFoodModal(f); }} className={`cursor-pointer rounded-lg overflow-hidden border-2 ${inCart ? 'border-yellow-500 bg-yellow-50' : 'border-gray-200 bg-white'}`} > <img src={f.img} className="w-full h-24 object-cover" /> <div className="p-2"> <div className="text-sm font-bold truncate">{f.name}</div> <div className="text-xs text-green-600 font-bold mt-1">{f.price}.- {inCart && `x${inCart.qty}`}</div> </div> </div> ); })}</div></div>
                                 {selectedFood && ( <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"> <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-sm relative animate-pop"> <img src={selectedFood.img} className="w-full h-40 object-cover rounded-lg mb-4" /> <h3 className="text-xl font-bold mb-1 text-green-800">{selectedFood.name}</h3> <p className="text-gray-500 text-sm mb-4">{selectedFood.price} บาท</p> <div className="flex items-center justify-center gap-4 mb-6"> <button onClick={() => setFoodCount(Math.max(1, foodCount - 1))} className="w-10 h-10 bg-gray-100 rounded-full font-bold">-</button> <span className="text-2xl font-bold">{foodCount}</span> <button onClick={() => setFoodCount(foodCount + 1)} className="w-10 h-10 bg-gray-100 rounded-full font-bold">+</button> </div> <div className="flex gap-2"> <button onClick={() => setSelectedFood(null)} className="flex-1 py-3 bg-gray-200 rounded-lg">ยกเลิก</button> <button onClick={confirmFoodSelection} className="flex-1 py-3 bg-green-600 text-white rounded-lg">ยืนยัน</button> </div> </div> </div> )}
                                 <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded mb-4"><h3 className="font-bold dark:text-white">🛒 ตะกร้า ({cart.length})</h3> {cart.map((c,i)=><div key={i} className="flex justify-between text-sm mt-1 dark:text-gray-200"><span>{c.name} {c.type==='food'?`x${c.qty}`:`(${c.guests} คน)`}</span><button onClick={()=>setCart(cart.filter((_,idx)=>idx!==i))} className="text-red-500">ลบ</button></div>)} </div>
-                                <button onClick={() => { const hasRoom = cart.some(c => c.type !== 'food'); if (!hasRoom) { setShowRoomRequiredModal(true); return; } setStep(3); }} className="w-full bg-green-600 text-white p-3 rounded-lg font-bold"> ดำเนินการต่อ </button>
+                                <button onClick={() => { if (!cart.some(c => c.type !== 'food')) { setShowRoomRequiredModal(true); return; } setStep(3); }} className="w-full bg-green-600 text-white p-3 rounded-lg font-bold"> ดำเนินการต่อ </button>
                             </div>
                         )}
 
