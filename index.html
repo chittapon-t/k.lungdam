@@ -79,8 +79,7 @@
                     img.src = event.target.result;
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
-                        let width = img.width;
-                        let height = img.height;
+                        let width = img.width; let height = img.height;
                         if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; }
                         canvas.width = width; canvas.height = height;
                         const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height);
@@ -119,7 +118,6 @@
         };
         
         const App = () => {
-            // --- CORE STATES ---
             const [isDark, setIsDark] = React.useState(true);
             const [step, setStep] = React.useState(1);
             const [mode, setMode] = React.useState(() => {
@@ -176,19 +174,15 @@
             // --- HELPERS ---
             const getTommorow = () => {
                 const d = new Date(); d.setDate(d.getDate() + 1);
-                const y = d.getFullYear();
-                const m = String(d.getMonth() + 1).padStart(2, '0');
-                const day = String(d.getDate()).padStart(2, '0');
+                const y = d.getFullYear(); const m = String(d.getMonth() + 1).padStart(2, '0'); const day = String(d.getDate()).padStart(2, '0');
                 return `${y}-${m}-${day}`;
             };
-
             const formatThaiDate = (dateStr) => {
                 if(!dateStr) return "-";
                 const date = new Date(dateStr);
-                const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+                const months = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
                 return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear() + 543}`;
             };
-
             const getClosedDateOverlap = (inDate, outDate) => {
                 let current = new Date(inDate); const end = new Date(outDate);
                 while(current < end) {
@@ -199,7 +193,6 @@
                 }
                 return null;
             };
-
             const checkDateOverlapHighSeason = (inDate, outDate) => {
                 let current = new Date(inDate); const end = new Date(outDate);
                 while(current < end) {
@@ -209,40 +202,19 @@
                 }
                 return false;
             };
-
-            const calculateNights = () => {
-                if(!dates.checkIn || !dates.checkOut) return 0;
-                return (new Date(dates.checkOut) - new Date(dates.checkIn)) / (1000 * 3600 * 24);
-            }
-
+            const calculateNights = () => { if(!dates.checkIn || !dates.checkOut) return 0; return (new Date(dates.checkOut) - new Date(dates.checkIn)) / (1000 * 3600 * 24); }
             const getPricing = () => {
-                const nights = calculateNights();
-                let roomTotal = 0; let foodTotal = 0; let z8Total = 0;
-                cart.forEach(item => {
-                    if (item.type === 'food') foodTotal += item.price * item.qty;
-                    else if (item.id === 'Z8') z8Total += item.pricePerNight * nights * item.guests; 
-                    else roomTotal += item.pricePerNight * nights;
-                });
-                let discountAmt = 0;
-                if (discount.type === 'FIXED') discountAmt = discount.val;
-                if (discount.type === 'PERCENT') discountAmt = (roomTotal * discount.val) / 100;
-                if (discountAmt > roomTotal) discountAmt = roomTotal; 
-                const totalBefore = roomTotal + z8Total + foodTotal;
-                const netTotal = totalBefore - discountAmt;
-                let deposit = 0;
-                const isHigh = checkDateOverlapHighSeason(dates.checkIn, dates.checkOut);
-                if (isHigh) deposit = netTotal;
-                else {
-                    const roomDeposit = (roomTotal - discountAmt) * 0.5;
-                    deposit = roomDeposit + z8Total + foodTotal;
-                }
+                const nights = calculateNights(); let roomTotal = 0; let foodTotal = 0; let z8Total = 0;
+                cart.forEach(item => { if (item.type === 'food') foodTotal += item.price * item.qty; else if (item.id === 'Z8') z8Total += item.pricePerNight * nights * item.guests; else roomTotal += item.pricePerNight * nights; });
+                let discountAmt = 0; if (discount.type === 'FIXED') discountAmt = discount.val; if (discount.type === 'PERCENT') discountAmt = (roomTotal * discount.val) / 100; if (discountAmt > roomTotal) discountAmt = roomTotal; 
+                const totalBefore = roomTotal + z8Total + foodTotal; const netTotal = totalBefore - discountAmt;
+                let deposit = 0; const isHigh = checkDateOverlapHighSeason(dates.checkIn, dates.checkOut);
+                if (isHigh) deposit = netTotal; else { const roomDeposit = (roomTotal - discountAmt) * 0.5; deposit = roomDeposit + z8Total + foodTotal; }
                 return { total: totalBefore, discount: discountAmt, netTotal: netTotal, deposit: Math.ceil(deposit), isHighSeason: isHigh };
             };
-
             const pricing = React.useMemo(() => getPricing(), [cart, dates, discount, systemSettings]);
             const canSubmit = customer.name && customer.phone && slipImg && agreed;
 
-            // --- EFFECTS ---
             React.useEffect(() => {
                 if (LIFF_ID) {
                     liff.init({ liffId: LIFF_ID }).then(() => {
@@ -254,7 +226,6 @@
                         }
                     }).catch(err => { console.error(err); setIsLiffReady(true); });
                 } else { setIsLiffReady(true); }
-                
                 fetch(`${GOOGLE_SCRIPT_URL}?action=getMapConfig`).then(r => r.json()).then(res => { if (res.status === 'success') setPinPos(res.data); });
                 fetch(`${GOOGLE_SCRIPT_URL}?action=getSettings`).then(r => r.json()).then(res => { if (res.status === 'success') setSystemSettings({ closed: res.closed, special: res.special }); });
                 fetch(`${GOOGLE_SCRIPT_URL}?action=getSiteSettings`).then(r => r.json()).then(res => { if (res.status === 'success') setSiteConfig(prev => ({ ...prev, ...res.data })); });
@@ -263,41 +234,26 @@
 
             React.useEffect(() => {
                 if (step === 3 && pricing.deposit > 0) {
-                    const payload = generatePromptPayPayload(PROMPTPAY_PHONE, pricing.deposit);
-                    const qr = new QRious({ value: payload, size: 300 }); 
-                    setQrUrl(qr.toDataURL());
+                    const payload = generatePromptPayPayload(PROMPTPAY_PHONE, pricing.deposit); const qr = new QRious({ value: payload, size: 300 }); setQrUrl(qr.toDataURL());
                 }
             }, [step, pricing.deposit]);
 
             React.useEffect(() => {
                 if (mode === 'manage' && manageTab === 'food') {
                     const total = addOnCart.reduce((sum,c)=>sum+(c.price*c.qty),0);
-                    if (total > 0) {
-                         const payload = generatePromptPayPayload(PROMPTPAY_PHONE, total);
-                         const qr = new QRious({ value: payload, size: 200 });
-                         setAddOnQr(qr.toDataURL());
-                    } else { setAddOnQr(null); }
+                    if (total > 0) { const payload = generatePromptPayPayload(PROMPTPAY_PHONE, total); const qr = new QRious({ value: payload, size: 200 }); setAddOnQr(qr.toDataURL()); } else { setAddOnQr(null); }
                 }
             }, [addOnCart, mode, manageTab]);
 
-            // Auto Fetch Booking Logic
+            // AUTO FETCH BOOKINGS
             React.useEffect(() => {
                 if (mode === 'manage' && isLiffReady && customer.userId && !manageData) {
                     setLoading(true);
-                    fetch(GOOGLE_SCRIPT_URL, {
-                        method: 'POST',
-                        body: JSON.stringify({ action: 'findBooking', userId: customer.userId })
-                    })
-                    .then(r => r.json())
-                    .then(res => {
+                    fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'findBooking', userId: customer.userId }) })
+                    .then(r => r.json()).then(res => {
                         setLoading(false);
-                        if(res.status === 'success' && res.bookings && res.bookings.length > 0) {
-                            setBookingList(res.bookings);
-                        } else {
-                            setBookingList([]);
-                        }
-                    })
-                    .catch(() => setLoading(false));
+                        if(res.status === 'success' && res.bookings && res.bookings.length > 0) { setBookingList(res.bookings); } else { setBookingList([]); }
+                    }).catch(() => setLoading(false));
                 }
             }, [mode, isLiffReady, customer.userId, manageData]);
 
@@ -305,89 +261,68 @@
             const handleSearch = () => {
                 if (!dates.checkIn || !dates.checkOut) { setSearchError('กรุณาเลือกวันเข้าพักและวันที่ออกให้ครบถ้วนครับ'); return; }
                 if (dates.checkIn >= dates.checkOut) { setSearchError('วันเช็คเอาท์ต้องอยู่หลังจากวันเช็คอินครับ'); return; }
-                const closedFound = getClosedDateOverlap(dates.checkIn, dates.checkOut);
-                if (closedFound) { setClosedModal(closedFound); return; }
+                const closedFound = getClosedDateOverlap(dates.checkIn, dates.checkOut); if (closedFound) { setClosedModal(closedFound); return; }
                 setLoading(true);
-                fetch(`${GOOGLE_SCRIPT_URL}?action=getAvailability&checkIn=${dates.checkIn}&checkOut=${dates.checkOut}`)
-                    .then(r => r.json()).then(data => { setAvailability(data); setStep(2); setLoading(false); })
-                    .catch(e => { alert('Error: ' + e); setLoading(false); });
+                fetch(`${GOOGLE_SCRIPT_URL}?action=getAvailability&checkIn=${dates.checkIn}&checkOut=${dates.checkOut}`).then(r => r.json()).then(data => { setAvailability(data); setStep(2); setLoading(false); }).catch(e => { alert('Error: ' + e); setLoading(false); });
             };
-
-            const openRoomModal = (roomId) => {
-                const room = roomConfig[roomId]; if (!room) return;
-                if(roomId === 'Z8') setGuestCount(1); else setGuestCount(room.min || 1);
-                setCurrentImgIdx(0); setSelectedRoomId(roomId);
-            };
-
+            const openRoomModal = (roomId) => { const room = roomConfig[roomId]; if (!room) return; if(roomId === 'Z8') setGuestCount(1); else setGuestCount(room.min || 1); setCurrentImgIdx(0); setSelectedRoomId(roomId); };
             const openFoodModal = (food) => { setSelectedFood(food); setFoodCount(1); };
-
             const confirmFoodSelection = () => {
-                const targetCart = mode === 'manage' ? addOnCart : cart;
-                const setTargetCart = mode === 'manage' ? setAddOnCart : setCart;
+                const targetCart = mode === 'manage' ? addOnCart : cart; const setTargetCart = mode === 'manage' ? setAddOnCart : setCart;
                 const exist = targetCart.find(c => c.id === selectedFood.id);
-                if (exist) setTargetCart(targetCart.map(c => c.id === selectedFood.id ? { ...c, qty: c.qty + foodCount } : c));
-                else setTargetCart([...targetCart, { ...selectedFood, type: 'food', qty: foodCount }]);
+                if (exist) setTargetCart(targetCart.map(c => c.id === selectedFood.id ? { ...c, qty: c.qty + foodCount } : c)); else setTargetCart([...targetCart, { ...selectedFood, type: 'food', qty: foodCount }]);
                 setSelectedFood(null);
             };
-
             const nextImage = () => { if(!selectedRoomId) return; const images = siteConfig.roomImages[selectedRoomId] || []; setCurrentImgIdx((prev) => (prev + 1) % images.length); };
             const prevImage = () => { if(!selectedRoomId) return; const images = siteConfig.roomImages[selectedRoomId] || []; setCurrentImgIdx((prev) => (prev - 1 + images.length) % images.length); };
-
             const confirmRoomSelection = () => {
                 const roomId = selectedRoomId; const guests = guestCount; const roomInfo = roomConfig[roomId];
-                if (roomId === 'Z8') {
-                    const currentZ8 = cart.filter(c => c.id === 'Z8').reduce((sum, c) => sum + c.guests, 0);
-                    if (currentZ8 + guests > availability.zone8Available) { alert(`ลานกางเต็นท์ว่างอีก ${availability.zone8Available - currentZ8} ท่าน`); return; }
-                }
-                let price = 0;
-                if (roomId === 'Z8') { price = roomInfo.pricing.priceHead; } else { const tier = roomInfo.pricing.tiers.find(t => guests <= t.max); if (!tier) { const maxTier = roomInfo.pricing.tiers[roomInfo.pricing.tiers.length - 1]; price = maxTier.price; } else { price = tier.price; } }
-                setCart([...cart, { id: roomId, name: roomInfo.name, type: roomInfo.type, guests, pricePerNight: price, nights: calculateNights() }]);
-                setSelectedRoomId(null);
+                if (roomId === 'Z8') { const currentZ8 = cart.filter(c => c.id === 'Z8').reduce((sum, c) => sum + c.guests, 0); if (currentZ8 + guests > availability.zone8Available) { alert(`ลานกางเต็นท์ว่างอีก ${availability.zone8Available - currentZ8} ท่าน`); return; } }
+                let price = 0; if (roomId === 'Z8') { price = roomInfo.pricing.priceHead; } else { const tier = roomInfo.pricing.tiers.find(t => guests <= t.max); if (!tier) { const maxTier = roomInfo.pricing.tiers[roomInfo.pricing.tiers.length - 1]; price = maxTier.price; } else { price = tier.price; } }
+                setCart([...cart, { id: roomId, name: roomInfo.name, type: roomInfo.type, guests, pricePerNight: price, nights: calculateNights() }]); setSelectedRoomId(null);
             };
-
             const checkDiscountCode = () => { 
-                if(!discount.code) return; 
-                setCheckingDiscount(true); 
-                fetch(`${GOOGLE_SCRIPT_URL}?action=checkDiscount&code=${discount.code}`)
-                    .then(r=>r.json()).then(d => { 
-                        setCheckingDiscount(false);
-                        if(d.status === 'success') setDiscount({...discount, val: parseInt(d.value), type: d.type, message: `ใช้โค้ดสำเร็จ ลด ${d.value} ${d.type==='PERCENT'?'%':'บาท'}`, status: 'success'}); 
-                        else setDiscount({...discount, val: 0, type: '', message: 'ไม่พบโค้ดส่วนลดนี้', status: 'error'}); 
-                    }).catch(() => { setCheckingDiscount(false); setDiscount({...discount, val: 0, type: '', message: 'เกิดข้อผิดพลาด', status: 'error'}); }); 
+                if(!discount.code) return; setCheckingDiscount(true); 
+                fetch(`${GOOGLE_SCRIPT_URL}?action=checkDiscount&code=${discount.code}`).then(r=>r.json()).then(d => { setCheckingDiscount(false); if(d.status === 'success') setDiscount({...discount, val: parseInt(d.value), type: d.type, message: `ใช้โค้ดสำเร็จ ลด ${d.value} ${d.type==='PERCENT'?'%':'บาท'}`, status: 'success'}); else setDiscount({...discount, val: 0, type: '', message: 'ไม่พบโค้ดส่วนลดนี้', status: 'error'}); }).catch(() => { setCheckingDiscount(false); setDiscount({...discount, val: 0, type: '', message: 'เกิดข้อผิดพลาด', status: 'error'}); }); 
             };
-
             const handleSubmit = () => {
                 if (!canSubmit) return; setLoading(true);
                 const payload = { action: 'saveBooking', customer, checkIn: dates.checkIn, checkOut: dates.checkOut, totalGuests: cart.filter(c => c.type !== 'food').reduce((s, c) => s + c.guests, 0), cart, pricing, discountCode: discount.code, slipImage: slipImg };
                 fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) }).then(r => r.json()).then(res => { if (res.status === 'success') { setBookingResult(res.bookingId); setStep(5); } else { alert('Error: ' + res.message); } setLoading(false); }).catch(e => { alert('Failed: ' + e); setLoading(false); });
             };
-
-            const selectBookingToManage = (booking) => {
-                setManageData(booking);
-                setManageForm({ bookingId: booking.id, phone: booking.phone });
-                setManageTab('info');
-            }
-
+            const selectBookingToManage = (booking) => { setManageData(booking); setManageForm({ bookingId: booking.id, phone: booking.phone }); setManageTab('info'); }
+            
             const handleCustomerReschedule = () => {
                 if(!rescheduleDates.checkIn || !rescheduleDates.checkOut) return setModalAlert({ show: true, type: 'warning', title: 'แจ้งเตือน', text: 'กรุณาเลือกวันเข้าพักและวันออกใหม่' });
                 if(rescheduleDates.checkIn < getTommorow()) return setModalAlert({ show: true, type: 'warning', title: 'แจ้งเตือน', text: 'ไม่สามารถเลือกวันที่ปัจจุบันหรือย้อนหลังได้' });
                 if(rescheduleDates.checkIn >= rescheduleDates.checkOut) return setModalAlert({ show: true, type: 'warning', title: 'แจ้งเตือน', text: 'วันเช็คเอาท์ต้องอยู่หลังวันเช็คอิน' });
-                
+                // Check if current booking check-in is at least 7 days from now
+                const today = new Date(); today.setHours(0,0,0,0);
+                const currentCheckIn = new Date(manageData.checkIn); currentCheckIn.setHours(0,0,0,0);
+                const diffTime = currentCheckIn.getTime() - today.getTime();
+                const diffDays = Math.ceil(diffTime / (1000 * 3600 * 24));
+                if (diffDays < 7) return setModalAlert({ show: true, type: 'warning', title: 'ไม่สามารถเลื่อนได้', text: `ต้องทำการเลื่อนล่วงหน้าอย่างน้อย 7 วัน (เหลืออีก ${diffDays} วัน)` });
+
                 setModalConfirm({ show: true, title: 'ยืนยันการเลื่อนวัน', text: `เปลี่ยนเป็น\n${formatThaiDate(rescheduleDates.checkIn)} - ${formatThaiDate(rescheduleDates.checkOut)}`, onConfirm: () => { setModalConfirm({ ...modalConfirm, show: false }); executeReschedule(); } });
             };
-
             const executeReschedule = () => {
                 setLoading(true);
                 fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'customerReschedule', bookingId: manageData.id, phone: manageForm.phone, newCheckIn: rescheduleDates.checkIn, newCheckOut: rescheduleDates.checkOut }) })
                 .then(r => r.json()).then(res => { setLoading(false); if(res.status === 'success') { setModalAlert({ show: true, type: 'success', title: 'สำเร็จ!', text: 'เลื่อนวันเรียบร้อย' }); setManageData(null); setMode('booking'); } else { setModalAlert({ show: true, type: 'error', title: 'ไม่สำเร็จ', text: res.message }); } }).catch(e => { setLoading(false); setModalAlert({ show: true, type: 'error', title: 'Error', text: e }); });
             };
-
             const handleCustomerAddFood = () => {
                 if(addOnCart.length === 0) return setModalAlert({ show: true, type: 'warning', title: 'แจ้งเตือน', text: 'กรุณาเลือกอาหาร' });
                 if(!addOnSlip) return setModalAlert({ show: true, type: 'warning', title: 'แจ้งเตือน', text: 'กรุณาแนบสลิป' });
+                
+                // Check if current booking check-in is at least 1 day from now
+                const today = new Date(); today.setHours(0,0,0,0);
+                const currentCheckIn = new Date(manageData.checkIn); currentCheckIn.setHours(0,0,0,0);
+                const diffTime = currentCheckIn.getTime() - today.getTime();
+                const diffDays = Math.ceil(diffTime / (1000 * 3600 * 24));
+                if (diffDays < 1) return setModalAlert({ show: true, type: 'warning', title: 'ไม่สามารถสั่งเพิ่มได้', text: 'ต้องสั่งอาหารล่วงหน้าอย่างน้อย 1 วันก่อนเข้าพัก' });
+
                 setModalConfirm({ show: true, title: 'ยืนยันการสั่งอาหาร', text: `รายการ:\n${addOnCart.map(i => '- '+i.name).join('\n')}`, onConfirm: () => { setModalConfirm({ ...modalConfirm, show: false }); executeAddFood(); } });
             };
-
             const executeAddFood = () => {
                 setLoading(true);
                 fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'customerAddFood', bookingId: manageData.id, phone: manageForm.phone, newFoodItems: addOnCart, slipImage: addOnSlip }) })
@@ -397,10 +332,7 @@
             return (
                 <div className={isDark ? "dark" : ""}>
                     <div className="min-h-screen bg-[#f3f4f6] dark:bg-gray-900 text-gray-800 dark:text-gray-100 transition-colors duration-300">
-                        {/* THEME TOGGLE */}
                         <button onClick={() => setIsDark(!isDark)} className="fixed top-4 right-4 z-50 bg-white dark:bg-gray-700 p-2 rounded-full shadow-lg border border-gray-200 dark:border-gray-600 w-10 h-10 flex items-center justify-center transition-transform hover:scale-110"> {isDark ? '☀️' : '🌙'} </button>
-                        
-                        {/* MODE TOGGLE */}
                         <button onClick={() => { setMode(mode === 'booking' ? 'manage' : 'booking'); setStep(1); setManageData(null); setManageTab('info'); }} className="fixed top-16 right-4 z-50 bg-white dark:bg-gray-700 p-2 rounded-full shadow-lg border border-gray-200 dark:border-gray-600 w-10 h-10 flex items-center justify-center transition-transform hover:scale-110 text-gray-800 dark:text-white"> {mode === 'booking' ? <i className="fas fa-search"></i> : <i className="fas fa-home"></i>} </button>
 
                         {/* --- MANAGE MODE --- */}
@@ -412,7 +344,7 @@
                                         <div className="animate-pop">
                                             {loading ? <div className="text-center py-10"><div className="w-12 h-12 border-4 border-gray-200 border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div><p className="text-gray-500 animate-pulse">กำลังค้นหาข้อมูล...</p></div> : 
                                             !isLiffReady ? <div className="text-center py-10"><p className="text-gray-500">Connecting to LINE...</p></div> :
-                                            !customer.userId ? <div className="text-center py-10"><div className="text-4xl mb-4">⚠️</div><p className="text-gray-500">ไม่พบข้อมูลผู้ใช้ LINE</p></div> :
+                                            !customer.userId ? <div className="text-center py-10"><div className="text-4xl mb-4">⚠️</div><p className="text-gray-500">ไม่พบข้อมูลผู้ใช้ LINE</p><p className="text-xs text-gray-400 mt-2">กรุณาเปิดผ่านแอป LINE</p></div> :
                                             bookingList.length > 0 ? (
                                                 <div className="space-y-3">
                                                     <p className="text-sm text-gray-500 text-center mb-4">พบ {bookingList.length} รายการจอง</p>
@@ -441,7 +373,6 @@
                                                 <button onClick={() => setManageTab('reschedule')} className={`flex-1 py-2 text-sm font-bold ${manageTab === 'reschedule' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-gray-500'}`}>เลื่อนวัน</button>
                                                 <button onClick={() => setManageTab('food')} className={`flex-1 py-2 text-sm font-bold ${manageTab === 'food' ? 'text-green-600 border-b-2 border-green-600' : 'text-gray-500'}`}>สั่งอาหาร</button>
                                             </div>
-
                                             {manageTab === 'info' && (
                                                 <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 p-4 rounded-lg mb-6">
                                                     <div className="text-center mb-2"><span className="bg-blue-600 text-white px-2 py-1 rounded text-xs">{manageData.status}</span></div>
@@ -452,13 +383,9 @@
                                                         <div className="flex justify-between"><span>จำนวนผู้เข้าพัก:</span> <b>{manageData.guests} คน</b></div>
                                                         <div className="flex justify-between"><span>ห้องพัก:</span> <span>{manageData.rooms}</span></div>
                                                     </div>
-                                                    <div className="mt-4 pt-4 border-t border-blue-200 dark:border-blue-700">
-                                                        <h4 className="font-bold text-sm text-blue-800 dark:text-blue-300 mb-2">อาหารที่สั่งแล้ว</h4>
-                                                        <p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-line">{manageData.food}</p>
-                                                    </div>
+                                                    <div className="mt-4 pt-4 border-t border-blue-200 dark:border-blue-700"><h4 className="font-bold text-sm text-blue-800 dark:text-blue-300 mb-2">อาหารที่สั่งแล้ว</h4><p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-line">{manageData.food}</p></div>
                                                 </div>
                                             )}
-
                                             {manageTab === 'reschedule' && (
                                                 <div className="space-y-3">
                                                     <div className="bg-yellow-50 text-xs p-2 rounded text-yellow-800">⚠️ ต้องเลื่อนล่วงหน้าอย่างน้อย 7 วัน</div>
@@ -467,7 +394,6 @@
                                                     <button onClick={handleCustomerReschedule} disabled={loading} className="w-full bg-orange-600 text-white py-3 rounded-lg font-bold shadow hover:bg-orange-700">{loading ? 'กำลังทำงาน...' : 'ยืนยันการเลื่อน'}</button>
                                                 </div>
                                             )}
-
                                             {manageTab === 'food' && (
                                                 <div className="space-y-4">
                                                     <div className="bg-green-50 text-xs p-2 rounded text-green-800">🍽️ สั่งล่วงหน้าอย่างน้อย 1 วัน</div>
@@ -482,11 +408,7 @@
                                                             <h4 className="font-bold text-xs mb-2">รายการที่เลือก</h4>
                                                             {addOnCart.map((c,i)=><div key={i} className="flex justify-between text-xs"><span>{c.name} x{c.qty}</span><button onClick={()=>setAddOnCart(addOnCart.filter((_,idx)=>idx!==i))} className="text-red-500">ลบ</button></div>)}
                                                             <div className="mt-2 pt-2 border-t text-right font-bold text-sm">รวม {addOnCart.reduce((s,c)=>s+(c.price*c.qty),0).toLocaleString()} บ.</div>
-                                                            <div className="bg-white p-2 rounded mt-2 border text-center">
-                                                                <p className="text-xs font-bold mb-1">สแกนจ่าย</p>
-                                                                {addOnQr && <img src={addOnQr} className="mx-auto w-24 h-24" />}
-                                                                <input type="file" onChange={async(e)=>{ const f=e.target.files[0]; if(f) setAddOnSlip(await compressImage(f)); }} className="text-xs w-full mt-2"/>
-                                                            </div>
+                                                            <div className="bg-white p-2 rounded mt-2 border text-center"><p className="text-xs font-bold mb-1">สแกนจ่าย</p>{addOnQr && <img src={addOnQr} className="mx-auto w-24 h-24" />}<input type="file" onChange={async(e)=>{ const f=e.target.files[0]; if(f) setAddOnSlip(await compressImage(f)); }} className="text-xs w-full mt-2"/></div>
                                                         </div>
                                                     )}
                                                     <button onClick={handleCustomerAddFood} disabled={loading || !addOnSlip} className="w-full bg-green-600 text-white py-3 rounded-lg font-bold shadow disabled:bg-gray-400">ยืนยันสั่งอาหาร</button>
@@ -498,7 +420,7 @@
                             </div>
                         )}
 
-                        {/* --- MODE: BOOKING (Existing Steps) --- */}
+                        {/* --- BOOKING MODE --- */}
                         {mode === 'booking' && step === 1 && (
                             <div className="max-w-md mx-auto bg-white dark:bg-gray-800 shadow-xl rounded-xl mt-4 border dark:border-gray-700 overflow-hidden">
                                 <div className="h-48 relative"><img src={siteConfig.bannerUrl} referrerPolicy="no-referrer" className="w-full h-full object-cover" /><div className="absolute inset-0 bg-black bg-opacity-10"></div></div>
@@ -519,7 +441,7 @@
 
                         {mode === 'booking' && step === 2 && (
                             <div className="max-w-4xl mx-auto p-4 relative">
-                                <div className="flex items-center gap-2 mb-4"><button onClick={()=>setStep(1)} className="text-gray-500 font-bold"><i className="fas fa-chevron-left"></i> ย้อนกลับ</button><h2 className="text-xl font-bold dark:text-white">เลือกที่พัก</h2></div>
+                                <div className="flex justify-between items-center mb-4"><div className="flex items-center gap-2"><button onClick={()=>setStep(1)} className="text-gray-500 font-bold"><i className="fas fa-chevron-left"></i> ย้อนกลับ</button><h2 className="text-xl font-bold dark:text-white">เลือกที่พัก</h2></div></div>
                                 <div className="map-container bg-blue-100 dark:bg-gray-700 mb-6" style={{paddingBottom: '100%'}}>
                                     <img src="https://img2.pic.in.th/3d539b84-44ce-4336-ad90-bd2f84b13eca.jpg" referrerpolicy="no-referrer" className="absolute top-0 left-0 w-full h-full object-cover" />
                                     {Object.keys(pinPos).map(key => {
@@ -531,8 +453,10 @@
                                     })}
                                 </div>
                                 {selectedRoomId && roomConfig[selectedRoomId] && ( <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"> <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-sm relative"> <div className="relative w-full h-48 mb-4 rounded-lg overflow-hidden bg-gray-200"> <img src={(siteConfig.roomImages[selectedRoomId]||[])[currentImgIdx] || "https://via.placeholder.com/600x400?text=No+Image"} className="w-full h-full object-cover transition-opacity duration-300" /> {(siteConfig.roomImages[selectedRoomId]||[]).length > 1 && ( <> <button onClick={prevImage} className="absolute left-2 top-1/2 bg-black/50 text-white p-1 rounded-full"><i className="fas fa-chevron-left"></i></button> <button onClick={nextImage} className="absolute right-2 top-1/2 bg-black/50 text-white p-1 rounded-full"><i className="fas fa-chevron-right"></i></button> </> )} </div> <h3 className="text-xl font-bold mb-2 dark:text-white">{roomConfig[selectedRoomId].name}</h3> <p className="text-gray-500 text-sm mb-4">{siteConfig.roomDescriptions?.[selectedRoomId]}</p> <div className="flex justify-between mb-4 bg-gray-100 p-2 rounded"> <button onClick={()=>setGuestCount(Math.max(roomConfig[selectedRoomId].min||1, guestCount-1))}>-</button> <span className="font-bold">{guestCount} คน</span> <button onClick={()=>setGuestCount(Math.min(roomConfig[selectedRoomId].maxCap, guestCount+1))}>+</button> </div> <div className="flex gap-2"> <button onClick={()=>setSelectedRoomId(null)} className="flex-1 bg-gray-200 py-2 rounded">ยกเลิก</button> <button onClick={confirmRoomSelection} className="flex-1 bg-green-600 text-white py-2 rounded">เลือกห้องนี้</button> </div> </div> </div> )}
-                                <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow mb-4"><h3 className="font-bold mb-4 dark:text-white">🛒 ตะกร้า ({cart.length})</h3> {cart.map((c,i)=><div key={i} className="flex justify-between text-sm mt-1 dark:text-gray-200"><span>{c.name} {c.type==='food'?`x${c.qty}`:`(${c.guests} คน)`}</span><button onClick={()=>setCart(cart.filter((_,idx)=>idx!==i))} className="text-red-500">ลบ</button></div>)} </div>
-                                <button onClick={() => { if (!cart.some(c => c.type !== 'food')) { setShowRoomRequiredModal(true); return; } setStep(3); }} className="w-full bg-green-600 text-white p-3 rounded-lg font-bold"> ดำเนินการต่อ </button>
+                                <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow mb-4"><h3 className="font-bold mb-4 dark:text-white text-lg">🍽️ สั่งอาหารล่วงหน้า</h3><div className="grid grid-cols-2 gap-3">{siteConfig.foodMenu.map(f => { const inCart = cart.find(c => c.id === f.id); return ( <div key={f.id} onClick={() => { if(inCart) setCart(cart.filter(c => c.id !== f.id)); else openFoodModal(f); }} className={`cursor-pointer rounded-lg overflow-hidden border-2 ${inCart ? 'border-yellow-500 bg-yellow-50' : 'border-gray-200 bg-white'}`} > <img src={f.img} className="w-full h-24 object-cover" /> <div className="p-2"> <div className="text-sm font-bold truncate">{f.name}</div> <div className="text-xs text-green-600 font-bold mt-1">{f.price}.- {inCart && `x${inCart.qty}`}</div> </div> </div> ); })}</div></div>
+                                {selectedFood && ( <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"> <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-sm relative animate-pop"> <img src={selectedFood.img} className="w-full h-40 object-cover rounded-lg mb-4" /> <h3 className="text-xl font-bold mb-1 text-green-800">{selectedFood.name}</h3> <p className="text-gray-500 text-sm mb-4">{selectedFood.price} บาท</p> <div className="flex items-center justify-center gap-4 mb-6"> <button onClick={() => setFoodCount(Math.max(1, foodCount - 1))} className="w-10 h-10 bg-gray-100 rounded-full font-bold">-</button> <span className="text-2xl font-bold">{foodCount}</span> <button onClick={() => setFoodCount(foodCount + 1)} className="w-10 h-10 bg-gray-100 rounded-full font-bold">+</button> </div> <div className="flex gap-2"> <button onClick={() => setSelectedFood(null)} className="flex-1 py-3 bg-gray-200 rounded-lg">ยกเลิก</button> <button onClick={confirmFoodSelection} className="flex-1 py-3 bg-green-600 text-white rounded-lg">ยืนยัน</button> </div> </div> </div> )}
+                                <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded mb-4"><h3 className="font-bold dark:text-white">🛒 ตะกร้า ({cart.length})</h3> {cart.map((c,i)=><div key={i} className="flex justify-between text-sm mt-1 dark:text-gray-200"><span>{c.name} {c.type==='food'?`x${c.qty}`:`(${c.guests} คน)`}</span><button onClick={()=>setCart(cart.filter((_,idx)=>idx!==i))} className="text-red-500">ลบ</button></div>)} </div>
+                                <button onClick={() => { const hasRoom = cart.some(c => c.type !== 'food'); if (!hasRoom) { setShowRoomRequiredModal(true); return; } setStep(3); }} className="w-full bg-green-600 text-white p-3 rounded-lg font-bold"> ดำเนินการต่อ </button>
                             </div>
                         )}
 
@@ -570,8 +494,6 @@
                         {modalConfirm.show && <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60"><div className="bg-white p-6 rounded-xl shadow-lg max-w-sm text-center"><h3 className="font-bold text-lg mb-2">{modalConfirm.title}</h3><p className="text-gray-600 mb-4 whitespace-pre-line">{modalConfirm.text}</p><div className="flex gap-2 justify-center"><button onClick={()=>setModalConfirm({...modalConfirm, show: false})} className="bg-gray-200 px-4 py-2 rounded-lg">ยกเลิก</button><button onClick={modalConfirm.onConfirm} className="bg-green-600 text-white px-4 py-2 rounded-lg">ยืนยัน</button></div></div></div>}
                         {checkingDiscount && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"><div className="bg-white p-6 rounded-xl animate-pulse">กำลังตรวจสอบโค้ด...</div></div>}
                         {loading && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"><div className="bg-white p-6 rounded-xl animate-pulse">กำลังทำงาน...</div></div>}
-                        {selectedFood && ( <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"> <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-sm relative animate-pop"> <img src={selectedFood.img} className="w-full h-40 object-cover rounded-lg mb-4" /> <h3 className="text-xl font-bold mb-1 text-green-800">{selectedFood.name}</h3> <p className="text-gray-500 text-sm mb-4">{selectedFood.price} บาท</p> <div className="flex items-center justify-center gap-4 mb-6"> <button onClick={() => setFoodCount(Math.max(1, foodCount - 1))} className="w-10 h-10 bg-gray-100 rounded-full font-bold">-</button> <span className="text-2xl font-bold">{foodCount}</span> <button onClick={() => setFoodCount(foodCount + 1)} className="w-10 h-10 bg-gray-100 rounded-full font-bold">+</button> </div> <div className="flex gap-2"> <button onClick={() => setSelectedFood(null)} className="flex-1 py-3 bg-gray-200 rounded-lg">ยกเลิก</button> <button onClick={confirmFoodSelection} className="flex-1 py-3 bg-green-600 text-white rounded-lg">ยืนยัน</button> </div> </div> </div> )}
-
                     </div>
                 </div>
             );
