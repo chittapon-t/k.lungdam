@@ -104,7 +104,7 @@
 
         const DEFAULT_CONFIG = {
             headerTitle: 'ขนำลุงดำ - Khanamlungdam',
-            headerDesc: '🏡 ขนำลุงดำ ดั้งเดิมมาจากหนำปู่ หรือที่พักตอนปู่มาอยู่ช่วงทำสวนนั้นเอง และค่อยๆ พัฒนาขึ้น แต่ยังคงความอบอุ่น ความรัก เสมือนทุกคนมาเที่ยวบ้านตากอากาศของเพื่อน มีโอกาสเจอสัตว์ แมลงเล็กๆ พื้นที่เป็นสวนผสม ตามเศรษฐกิจพอเพียง ป่า 3 อย่างประโยชน์ 4 อย่าง เงียบสงบ มีลานรอบกองไฟ มีผลไม้ให้กินตามฤดู มีระบบน้ำกรอง ใช้ไฟฟ้าโซลาร์เซลล์ทั้งหมด มีไวไฟ สัญญาณไม่ได้แรงมาก และอาจจะไม่มีสิ่งอำนวยความสะดวกครบครัน แคมป์ปิ้งสไตล์บ้านสวน มีครัวไทยด้วยฟืน มีที่พักหลากหลายแบบ',
+            headerDesc: '🏡 ขนำลุงดำ ดั้งเดิมมาจากหนำปู่ หรือที่พักตอนปู่มาอยู่ช่วงทำสวนนั้นเอง...',
             bannerUrl: 'https://img5.pic.in.th/file/secure-sv1/LINE_ALBUM__240916_14dd72f9bd7de4facf.jpg',
             logoUrl: 'https://lh3.googleusercontent.com/pw/AP1GczPi_rYAbsNGi4X96mW5koYl0JJ3BN9ipRf6UgsXAOQgkyhrs2ChGcZlbsuQ3OLJOYnYhSTYJhWUuu2hwWtPqlt4MUfdUDSS3s4RdRLeD36gPLiK-8OhYLXWmqxVLh2eOtkLIx7pQxrQA6ZnqBYHOftH=w913-h913-s-no-gm?authuser=0',
             roomImages: {},
@@ -185,7 +185,7 @@
             const formatThaiDate = (dateStr) => {
                 if(!dateStr) return "-";
                 const date = new Date(dateStr);
-                const months = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+                const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
                 return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear() + 543}`;
             };
 
@@ -252,7 +252,7 @@
                                 setCustomer(prev => ({...prev, userId: profile.userId, lineDisplayName: profile.displayName}));
                             });
                         }
-                    }).catch(err => { console.error('LIFF Error', err); setIsLiffReady(true); });
+                    }).catch(err => { console.error(err); setIsLiffReady(true); });
                 } else { setIsLiffReady(true); }
                 
                 fetch(`${GOOGLE_SCRIPT_URL}?action=getMapConfig`).then(r => r.json()).then(res => { if (res.status === 'success') setPinPos(res.data); });
@@ -372,10 +372,11 @@
 
             // --- MANAGE BOOKING HANDLERS ---
             
-            const selectBookingToManage = (booking) => {
+            // [UPDATED] Function to select booking and go to specific tab
+            const selectBookingToManage = (booking, tab = 'info') => {
                 setManageData(booking);
                 setManageForm({ bookingId: booking.id, phone: booking.phone });
-                setManageTab('info');
+                setManageTab(tab);
             }
 
             const handleCustomerReschedule = () => {
@@ -386,6 +387,13 @@
                 
                 if(rescheduleDates.checkIn >= rescheduleDates.checkOut) return setModalAlert({ show: true, type: 'warning', title: 'แจ้งเตือน', text: 'วันเช็คเอาท์ต้องอยู่หลังวันเช็คอิน' });
                 
+                // Check 7 Days Condition
+                const today = new Date(); today.setHours(0,0,0,0);
+                const currentCheckIn = new Date(manageData.checkIn); currentCheckIn.setHours(0,0,0,0);
+                const diffTime = currentCheckIn.getTime() - today.getTime();
+                const diffDays = Math.ceil(diffTime / (1000 * 3600 * 24));
+                if (diffDays < 7) return setModalAlert({ show: true, type: 'warning', title: 'ไม่สามารถเลื่อนได้', text: `ต้องทำการเลื่อนล่วงหน้าอย่างน้อย 7 วัน (เหลืออีก ${diffDays} วัน)` });
+
                 setModalConfirm({
                     show: true,
                     title: 'ยืนยันการเลื่อนวัน',
@@ -416,9 +424,9 @@
                         setModalAlert({ show: true, type: 'success', title: 'สำเร็จ!', text: 'เลื่อนวันเข้าพักเรียบร้อย ระบบได้ส่งใบนัดหมายใหม่ทาง LINE แล้วครับ' });
                         setManageData(null);
                         setManageForm({bookingId: '', phone: ''});
-                        setMode('booking');
+                        setMode('booking'); // Reset to home
                     } else {
-                        setModalAlert({ show: true, type: 'error', title: 'ไม่สำเร็จ', text: res.message });
+                        setModalAlert({ show: true, type: 'error', title: 'ไม่สามารถทำรายการได้', text: res.message });
                     }
                 })
                 .catch(e => { 
@@ -428,13 +436,20 @@
             };
 
             const handleCustomerAddFood = () => {
-                if(addOnCart.length === 0) return setModalAlert({ show: true, type: 'warning', title: 'แจ้งเตือน', text: 'กรุณาเลือกอาหาร' });
-                if(!addOnSlip) return setModalAlert({ show: true, type: 'warning', title: 'แจ้งเตือน', text: 'กรุณาแนบสลิป' });
+                if(addOnCart.length === 0) return setModalAlert({ show: true, type: 'warning', title: 'แจ้งเตือน', text: 'กรุณาเลือกรายการอาหารก่อนครับ' });
+                if(!addOnSlip) return setModalAlert({ show: true, type: 'warning', title: 'แจ้งเตือน', text: 'กรุณาแนบสลิปโอนเงินก่อนยืนยันครับ' });
                 
+                // Check 1 Day Condition
+                const today = new Date(); today.setHours(0,0,0,0);
+                const currentCheckIn = new Date(manageData.checkIn); currentCheckIn.setHours(0,0,0,0);
+                const diffTime = currentCheckIn.getTime() - today.getTime();
+                const diffDays = Math.ceil(diffTime / (1000 * 3600 * 24));
+                if (diffDays < 1) return setModalAlert({ show: true, type: 'warning', title: 'ไม่สามารถสั่งเพิ่มได้', text: 'ต้องสั่งอาหารล่วงหน้าอย่างน้อย 1 วันก่อนเข้าพัก' });
+
                 setModalConfirm({
                     show: true,
                     title: 'ยืนยันการสั่งอาหาร',
-                    text: `รายการ:\n${addOnCart.map(i => '- ' + i.name + ' x' + i.qty).join('\n')}`,
+                    text: `รายการ:\n${addOnCart.map(i => '- ' + i.name + ' x' + i.qty).join('\n')}\n\nระบบจะส่งรายการให้แอดมินตรวจสอบทันที`,
                     onConfirm: () => {
                         setModalConfirm({ ...modalConfirm, show: false });
                         executeAddFood();
@@ -458,14 +473,14 @@
                 .then(res => {
                     setLoading(false);
                     if(res.status === 'success') {
-                        setModalAlert({ show: true, type: 'success', title: 'สำเร็จ!', text: 'สั่งอาหารเรียบร้อย' });
+                        setModalAlert({ show: true, type: 'success', title: 'สั่งอาหารสำเร็จ!', text: 'ระบบได้บันทึกและส่งรายการทาง LINE เรียบร้อยแล้วครับ' });
                         setManageData(null);
                         setManageForm({bookingId: '', phone: ''});
                         setAddOnCart([]);
                         setAddOnSlip(null);
-                        setMode('booking');
+                        setMode('booking'); // Reset to home
                     } else {
-                        setModalAlert({ show: true, type: 'error', title: 'ไม่สำเร็จ', text: res.message });
+                        setModalAlert({ show: true, type: 'error', title: 'ไม่สามารถทำรายการได้', text: res.message });
                     }
                 })
                 .catch(e => { 
@@ -532,20 +547,36 @@
                                                         </div>
                                                     ) : (
                                                         bookingList.length > 0 ? (
-                                                            <div className="space-y-3">
+                                                            <div className="space-y-4 animate-pop">
                                                                 <p className="text-sm text-gray-500 text-center mb-4">พบ {bookingList.length} รายการจอง</p>
                                                                 {bookingList.map(b => (
-                                                                    <div key={b.id} onClick={() => selectBookingToManage(b)} className="border border-gray-200 dark:border-gray-700 p-4 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer transition shadow-sm relative group">
-                                                                        <div className="absolute top-4 right-4 text-gray-300 group-hover:text-blue-500"><i className="fas fa-chevron-right"></i></div>
-                                                                        <div className="font-bold text-blue-600 dark:text-blue-400 text-lg mb-1">{b.id}</div>
-                                                                        <div className="text-sm text-gray-600 dark:text-gray-300"><i className="fas fa-calendar-day mr-2 w-4 text-center"></i>{formatThaiDate(b.checkIn)}</div>
-                                                                        <div className="text-sm text-gray-600 dark:text-gray-300 mt-1"><i className="fas fa-home mr-2 w-4 text-center"></i>{b.rooms}</div>
-                                                                        <div className="mt-2 inline-block px-2 py-1 text-xs rounded bg-green-100 text-green-700 font-bold">{b.status}</div>
+                                                                    <div key={b.id} className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition">
+                                                                        {/* Card Header / Info - Click to View Details */}
+                                                                        <div onClick={() => selectBookingToManage(b, 'info')} className="p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600 transition">
+                                                                            <div className="flex justify-between items-start mb-2">
+                                                                                 <span className="font-bold text-blue-600 dark:text-blue-400 text-lg">{b.id}</span>
+                                                                                 <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-bold">{b.status}</span>
+                                                                            </div>
+                                                                            <div className="text-sm text-gray-600 dark:text-gray-300 space-y-1">
+                                                                                <div className="flex items-center"><i className="fas fa-calendar-day w-5 text-center mr-2 text-gray-400"></i> {formatThaiDate(b.checkIn)}</div>
+                                                                                <div className="flex items-center"><i className="fas fa-home w-5 text-center mr-2 text-gray-400"></i> {b.rooms}</div>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {/* Action Buttons Row */}
+                                                                        <div className="flex border-t border-gray-100 dark:border-gray-600 divide-x divide-gray-100 dark:divide-gray-600 bg-gray-50 dark:bg-gray-800">
+                                                                            <button onClick={() => selectBookingToManage(b, 'reschedule')} className="flex-1 py-3 text-sm font-bold text-orange-600 hover:bg-orange-50 dark:hover:bg-gray-700 transition flex items-center justify-center gap-2">
+                                                                                <i className="fas fa-calendar-alt"></i> เลื่อนวัน
+                                                                            </button>
+                                                                            <button onClick={() => selectBookingToManage(b, 'food')} className="flex-1 py-3 text-sm font-bold text-green-600 hover:bg-green-50 dark:hover:bg-gray-700 transition flex items-center justify-center gap-2">
+                                                                                <i className="fas fa-utensils"></i> สั่งอาหาร
+                                                                            </button>
+                                                                        </div>
                                                                     </div>
                                                                 ))}
                                                             </div>
                                                         ) : (
-                                                            <div className="text-center py-10">
+                                                            <div className="text-center py-10 animate-pop">
                                                                 <div className="text-6xl mb-4">🔍</div>
                                                                 <p className="text-gray-500">ไม่พบประวัติการจอง</p>
                                                                 <p className="text-xs text-gray-400 mt-2">หากเพิ่งจอง กรุณารอแอดมินยืนยันสักครู่</p>
@@ -559,11 +590,9 @@
                                         <div className="animate-pop">
                                             {/* Header with Back Button */}
                                             <div className="flex items-center mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">
-                                                {bookingList.length > 0 && (
-                                                    <button onClick={() => setManageData(null)} className="mr-3 text-gray-500 hover:text-blue-600">
-                                                        <i className="fas fa-arrow-left"></i>
-                                                    </button>
-                                                )}
+                                                <button onClick={() => setManageData(null)} className="mr-3 text-gray-500 hover:text-blue-600 p-1">
+                                                    <i className="fas fa-arrow-left text-lg"></i>
+                                                </button>
                                                 <span className="font-bold text-gray-700 dark:text-gray-200">รายการ: {manageData.id}</span>
                                             </div>
 
@@ -575,51 +604,49 @@
                                             </div>
 
                                             {manageTab === 'info' && (
-                                                <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 p-4 rounded-lg mb-6">
+                                                <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 p-4 rounded-lg mb-6 animate-pop">
                                                     <div className="text-center mb-2"><span className="bg-blue-600 text-white px-2 py-1 rounded text-xs">{manageData.status}</span></div>
-                                                    <h3 className="text-lg font-bold text-center mb-4">{manageData.name}</h3>
-                                                    <div className="text-sm space-y-2">
+                                                    <h3 className="text-lg font-bold text-center mb-4 text-gray-800 dark:text-white">{manageData.name}</h3>
+                                                    <div className="text-sm space-y-2 text-gray-700 dark:text-gray-300">
                                                         <div className="flex justify-between"><span>เข้าพัก:</span> <b>{formatThaiDate(manageData.checkIn)}</b></div>
                                                         <div className="flex justify-between"><span>ออก:</span> <b>{formatThaiDate(manageData.checkOut)}</b></div>
                                                         <div className="flex justify-between"><span>จำนวนผู้เข้าพัก:</span> <b>{manageData.guests} คน</b></div>
-                                                        <div className="flex justify-between"><span>ห้องพัก:</span> <span>{manageData.rooms}</span></div>
+                                                        <div className="flex justify-between"><span>ห้องพัก:</span> <span className="text-right">{manageData.rooms}</span></div>
                                                     </div>
                                                     
                                                     {/* แสดงรายการอาหารที่สั่งไปแล้ว */}
                                                     <div className="mt-4 pt-4 border-t border-blue-200 dark:border-blue-700">
-                                                        <h4 className="font-bold text-sm text-blue-800 dark:text-blue-300 mb-2">รายการอาหารที่สั่งแล้ว</h4>
+                                                        <h4 className="font-bold text-sm text-blue-800 dark:text-blue-300 mb-2">อาหารที่สั่งแล้ว</h4>
                                                         <p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-line">{manageData.food}</p>
                                                     </div>
                                                 </div>
                                             )}
 
                                             {manageTab === 'reschedule' && (
-                                                <div>
-                                                    <div className="bg-yellow-50 dark:bg-yellow-900/20 text-xs p-2 rounded mb-4 text-yellow-800 dark:text-yellow-200">
+                                                <div className="space-y-3 animate-pop">
+                                                    <div className="bg-yellow-50 dark:bg-yellow-900/20 text-xs p-2 rounded mb-4 text-yellow-800 dark:text-yellow-200 border border-yellow-200 dark:border-yellow-800">
                                                         ⚠️ เงื่อนไข: ต้องเลื่อนล่วงหน้าอย่างน้อย 7 วัน และห้องพักต้องว่างในวันที่เลือกใหม่
                                                     </div>
-                                                    <div className="space-y-3 mb-6">
-                                                        <div>
-                                                            <label className="block text-xs font-bold mb-1">เช็คอินใหม่</label>
-                                                            <input type="date" min={getTommorow()} className="w-full border p-2 rounded dark:bg-gray-700" onChange={e => setRescheduleDates({...rescheduleDates, checkIn: e.target.value})} />
-                                                        </div>
-                                                        <div>
-                                                            <label className="block text-xs font-bold mb-1">เช็คเอาท์ใหม่</label>
-                                                            <input type="date" min={rescheduleDates.checkIn || getTommorow()} className="w-full border p-2 rounded dark:bg-gray-700" onChange={e => setRescheduleDates({...rescheduleDates, checkOut: e.target.value})} />
-                                                        </div>
+                                                    <div>
+                                                        <label className="block text-xs font-bold mb-1 text-gray-700 dark:text-gray-300">เช็คอินใหม่</label>
+                                                        <input type="date" min={getTommorow()} className="w-full border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" onChange={e => setRescheduleDates({...rescheduleDates, checkIn: e.target.value})} />
                                                     </div>
-                                                    <button onClick={handleCustomerReschedule} disabled={loading} className="w-full bg-orange-600 text-white py-3 rounded-lg font-bold shadow hover:bg-orange-700">
-                                                        {loading ? 'แอดมินกำลังทำงาน...รอสุกครู่' : 'ยืนยันการเลื่อน'}
+                                                    <div>
+                                                        <label className="block text-xs font-bold mb-1 text-gray-700 dark:text-gray-300">เช็คเอาท์ใหม่</label>
+                                                        <input type="date" min={rescheduleDates.checkIn || getTommorow()} className="w-full border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" onChange={e => setRescheduleDates({...rescheduleDates, checkOut: e.target.value})} />
+                                                    </div>
+                                                    <button onClick={handleCustomerReschedule} disabled={loading} className="w-full bg-orange-600 text-white py-3 rounded-lg font-bold shadow hover:bg-orange-700 transition mt-4">
+                                                        {loading ? 'กำลังทำงาน...' : 'ยืนยันการเลื่อน'}
                                                     </button>
                                                 </div>
                                             )}
 
                                             {manageTab === 'food' && (
-                                                <div>
-                                                    <div className="bg-green-50 dark:bg-green-900/20 text-xs p-2 rounded mb-4 text-green-800 dark:text-green-200">
+                                                <div className="space-y-4 animate-pop">
+                                                    <div className="bg-green-50 dark:bg-green-900/20 text-xs p-2 rounded mb-4 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-800">
                                                         🍽️ เงื่อนไข: สั่งล่วงหน้าอย่างน้อย 1 วันก่อนเข้าพัก
                                                     </div>
-                                                    <div className="grid grid-cols-2 gap-2 mb-4 max-h-60 overflow-y-auto custom-scrollbar">
+                                                    <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto custom-scrollbar">
                                                         {siteConfig.foodMenu.map(f => {
                                                             const inCart = addOnCart.find(c => c.id === f.id);
                                                             return (
@@ -686,7 +713,7 @@
                                             <label className="block text-gray-700 dark:text-red-300 font-bold mb-1">วันที่ออก</label>
                                             <input type="date" min={dates.checkIn || getTommorow()} className="w-full border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" onChange={e => setDates({...dates, checkOut: e.target.value})} />
                                         </div>
-                                        <button onClick={handleSearch} disabled={loading} className="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition font-bold shadow-lg mt-2">{loading ? 'กำลังกางเต็นท์...รอแปบ...' : 'ค้นหาที่พักว่าง'}</button>
+                                        <button onClick={handleSearch} disabled={loading} className="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition font-bold shadow-lg mt-2">{loading ? 'กำลังตรวจสอบ...' : 'ค้นหาที่พักว่าง'}</button>
                                     </div>
                                 </div>
                                 {closedModal && ( <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-6"> <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center relative animate-pop"> <div className="w-16 h-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mx-auto mb-4"> <i className="fas fa-store-slash text-3xl text-red-500 dark:text-red-300"></i> </div> <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">วันปิดให้บริการ</h3> <p className="text-gray-600 dark:text-gray-300 mb-1">วันที่ <strong>{formatThaiDate(closedModal.date)}</strong></p> <p className="text-red-500 dark:text-red-400 font-medium mb-6">"{closedModal.reason}"</p> <button onClick={() => setClosedModal(null)} className="w-full bg-gray-800 dark:bg-gray-600 text-white py-3 rounded-xl font-bold hover:bg-gray-700 transition">เลือกวันใหม่</button> </div> </div> )}
@@ -706,10 +733,7 @@
                                     <img src="https://img2.pic.in.th/3d539b84-44ce-4336-ad90-bd2f84b13eca.jpg" referrerpolicy="no-referrer" className="absolute top-0 left-0 w-full h-full object-cover" />
                                     {Object.keys(pinPos).map(key => {
                                         if (!roomConfig[key]) return null;
-                                        const isBooked = availability.bookedRooms.includes(key);
-                                        const isZ8Full = key === 'Z8' && availability.zone8Available <= 0;
-                                        const disable = isBooked || isZ8Full;
-                                        const inCart = cart.find(c => c.id === key);
+                                        const isBooked = availability.bookedRooms.includes(key); const isZ8Full = key === 'Z8' && availability.zone8Available <= 0; const disable = isBooked || isZ8Full; const inCart = cart.find(c => c.id === key);
                                         let circleClasses = "w-12 h-12 rounded-full flex items-center justify-center text-center text-[8px] font-bold border-2 shadow-lg p-1 leading-tight transition-all duration-300";
                                         if (disable) circleClasses += " bg-gray-400 text-white border-gray-500 cursor-not-allowed opacity-80 grayscale";
                                         else if (inCart) circleClasses += " bg-yellow-400 text-black border-yellow-600 scale-110 shadow-xl z-20";
@@ -795,117 +819,28 @@
                                 <div className="text-6xl mb-4">🎉</div>
                                 <h2 className="text-2xl font-bold text-green-700 dark:text-green-400 mb-2">จองสำเร็จ!</h2>
                                 <p className="text-gray-600 dark:text-gray-300 mb-4">รหัส: <strong>{bookingResult}</strong></p>
-                                <p className="text-sm text-gray-400 mb-4">ระบบส่งใบจองให้ทาง LINE แล้วครับ</p>
-                                <p className="text-sm text-gray-500 mb-4">เงื่อนไข : ไม่สามารถคืนมัดจำได้</p>
-                                <p className="text-sm text-gray-500 mb-4">เลื่อนที่พักก่อนเข้าพักไม่น้อยกว่า 7 วัน</p>
-                                <p className="text-sm text-gray-500 mb-4">ยกเว้นโรคระบาดและภัยพิบัติเลื่อนที่พักได้</p>
-                                <button onClick={() => liff.closeWindow()} className="mt-8 bg-gray-800 dark:bg-gray-600 text-white px-6 py-2 rounded-full">กดปิดเบาๆ นะ</button>
+                                <button onClick={() => liff.closeWindow()} className="mt-8 bg-gray-800 text-white px-6 py-2 rounded-full">ปิดหน้าต่าง</button>
                             </div>
                         )}
 
-                        {/* --- BEAUTIFUL ALERT MODAL --- */}
-                        {modalAlert.show && (
-                            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity">
-                                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-100 animate-pop">
-                                    <div className={`p-6 text-center ${
-                                        modalAlert.type === 'error' ? 'bg-red-50 dark:bg-red-900/30' : 
-                                        modalAlert.type === 'success' ? 'bg-green-50 dark:bg-green-900/30' : 
-                                        modalAlert.type === 'warning' ? 'bg-yellow-50 dark:bg-yellow-900/30' : 'bg-blue-50 dark:bg-blue-900/30'
-                                    }`}>
-                                        <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm ${
-                                            modalAlert.type === 'error' ? 'bg-red-100 text-red-500' : 
-                                            modalAlert.type === 'success' ? 'bg-green-100 text-green-500' : 
-                                            modalAlert.type === 'warning' ? 'bg-yellow-100 text-yellow-500' : 'bg-blue-100 text-blue-500'
-                                        }`}>
-                                            <i className={`fas ${
-                                                modalAlert.type === 'error' ? 'fa-times' : 
-                                                modalAlert.type === 'success' ? 'fa-check' : 
-                                                modalAlert.type === 'warning' ? 'fa-exclamation' : 'fa-info'
-                                            } text-3xl`}></i>
-                                        </div>
-                                        <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">{modalAlert.title}</h3>
-                                        <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed">{modalAlert.text}</p>
-                                    </div>
-                                    <div className="p-4 bg-gray-50 dark:bg-gray-700">
-                                        <button 
-                                            onClick={() => setModalAlert({ ...modalAlert, show: false })} 
-                                            className={`w-full py-3 rounded-xl font-bold text-white shadow-lg transition transform active:scale-95 ${
-                                                modalAlert.type === 'error' ? 'bg-red-500 hover:bg-red-600' : 
-                                                modalAlert.type === 'success' ? 'bg-green-500 hover:bg-green-600' : 
-                                                modalAlert.type === 'warning' ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-600 hover:bg-blue-700'
-                                            }`}
-                                        >
-                                            ตกลง
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* --- BEAUTIFUL CONFIRM MODAL --- */}
-                        {modalConfirm.show && (
-                            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity">
-                                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-100 animate-pop">
-                                    <div className="p-6 text-center bg-white dark:bg-gray-800">
-                                        <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300">
-                                            <i className="fas fa-question text-3xl"></i>
-                                        </div>
-                                        <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">{modalConfirm.title}</h3>
-                                        <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed whitespace-pre-line">{modalConfirm.text}</p>
-                                    </div>
-                                    <div className="p-4 bg-gray-50 dark:bg-gray-700 flex gap-3">
-                                        <button 
-                                            onClick={() => setModalConfirm({ ...modalConfirm, show: false })}
-                                            className="flex-1 py-3 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200 rounded-xl font-bold hover:bg-gray-100 dark:hover:bg-gray-500 transition shadow-sm"
-                                        >
-                                            ยกเลิก
-                                        </button>
-                                        <button 
-                                            onClick={modalConfirm.onConfirm}
-                                            className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow-lg transform active:scale-95"
-                                        >
-                                            ยืนยัน
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* --- NEW: CHECKING DISCOUNT POPUP --- */}
-                        {checkingDiscount && (
-                            <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm transition-opacity">
-                                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-xs p-6 text-center animate-pop">
-                                    <div className="w-12 h-12 border-4 border-gray-200 border-t-green-500 rounded-full animate-spin mx-auto mb-4"></div>
-                                    <h3 className="text-lg font-bold text-gray-800 dark:text-white">กำลังตรวจสอบโค้ด...</h3>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">กรุณารอสักครู่</p>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* --- CAMPING THEMED LOADING POPUP --- */}
+                        {/* Modals & Popups */}
+                        {modalAlert.show && <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60"><div className="bg-white p-6 rounded-xl shadow-lg max-w-sm text-center"><h3 className="font-bold text-lg mb-2">{modalAlert.title}</h3><p className="text-gray-600 mb-4">{modalAlert.text}</p><button onClick={()=>setModalAlert({...modalAlert, show: false})} className="bg-blue-600 text-white px-4 py-2 rounded-lg">ตกลง</button></div></div>}
+                        {modalConfirm.show && <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60"><div className="bg-white p-6 rounded-xl shadow-lg max-w-sm text-center"><h3 className="font-bold text-lg mb-2">{modalConfirm.title}</h3><p className="text-gray-600 mb-4 whitespace-pre-line">{modalConfirm.text}</p><div className="flex gap-2 justify-center"><button onClick={()=>setModalConfirm({...modalConfirm, show: false})} className="bg-gray-200 px-4 py-2 rounded-lg">ยกเลิก</button><button onClick={modalConfirm.onConfirm} className="bg-green-600 text-white px-4 py-2 rounded-lg">ยืนยัน</button></div></div></div>}
+                        {checkingDiscount && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"><div className="bg-white p-6 rounded-xl animate-pulse">กำลังตรวจสอบโค้ด...</div></div>}
                         {loading && (
                             <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center p-4 bg-black/80 backdrop-blur-sm transition-opacity text-white">
                                 <div className="relative mb-6">
-                                    {/* Moon/Sun Circle */}
                                     <div className="w-24 h-24 rounded-full border-4 border-white/20 border-t-green-400 animate-spin absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></div>
-                                    
-                                    {/* Icons */}
                                     <div className="flex items-end gap-1 relative z-10">
                                         <i className="fas fa-tree text-green-500 text-2xl animate-bounce" style={{animationDuration: '1.5s'}}></i>
                                         <i className="fas fa-campground text-orange-500 text-5xl"></i>
                                         <i className="fas fa-fire text-red-500 text-xl animate-pulse"></i>
                                     </div>
                                 </div>
-                                
-                                <h3 className="text-2xl font-bold text-white mb-2 animate-pulse">
-                                    {step === 1 && mode === 'booking' ? 'กำลังหาลานกางเต็นท์...' : 
-                                     step === 3 && mode === 'booking' ? 'กำลังจองที่พัก...' : 
-                                     'กำลังโหลดข้อมูล...'}
-                                </h3>
+                                <h3 className="text-2xl font-bold text-white mb-2 animate-pulse">กำลังโหลดข้อมูล...</h3>
                                 <p className="text-sm text-gray-300">กรุณารอสักครู่ ธรรมชาติกำลังเรียกหา 🍃</p>
                             </div>
                         )}
-
                     </div>
                 </div>
             );
