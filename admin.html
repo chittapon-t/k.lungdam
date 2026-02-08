@@ -22,6 +22,28 @@
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
         
+        /* Map Pin */
+        .map-pin {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            width: 30px;
+            height: 30px;
+            background-color: #ef4444;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+            cursor: grab;
+            transition: transform 0.1s;
+        }
+        .map-pin:active { cursor: grabbing; transform: translate(-50%, -50%) scale(1.1); }
+        .map-pin.active { background-color: #22c55e; z-index: 10; transform: translate(-50%, -50%) scale(1.2); }
+
         /* ซ่อนส่วนพิมพ์ในหน้าจอปกติ */
         #print-container {
             display: none;
@@ -141,6 +163,7 @@
             const [siteSettings, setSiteSettings] = React.useState(null);
             const [savingSiteSettings, setSavingSiteSettings] = React.useState(false);
             const [roomConfig, setRoomConfig] = React.useState({});
+            const [mapConfig, setMapConfig] = React.useState({});
 
             const [viewSlip, setViewSlip] = React.useState(null); 
             const [viewBooking, setViewBooking] = React.useState(null); 
@@ -161,6 +184,10 @@
             const [adminBookingForm, setAdminBookingForm] = React.useState({ name: '', phone: '', checkIn: '', checkOut: '', rooms: [], price: '', deposit: '' });
             const [adminAvailability, setAdminAvailability] = React.useState(null); 
             const [loadingAvailability, setLoadingAvailability] = React.useState(false);
+
+            // --- Room Manager State ---
+            const [editingRoom, setEditingRoom] = React.useState(null); 
+            const [roomsMapData, setRoomsMapData] = React.useState([]); // combined data for convenience
 
             const [calendarDate, setCalendarDate] = React.useState(new Date());
 
@@ -236,13 +263,33 @@
                 return result;
             }, [bookings, filter, searchTerm]);
 
+            // Combine roomConfig + mapConfig + siteSettings for Room Manager
+            React.useEffect(() => {
+                if (Object.keys(roomConfig).length > 0) {
+                    const combined = Object.values(roomConfig).map(r => ({
+                        ...r,
+                        x: mapConfig[r.id]?.x || 50,
+                        y: mapConfig[r.id]?.y || 50,
+                        desc: siteSettings?.roomDescriptions?.[r.id] || '',
+                        images: siteSettings?.roomImages?.[r.id] || []
+                    }));
+                    setRoomsMapData(combined);
+                }
+            }, [roomConfig, mapConfig, siteSettings]);
+
             const handleLogin = (e) => {
                 e.preventDefault();
                 setLoading(true);
                 fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'adminLogin', password: password }) })
                 .then(r => r.json()).then(res => {
                     setLoading(false);
-                    if (res.status === 'success') { setIsLoggedIn(true); fetchData(); fetchSettings(); fetchRoomConfig(); } else errorMsg('รหัสผ่านไม่ถูกต้อง');
+                    if (res.status === 'success') { 
+                        setIsLoggedIn(true); 
+                        fetchData(); 
+                        fetchSettings(); 
+                        fetchRoomConfig(); 
+                        fetchMapConfig(); 
+                    } else errorMsg('รหัสผ่านไม่ถูกต้อง');
                 }).catch(err => { setLoading(false); errorMsg('Connection Error: ' + err); });
             };
 
@@ -259,6 +306,10 @@
 
             const fetchRoomConfig = () => {
                 fetch(`${GOOGLE_SCRIPT_URL}?action=getRoomConfig`).then(r => r.json()).then(res => { if (res.status === 'success') { setRoomConfig(res.data); const loadedIds = Object.keys(res.data); if (loadedIds.length > 0) { ROOM_IDS = loadedIds; ROOM_NAMES = {}; loadedIds.forEach(id => ROOM_NAMES[id] = res.data[id].name); } } });
+            };
+
+            const fetchMapConfig = () => {
+                fetch(`${GOOGLE_SCRIPT_URL}?action=getMapConfig`).then(r => r.json()).then(res => { if (res.status === 'success') setMapConfig(res.data); });
             };
 
             const updateStatus = (id, newStatus) => {
@@ -316,45 +367,87 @@
             const handleMultipleImageUpload = async (files, callback) => { if (!files || files.length === 0) return; try { const promises = Array.from(files).map(file => compressImage(file)); const base64List = await Promise.all(promises); callback(base64List); } catch(e) { errorMsg('Upload Failed'); } };
             const handleExport = () => { const header = ["BookingID", "Date", "Customer", "Phone", "CheckIn", "CheckOut", "Rooms", "Total", "Deposit", "Status"]; const rows = bookings.map(b => [ b.id, b.timestamp, `"${b.name}"`, `'${b.phone}`, b.checkIn, b.checkOut, `"${b.rooms.replace(/"/g, '""')}"`, b.price, b.deposit, b.status ]); const csvContent = [header.join(","), ...rows.map(r => r.join(","))].join("\n"); const blob = new Blob(["\uFEFF"+csvContent], { type: 'text/csv;charset=utf-8;' }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.setAttribute("href", url); link.setAttribute("download", "bookings_lungdam.csv"); document.body.appendChild(link); link.click(); document.body.removeChild(link); };
             
-            // --- NEW: ฟังก์ชันพิมพ์รายงาน (แนวนอน) ---
-            const handlePrintReport = () => {
-                const style = document.createElement('style');
-                style.innerHTML = `
-                    @media print { 
-                        @page { size: A4 landscape; margin: 0; }
-                        body { -webkit-print-color-adjust: exact; }
-                        #print-container { display: block !important; }
-                        #report-print-area { display: block !important; }
-                        #receipt-print-area { display: none !important; }
-                    }
-                `;
-                document.head.appendChild(style);
-                window.print();
-                // ลบ Style หลังพิมพ์เสร็จ (timeout เพื่อให้แน่ใจว่า dialog ขึ้นแล้ว)
-                setTimeout(() => document.head.removeChild(style), 100);
+            // --- PDF EXPORT (Report uses html2pdf) ---
+            const handleExportPDF = () => {
+                const element = document.getElementById('report-print-area');
+                const opt = { 
+                    margin: 0, 
+                    filename: `Report_${new Date().toISOString().split('T')[0]}.pdf`, 
+                    image: { type: 'jpeg', quality: 0.98 }, 
+                    html2canvas: { scale: 2, useCORS: true }, 
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' } 
+                };
+                html2pdf().set(opt).from(element).save();
             };
 
-            // --- NEW: ฟังก์ชันพิมพ์ใบเสร็จ (แนวตั้ง) ---
+            // --- RECEIPT PRINT (Direct Window Print) ---
             const handlePrintReceipt = () => {
-                const style = document.createElement('style');
-                style.innerHTML = `
-                    @media print { 
-                        @page { size: A4 portrait; margin: 0; }
-                        body { -webkit-print-color-adjust: exact; }
-                        #print-container { display: block !important; }
-                        #receipt-print-area { display: block !important; }
-                        #report-print-area { display: none !important; }
-                    }
-                `;
-                document.head.appendChild(style);
                 window.print();
-                setTimeout(() => document.head.removeChild(style), 100);
             };
 
             const getDaysInMonth = (date) => new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
             const firstDayOfMonth = new Date(calendarDate.getFullYear(), calendarDate.getMonth(), 1).getDay();
             const days = []; for(let i=0; i<firstDayOfMonth; i++) days.push(null); for(let i=1; i<=getDaysInMonth(calendarDate); i++) days.push(i);
             const getBookingsForDate = (day) => { if(!day) return []; const dateStr = `${calendarDate.getFullYear()}-${String(calendarDate.getMonth()+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`; return bookings.filter(b => b.status !== 'ยกเลิก' && b.checkIn <= dateStr && b.checkOut > dateStr); };
+
+            // --- Room Manager Logic ---
+            const handleMapClick = (e) => {
+                if (!editingRoom) return;
+                const rect = e.target.getBoundingClientRect();
+                const x = ((e.clientX - rect.left) / rect.width) * 100;
+                const y = ((e.clientY - rect.top) / rect.height) * 100;
+                setEditingRoom({ ...editingRoom, x: Math.round(x), y: Math.round(y) });
+            };
+
+            const saveRoomChanges = () => {
+                confirmMsg('ยืนยันการบันทึกข้อมูลห้องพักและแผนที่?', () => {
+                    setSavingSiteSettings(true);
+                    // Prepare data structure
+                    const rooms = roomsMapData.map(r => ({
+                        id: r.id, name: r.name, type: r.type, min: r.min, maxCap: r.maxCap, pricing: r.pricing, bf: r.bf
+                    }));
+                    const mapConfigObj = {};
+                    roomsMapData.forEach(r => mapConfigObj[r.id] = { x: r.x, y: r.y });
+                    const images = {}, descs = {};
+                    roomsMapData.forEach(r => {
+                        images[r.id] = r.images;
+                        descs[r.id] = r.desc;
+                    });
+
+                    fetch(GOOGLE_SCRIPT_URL, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            action: 'saveRoomSystem',
+                            password: password,
+                            rooms: rooms,
+                            mapConfig: mapConfigObj,
+                            siteSettings: { roomImages: images, roomDescriptions: descs }
+                        })
+                    })
+                    .then(r => r.json())
+                    .then(res => {
+                        setSavingSiteSettings(false);
+                        if(res.status === 'success') {
+                            successMsg('บันทึกข้อมูลสำเร็จ');
+                            fetchRoomConfig(); fetchMapConfig(); fetchSettings();
+                            setEditingRoom(null);
+                        } else errorMsg('บันทึกไม่สำเร็จ: ' + res.message);
+                    });
+                });
+            };
+
+            const updateEditingRoomInList = () => {
+                setRoomsMapData(prev => {
+                    const idx = prev.findIndex(r => r.id === editingRoom.id);
+                    if (idx > -1) {
+                        const newArr = [...prev];
+                        newArr[idx] = editingRoom;
+                        return newArr;
+                    }
+                    return [...prev, editingRoom];
+                });
+                setEditingRoom(null);
+            };
 
             if (!isLoggedIn) return ( <div className="min-h-screen flex items-center justify-center bg-gray-900 px-4 relative"> <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-sm z-10"> <div className="text-center mb-6"><h1 className="text-3xl font-bold text-green-800">Admin Panel</h1><p className="text-gray-500">ขนำลุงดำ แคมป์ปิ้ง</p></div> <form onSubmit={handleLogin} className="space-y-4"> <input type="password" placeholder="รหัสผ่าน" className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" value={password} onChange={e => setPassword(e.target.value)} /> <button disabled={loading} className="w-full bg-gray-800 text-white p-3 rounded-lg hover:bg-gray-700 transition font-bold shadow-lg">{loading ? 'กำลังตรวจสอบ...' : 'เข้าสู่ระบบ'}</button> </form> </div> {modal.isOpen && ( <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60 backdrop-blur-sm transition-opacity"> <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xs overflow-hidden animate-modal"> <div className={`p-6 text-center ${modal.type==='error'?'bg-red-50':''}`}> <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${modal.type==='error'?'bg-red-100 text-red-500':'bg-gray-100 text-gray-500'}`}> <i className={`fas ${modal.type==='error'?'fa-times':'fa-info'} text-2xl`}></i> </div> <h3 className="text-xl font-bold text-gray-800 mb-2">{modal.title}</h3> <p className="text-gray-600 text-sm">{modal.message}</p> </div> <div className="p-4 bg-gray-50"> <button onClick={closeModal} className="w-full py-2.5 bg-gray-800 text-white rounded-xl font-bold hover:bg-gray-700 transition">ตกลง</button> </div> </div> </div> )} </div> );
 
@@ -376,6 +469,7 @@
                                 <button onClick={() => setActiveTab('dashboard')} className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${activeTab==='dashboard'?'bg-green-600 text-white shadow-lg transform scale-105':'bg-white text-gray-600 shadow hover:bg-gray-50'}`}><i className="fas fa-chart-line mr-1"></i> ภาพรวม</button>
                                 <button onClick={() => setActiveTab('bookings')} className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${activeTab==='bookings'?'bg-green-600 text-white shadow-lg transform scale-105':'bg-white text-gray-600 shadow hover:bg-gray-50'}`}><i className="fas fa-list mr-1"></i> รายการจอง</button>
                                 <button onClick={() => setActiveTab('calendar')} className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${activeTab==='calendar'?'bg-green-600 text-white shadow-lg transform scale-105':'bg-white text-gray-600 shadow hover:bg-gray-50'}`}><i className="fas fa-calendar-alt mr-1"></i> ปฏิทิน</button>
+                                <button onClick={() => setActiveTab('rooms_map')} className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${activeTab==='rooms_map'?'bg-green-600 text-white shadow-lg transform scale-105':'bg-white text-gray-600 shadow hover:bg-gray-50'}`}><i className="fas fa-map-marked-alt mr-1"></i> ห้องพัก & แผนที่</button>
                                 <button onClick={() => setActiveTab('settings')} className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${activeTab==='settings'?'bg-green-600 text-white shadow-lg transform scale-105':'bg-white text-gray-600 shadow hover:bg-gray-50'}`}><i className="fas fa-cogs mr-1"></i> ตั้งค่าระบบ</button>
                             </div>
 
@@ -526,6 +620,103 @@
                                 </div>
                             )}
 
+                            {/* --- NEW TAB: ROOMS & MAP MANAGER --- */}
+                            {activeTab === 'rooms_map' && (
+                                <div className="animate-fade-in flex flex-col lg:flex-row gap-6 min-h-[600px] h-[calc(100vh-150px)]">
+                                    {/* Left: List & Form */}
+                                    <div className="w-full lg:w-1/3 bg-white rounded-lg shadow-lg flex flex-col overflow-hidden">
+                                        <div className="p-4 border-b bg-gray-50 flex justify-between items-center">
+                                            <h2 className="font-bold text-gray-800">จัดการห้องพัก</h2>
+                                            <button onClick={() => setEditingRoom({ id: 'R'+Date.now().toString().substr(-4), name: 'ห้องใหม่', type: 'room', min: 2, maxCap: 4, pricing: {tiers:[{max:2,price:1000}]}, bf: false, x: 50, y: 50, desc: '', images: [] })} className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 shadow">+ เพิ่มห้อง</button>
+                                        </div>
+                                        <div className="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-4">
+                                            {editingRoom ? (
+                                                <div className="space-y-3">
+                                                    <div className="flex justify-between items-center mb-2">
+                                                        <span className="font-bold text-blue-600">กำลังแก้ไข: {editingRoom.name}</span>
+                                                        <button onClick={()=>updateEditingRoomInList()} className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded">เสร็จสิ้น (ชั่วคราว)</button>
+                                                    </div>
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        <div><label className="text-xs font-bold block">ID</label><input className="w-full border p-1 rounded text-sm bg-gray-100" value={editingRoom.id} readOnly /></div>
+                                                        <div><label className="text-xs font-bold block">ชื่อห้อง</label><input className="w-full border p-1 rounded text-sm" value={editingRoom.name} onChange={e=>setEditingRoom({...editingRoom, name: e.target.value})} /></div>
+                                                        <div><label className="text-xs font-bold block">ประเภท</label><select className="w-full border p-1 rounded text-sm" value={editingRoom.type} onChange={e=>setEditingRoom({...editingRoom, type: e.target.value})}><option value="room">บ้านพัก</option><option value="tent">เต็นท์กระโจม</option><option value="tent_rent">เช่าเต็นท์</option><option value="ground">ลานกางเต็นท์</option></select></div>
+                                                        <div><label className="text-xs font-bold block">อาหารเช้า</label><select className="w-full border p-1 rounded text-sm" value={editingRoom.bf} onChange={e=>setEditingRoom({...editingRoom, bf: e.target.value==='true'})}><option value="true">มี</option><option value="false">ไม่มี</option></select></div>
+                                                        <div><label className="text-xs font-bold block">Min คน</label><input type="number" className="w-full border p-1 rounded text-sm" value={editingRoom.min} onChange={e=>setEditingRoom({...editingRoom, min: parseInt(e.target.value)})} /></div>
+                                                        <div><label className="text-xs font-bold block">Max คน</label><input type="number" className="w-full border p-1 rounded text-sm" value={editingRoom.maxCap} onChange={e=>setEditingRoom({...editingRoom, maxCap: parseInt(e.target.value)})} /></div>
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-xs font-bold block">โครงสร้างราคา (JSON)</label>
+                                                        <textarea className="w-full border p-1 rounded text-xs font-mono h-20" value={JSON.stringify(editingRoom.pricing, null, 2)} onChange={e=>{ try { setEditingRoom({...editingRoom, pricing: JSON.parse(e.target.value)}) } catch(err){} }}></textarea>
+                                                        <p className="text-[10px] text-gray-400">Ex: {"{\"tiers\":[{\"max\":2,\"price\":1200}]}"}</p>
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-xs font-bold block">คำอธิบาย</label>
+                                                        <textarea className="w-full border p-1 rounded text-sm h-16" value={editingRoom.desc} onChange={e=>setEditingRoom({...editingRoom, desc: e.target.value})}></textarea>
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-xs font-bold block">รูปภาพ</label>
+                                                        <div className="flex flex-wrap gap-2 mb-2">
+                                                            {(editingRoom.images || []).map((img, idx) => (
+                                                                <div key={idx} className="relative w-12 h-12 group">
+                                                                    <img src={img} className="w-full h-full object-cover rounded border" />
+                                                                    <button onClick={()=>setEditingRoom({...editingRoom, images: editingRoom.images.filter((_,i)=>i!==idx)})} className="absolute -top-1 -right-1 bg-red-500 text-white w-4 h-4 rounded-full flex items-center justify-center text-[10px] hidden group-hover:flex">x</button>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                        <input type="file" multiple className="text-[10px]" onChange={e => handleMultipleImageUpload(e.target.files, base64List => setEditingRoom({...editingRoom, images: [...(editingRoom.images||[]), ...base64List]}))} />
+                                                    </div>
+                                                    <div className="pt-2 border-t flex justify-between">
+                                                        <button onClick={()=>{
+                                                            if(confirm('ลบห้องนี้?')) {
+                                                                setRoomsMapData(roomsMapData.filter(r=>r.id!==editingRoom.id));
+                                                                setEditingRoom(null);
+                                                            }
+                                                        }} className="text-red-500 text-xs underline">ลบห้องพัก</button>
+                                                        <div className="text-xs text-gray-400">ตำแหน่ง: {editingRoom.x}, {editingRoom.y}</div>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-2">
+                                                    {roomsMapData.map(r => (
+                                                        <div key={r.id} onClick={()=>setEditingRoom(r)} className="p-3 border rounded hover:bg-blue-50 cursor-pointer flex justify-between items-center transition">
+                                                            <div>
+                                                                <div className="font-bold text-sm text-gray-800">{r.name}</div>
+                                                                <div className="text-xs text-gray-500">{r.id} • {r.type}</div>
+                                                            </div>
+                                                            <i className="fas fa-chevron-right text-gray-300"></i>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="p-4 bg-gray-100 border-t">
+                                            <button onClick={saveRoomChanges} disabled={savingSiteSettings} className="w-full bg-blue-600 text-white py-3 rounded font-bold shadow hover:bg-blue-700 disabled:bg-gray-400">
+                                                {savingSiteSettings ? 'กำลังบันทึก...' : 'บันทึกการเปลี่ยนแปลงทั้งหมด'}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Right: Interactive Map */}
+                                    <div className="w-full lg:w-2/3 bg-gray-200 rounded-lg shadow-inner overflow-auto flex items-center justify-center p-4">
+                                        <div className="relative inline-block" onClick={handleMapClick}>
+                                            <img src="https://img2.pic.in.th/3d539b84-44ce-4336-ad90-bd2f84b13eca.jpg" className="max-w-full max-h-[calc(100vh-200px)] object-contain block pointer-events-none select-none shadow-lg rounded" />
+                                            {/* Render Pins from List */}
+                                            {!editingRoom && roomsMapData.map(r => (
+                                                <div key={r.id} className="map-pin" style={{ left: `${r.x}%`, top: `${r.y}%` }} onClick={(e)=>{ e.stopPropagation(); setEditingRoom(r); }}>
+                                                    {r.id}
+                                                </div>
+                                            ))}
+                                            {/* Render Editing Pin */}
+                                            {editingRoom && (
+                                                <div className="map-pin active shadow-xl border-4 border-yellow-400" style={{ left: `${editingRoom.x}%`, top: `${editingRoom.y}%` }}>
+                                                    {editingRoom.id}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                             {activeTab === 'settings' && (
                                 <div className="space-y-8 animate-fade-in">
                                     {siteSettings && (
@@ -543,36 +734,7 @@
                                                 </div>
                                             </div>
 
-                                            <div className="mb-8">
-                                                <h3 className="font-bold text-lg mb-4 text-blue-600">รูปภาพและรายละเอียดห้องพัก</h3>
-                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                                    {ROOM_IDS.map(roomId => (
-                                                        <div key={roomId} className="border p-3 rounded bg-gray-50 flex flex-col h-full">
-                                                            <h4 className="font-bold mb-2 text-sm">{ROOM_NAMES[roomId]} ({roomId})</h4>
-                                                            <textarea className="w-full border p-1 rounded text-xs mb-2 resize-none h-16" placeholder="คำอธิบายห้องพัก..." value={siteSettings.roomDescriptions?.[roomId] || ''} onChange={e => {
-                                                                    const newDesc = {...(siteSettings.roomDescriptions || {})};
-                                                                    newDesc[roomId] = e.target.value;
-                                                                    setSiteSettings({...siteSettings, roomDescriptions: newDesc});
-                                                                }}></textarea>
-                                                            <div className="flex flex-wrap gap-2 mb-2 flex-grow">
-                                                                {(siteSettings.roomImages[roomId] || []).map((img, idx) => (
-                                                                    <div key={idx} className="relative w-12 h-12">
-                                                                        <img src={img} className="w-full h-full object-cover rounded" />
-                                                                        <button onClick={() => {
-                                                                            const newImgs = siteSettings.roomImages[roomId].filter((_, i) => i !== idx);
-                                                                            setSiteSettings({...siteSettings, roomImages: {...siteSettings.roomImages, [roomId]: newImgs}});
-                                                                        }} className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 text-[10px] flex items-center justify-center">×</button>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                            <input type="file" multiple className="text-[10px] w-full mt-auto" onChange={e => handleMultipleImageUpload(e.target.files, base64List => {
-                                                                    const current = siteSettings.roomImages[roomId] || [];
-                                                                    setSiteSettings({...siteSettings, roomImages: {...siteSettings.roomImages, [roomId]: [...current, ...base64List]}});
-                                                                })} />
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
+                                            {/* Removed Room Images section here since it's moved to "Rooms & Map" tab */}
 
                                             <div>
                                                 <div className="flex justify-between items-center mb-4">
