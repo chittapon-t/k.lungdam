@@ -390,7 +390,7 @@
             const days = []; for(let i=0; i<firstDayOfMonth; i++) days.push(null); for(let i=1; i<=getDaysInMonth(calendarDate); i++) days.push(i);
             const getBookingsForDate = (day) => { if(!day) return []; const dateStr = `${calendarDate.getFullYear()}-${String(calendarDate.getMonth()+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`; return bookings.filter(b => b.status !== 'ยกเลิก' && b.checkIn <= dateStr && b.checkOut > dateStr); };
 
-            // --- Room Manager Logic ---
+            // --- Room Manager Logic (Fix: Merge Editing Data Before Save) ---
             const handleMapClick = (e) => {
                 if (!editingRoom) return;
                 const rect = e.target.getBoundingClientRect();
@@ -400,18 +400,30 @@
             };
 
             const saveRoomChanges = () => {
+                // [FIXED] Combine current editing room into the list before saving
+                let finalRoomsData = [...roomsMapData];
+                if (editingRoom) {
+                    const idx = finalRoomsData.findIndex(r => r.id === editingRoom.id);
+                    if (idx > -1) {
+                        finalRoomsData[idx] = editingRoom;
+                    } else {
+                        finalRoomsData.push(editingRoom);
+                    }
+                }
+
                 confirmMsg('ยืนยันการบันทึกข้อมูลห้องพักและแผนที่?', () => {
                     setSavingSiteSettings(true);
-                    // Prepare data structure
-                    const rooms = roomsMapData.map(r => ({
+                    
+                    // Prepare Payload
+                    const rooms = finalRoomsData.map(r => ({
                         id: r.id, name: r.name, type: r.type, min: r.min, maxCap: r.maxCap, pricing: r.pricing, bf: r.bf
                     }));
                     const mapConfigObj = {};
-                    roomsMapData.forEach(r => mapConfigObj[r.id] = { x: r.x, y: r.y });
+                    finalRoomsData.forEach(r => mapConfigObj[r.id] = { x: r.x, y: r.y });
                     const images = {}, descs = {};
-                    roomsMapData.forEach(r => {
-                        images[r.id] = r.images;
-                        descs[r.id] = r.desc;
+                    finalRoomsData.forEach(r => {
+                        images[r.id] = r.images || [];
+                        descs[r.id] = r.desc || '';
                     });
 
                     fetch(GOOGLE_SCRIPT_URL, {
@@ -430,8 +442,12 @@
                         if(res.status === 'success') {
                             successMsg('บันทึกข้อมูลสำเร็จ');
                             fetchRoomConfig(); fetchMapConfig(); fetchSettings();
-                            setEditingRoom(null);
+                            setEditingRoom(null); // Clear editing state after success
                         } else errorMsg('บันทึกไม่สำเร็จ: ' + res.message);
+                    })
+                    .catch(e => {
+                         setSavingSiteSettings(false);
+                         errorMsg('Connection Error: ' + e.message);
                     });
                 });
             };
@@ -712,6 +728,7 @@
                                                     {editingRoom.id}
                                                 </div>
                                             )}
+                                            {editingRoom && <div className="absolute top-4 left-4 bg-black/70 text-white px-4 py-2 rounded-full text-sm pointer-events-none">📍 คลิกบนแผนที่เพื่อย้ายตำแหน่ง <b>{editingRoom.name}</b></div>}
                                         </div>
                                     </div>
                                 </div>
