@@ -311,7 +311,7 @@
                                     <h2 className="text-xl font-bold mb-4 text-center text-blue-600 dark:text-blue-400">จัดการการจอง / สั่งอาหาร</h2>
                                     
                                     <div className="mb-4 text-center text-xs text-gray-400">
-                                        <p>UID: {customer.userId ? (customer.userId.length > 10 ? customer.userId.substring(0, 10) + '...' : customer.userId) : '-'}</p>
+                                        <p className="select-all">UID: {customer.userId || '-'}</p>
                                     </div>
 
                                     {!manageData ? (
@@ -374,6 +374,7 @@
                                                                 <div className="text-6xl mb-4">🔍</div>
                                                                 <p className="text-gray-500">ไม่พบประวัติการจอง</p>
                                                                 <p className="text-xs text-gray-400 mt-2">หากเพิ่งจอง กรุณารอแอดมินยืนยันสักครู่</p>
+                                                                <button onClick={() => window.location.reload()} className="mt-4 text-blue-600 text-sm underline">ลองใหม่อีกครั้ง</button>
                                                             </div>
                                                         )
                                                     )
@@ -405,7 +406,7 @@
                                                         <div className="flex justify-between"><span>เข้าพัก:</span> <b>{formatThaiDate(manageData.checkIn)}</b></div>
                                                         <div className="flex justify-between"><span>ออก:</span> <b>{formatThaiDate(manageData.checkOut)}</b></div>
                                                         <div className="flex justify-between"><span>จำนวนผู้เข้าพัก:</span> <b>{manageData.guests} คน</b></div>
-                                                        <div className="flex justify-between"><span>ห้องพัก:</span> <span className="text-right">{manageData.rooms}</span></div>
+                                                        <div className="flex justify-between"><span>ห้องพัก:</span> <span>{manageData.rooms}</span></div>
                                                     </div>
                                                     
                                                     {/* แสดงรายการอาหารที่สั่งไปแล้ว */}
