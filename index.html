@@ -10,19 +10,14 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    <!-- Tailwind CSS & Config -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class', 
-        }
-    </script>
+    <script> tailwind.config = { darkMode: 'class' } </script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     
     <script>
-        // ฟังก์ชันสร้าง Payload PromptPay
         function generatePromptPayPayload(phoneNumber, amount) {
             const target = phoneNumber.replace(/^0/, '66');
             const f01 = '00' + target; 
@@ -35,9 +30,7 @@
             const data = '000201' + '010212' + tag29 + tag53 + tag54 + tag58 + '6304';
             let crc = 0xFFFF;
             for (let i = 0; i < data.length; i++) {
-                let x = ((crc >> 8) ^ data.charCodeAt(i)) & 0xFF;
-                x ^= x >> 4;
-                crc = ((crc << 8) ^ (x << 12) ^ (x << 5) ^ x) & 0xFFFF;
+                let x = ((crc >> 8) ^ data.charCodeAt(i)) & 0xFF; x ^= x >> 4; crc = ((crc << 8) ^ (x << 12) ^ (x << 5) ^ x) & 0xFFFF;
             }
             return data + crc.toString(16).toUpperCase().padStart(4, '0');
         }
@@ -50,10 +43,7 @@
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
         .animate-pop { animation: fadeIn 0.3s ease-out forwards; }
         .map-pin-responsive { transition: transform 0.2s; }
-        @media (max-width: 640px) {
-            .map-pin-responsive { transform: translate(-50%, -50%) scale(0.8) !important; }
-        }
-        /* Custom Scrollbar */
+        @media (max-width: 640px) { .map-pin-responsive { transform: translate(-50%, -50%) scale(0.8) !important; } }
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(156, 163, 175, 0.5); border-radius: 4px; }
     </style>
@@ -68,19 +58,16 @@
         const PROMPTPAY_PHONE = "0615924262";
         const PROMPTPAY_NAME = "อลงกต ทวีผ่อง";
 
-        // --- Helper Functions ---
         const compressImage = async (file) => {
             return new Promise((resolve, reject) => {
                 const maxWidth = 800;
                 const reader = new FileReader();
                 reader.readAsDataURL(file);
                 reader.onload = (event) => {
-                    const img = new Image();
-                    img.src = event.target.result;
+                    const img = new Image(); img.src = event.target.result;
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
-                        let width = img.width;
-                        let height = img.height;
+                        let width = img.width; let height = img.height;
                         if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; }
                         canvas.width = width; canvas.height = height;
                         const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height);
@@ -107,29 +94,20 @@
             headerDesc: '🏡 ขนำลุงดำ ดั้งเดิมมาจากหนำปู่ หรือที่พักตอนปู่มาอยู่ช่วงทำสวนนั้นเอง...',
             bannerUrl: 'https://img5.pic.in.th/file/secure-sv1/LINE_ALBUM__240916_14dd72f9bd7de4facf.jpg',
             logoUrl: 'https://lh3.googleusercontent.com/pw/AP1GczPi_rYAbsNGi4X96mW5koYl0JJ3BN9ipRf6UgsXAOQgkyhrs2ChGcZlbsuQ3OLJOYnYhSTYJhWUuu2hwWtPqlt4MUfdUDSS3s4RdRLeD36gPLiK-8OhYLXWmqxVLh2eOtkLIx7pQxrQA6ZnqBYHOftH=w913-h913-s-no-gm?authuser=0',
-            roomImages: {},
-            foodMenu: [],
-            roomDescriptions: {}
+            roomImages: {}, foodMenu: [], roomDescriptions: {}
         };
 
-        const DEFAULT_POSITIONS = {
-            'R1': {x: 20, y: 30}, 'R2': {x: 40, y: 50}, 'R3': {x: 60, y: 50},
-            'T1': {x: 25, y: 70}, 'T2': {x: 35, y: 75}, 'K1': {x: 70, y: 70},
-            'K2': {x: 80, y: 70}, 'Z8': {x: 50, y: 20}
-        };
+        const DEFAULT_POSITIONS = { 'R1': {x: 20, y: 30}, 'R2': {x: 40, y: 50}, 'R3': {x: 60, y: 50}, 'T1': {x: 25, y: 70}, 'T2': {x: 35, y: 75}, 'K1': {x: 70, y: 70}, 'K2': {x: 80, y: 70}, 'Z8': {x: 50, y: 20} };
         
         const App = () => {
-            // --- CORE STATES ---
             const [isDark, setIsDark] = React.useState(true);
             const [step, setStep] = React.useState(1);
-            
-            // Mode: 'booking' or 'manage' (Check URL param)
             const [mode, setMode] = React.useState(() => {
                 const params = new URLSearchParams(window.location.search);
                 return params.get('mode') === 'manage' ? 'manage' : 'booking';
             }); 
 
-            // --- BOOKING STATES ---
+            // Booking States
             const [dates, setDates] = React.useState({ checkIn: '', checkOut: '' });
             const [availability, setAvailability] = React.useState(null);
             const [loading, setLoading] = React.useState(false);
@@ -138,118 +116,71 @@
             const [isLiffReady, setIsLiffReady] = React.useState(false);
             const [pinPos, setPinPos] = React.useState(DEFAULT_POSITIONS);
             
-            // --- DATA STATES ---
+            // Data States
             const [roomConfig, setRoomConfig] = React.useState({});
             const [systemSettings, setSystemSettings] = React.useState({ closed: [], special: [] });
             const [siteConfig, setSiteConfig] = React.useState(DEFAULT_CONFIG);
 
-            // --- PAYMENT & CONFIRMATION STATES ---
+            // Payment States
             const [discount, setDiscount] = React.useState({ code: '', val: 0, type: '', message: '', status: '' });
             const [checkingDiscount, setCheckingDiscount] = React.useState(false);
-
             const [slipImg, setSlipImg] = React.useState(null);
             const [bookingResult, setBookingResult] = React.useState(null);
             const [agreed, setAgreed] = React.useState(false);
             const [qrUrl, setQrUrl] = React.useState(null);
             
-            // --- MODAL & SELECTION STATES ---
+            // Modal States
             const [selectedRoomId, setSelectedRoomId] = React.useState(null);
             const [guestCount, setGuestCount] = React.useState(1);
             const [selectedFood, setSelectedFood] = React.useState(null);
             const [foodCount, setFoodCount] = React.useState(1);
-
             const [closedModal, setClosedModal] = React.useState(null); 
             const [searchError, setSearchError] = React.useState(null);
             const [currentImgIdx, setCurrentImgIdx] = React.useState(0);
             const [showRoomRequiredModal, setShowRoomRequiredModal] = React.useState(false);
 
-            // --- MANAGE BOOKING STATES ---
-            const [manageForm, setManageForm] = React.useState({ bookingId: '', phone: '' });
+            // Manage Booking States
             const [manageData, setManageData] = React.useState(null);
             const [bookingList, setBookingList] = React.useState([]); 
             const [rescheduleDates, setRescheduleDates] = React.useState({ checkIn: '', checkOut: '' });
-            const [manageTab, setManageTab] = React.useState('info'); // 'info', 'reschedule', 'food'
-            const [addOnCart, setAddOnCart] = React.useState([]); // For adding food
+            const [manageTab, setManageTab] = React.useState('info'); 
+            const [addOnCart, setAddOnCart] = React.useState([]); 
             const [addOnSlip, setAddOnSlip] = React.useState(null);
             const [addOnQr, setAddOnQr] = React.useState(null);
+            // We need to keep manageForm for backward compatibility if backend uses it, though we now use manageData directly
+            const [manageForm, setManageForm] = React.useState({ bookingId: '', phone: '' });
 
-            // --- NEW: BEAUTIFUL POPUP STATES ---
+            // Popup States
             const [modalAlert, setModalAlert] = React.useState({ show: false, type: 'info', title: '', text: '' }); 
             const [modalConfirm, setModalConfirm] = React.useState({ show: false, title: '', text: '', onConfirm: null });
 
-            // --- HELPERS ---
-            const getTommorow = () => {
-                const d = new Date(); d.setDate(d.getDate() + 1);
-                const y = d.getFullYear();
-                const m = String(d.getMonth() + 1).padStart(2, '0');
-                const day = String(d.getDate()).padStart(2, '0');
-                return `${y}-${m}-${day}`;
-            };
-
-            const formatThaiDate = (dateStr) => {
-                if(!dateStr) return "-";
-                const date = new Date(dateStr);
-                const months = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
-                return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear() + 543}`;
-            };
-
+            // --- Helpers ---
+            const getTommorow = () => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0]; };
+            const formatThaiDate = (dateStr) => { if(!dateStr) return "-"; const d = new Date(dateStr); const m = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."]; return `${d.getDate()} ${m[d.getMonth()]} ${d.getFullYear() + 543}`; };
             const getClosedDateOverlap = (inDate, outDate) => {
                 let current = new Date(inDate); const end = new Date(outDate);
-                while(current < end) {
-                    const dStr = current.toISOString().split('T')[0];
-                    const closed = systemSettings.closed.find(c => c.date === dStr);
-                    if (closed) return closed;
-                    current.setDate(current.getDate() + 1);
-                }
+                while(current < end) { const dStr = current.toISOString().split('T')[0]; const closed = systemSettings.closed.find(c => c.date === dStr); if (closed) return closed; current.setDate(current.getDate() + 1); }
                 return null;
             };
-
             const checkDateOverlapHighSeason = (inDate, outDate) => {
                 let current = new Date(inDate); const end = new Date(outDate);
-                while(current < end) {
-                    const dStr = current.toISOString().split('T')[0];
-                    if (systemSettings.special.some(s => s.date === dStr)) return true;
-                    current.setDate(current.getDate() + 1);
-                }
+                while(current < end) { const dStr = current.toISOString().split('T')[0]; if (systemSettings.special.some(s => s.date === dStr)) return true; current.setDate(current.getDate() + 1); }
                 return false;
             };
-
-            const calculateNights = () => {
-                if(!dates.checkIn || !dates.checkOut) return 0;
-                return (new Date(dates.checkOut) - new Date(dates.checkIn)) / (1000 * 3600 * 24);
-            }
-
+            const calculateNights = () => { if(!dates.checkIn || !dates.checkOut) return 0; return (new Date(dates.checkOut) - new Date(dates.checkIn)) / (1000 * 3600 * 24); }
             const getPricing = () => {
-                const nights = calculateNights();
-                let roomTotal = 0; let foodTotal = 0; let z8Total = 0;
-                cart.forEach(item => {
-                    if (item.type === 'food') foodTotal += item.price * item.qty;
-                    else if (item.id === 'Z8') z8Total += item.pricePerNight * nights * item.guests; 
-                    else roomTotal += item.pricePerNight * nights;
-                });
-
-                let discountAmt = 0;
-                if (discount.type === 'FIXED') discountAmt = discount.val;
-                if (discount.type === 'PERCENT') discountAmt = (roomTotal * discount.val) / 100;
-                if (discountAmt > roomTotal) discountAmt = roomTotal; 
-
-                const totalBefore = roomTotal + z8Total + foodTotal;
-                const netTotal = totalBefore - discountAmt;
-
-                let deposit = 0;
-                const isHigh = checkDateOverlapHighSeason(dates.checkIn, dates.checkOut);
-                if (isHigh) deposit = netTotal;
-                else {
-                    const roomDeposit = (roomTotal - discountAmt) * 0.5;
-                    deposit = roomDeposit + z8Total + foodTotal;
-                }
+                const nights = calculateNights(); let roomTotal = 0; let foodTotal = 0; let z8Total = 0;
+                cart.forEach(item => { if (item.type === 'food') foodTotal += item.price * item.qty; else if (item.id === 'Z8') z8Total += item.pricePerNight * nights * item.guests; else roomTotal += item.pricePerNight * nights; });
+                let discountAmt = 0; if (discount.type === 'FIXED') discountAmt = discount.val; if (discount.type === 'PERCENT') discountAmt = (roomTotal * discount.val) / 100; if (discountAmt > roomTotal) discountAmt = roomTotal; 
+                const totalBefore = roomTotal + z8Total + foodTotal; const netTotal = totalBefore - discountAmt;
+                let deposit = 0; const isHigh = checkDateOverlapHighSeason(dates.checkIn, dates.checkOut);
+                if (isHigh) deposit = netTotal; else { const roomDeposit = (roomTotal - discountAmt) * 0.5; deposit = roomDeposit + z8Total + foodTotal; }
                 return { total: totalBefore, discount: discountAmt, netTotal: netTotal, deposit: Math.ceil(deposit), isHighSeason: isHigh };
             };
-
             const pricing = React.useMemo(() => getPricing(), [cart, dates, discount, systemSettings]);
             const canSubmit = customer.name && customer.phone && slipImg && agreed;
 
-            // --- EFFECTS ---
+            // --- Effects ---
             React.useEffect(() => {
                 if (LIFF_ID) {
                     liff.init({ liffId: LIFF_ID }).then(() => {
@@ -259,9 +190,8 @@
                                 setCustomer(prev => ({...prev, userId: profile.userId, lineDisplayName: profile.displayName}));
                             });
                         }
-                    }).catch(err => { console.error(err); setIsLiffReady(true); });
+                    }).catch(err => { console.error('LIFF Error', err); setIsLiffReady(true); });
                 } else { setIsLiffReady(true); }
-                
                 fetch(`${GOOGLE_SCRIPT_URL}?action=getMapConfig`).then(r => r.json()).then(res => { if (res.status === 'success') setPinPos(res.data); });
                 fetch(`${GOOGLE_SCRIPT_URL}?action=getSettings`).then(r => r.json()).then(res => { if (res.status === 'success') setSystemSettings({ closed: res.closed, special: res.special }); });
                 fetch(`${GOOGLE_SCRIPT_URL}?action=getSiteSettings`).then(r => r.json()).then(res => { if (res.status === 'success') setSiteConfig(prev => ({ ...prev, ...res.data })); });
@@ -302,7 +232,7 @@
                 }
             }, [mode, isLiffReady, customer.userId, manageData]);
 
-            // --- HANDLERS ---
+            // --- Handlers ---
             const handleSearch = () => {
                 if (!dates.checkIn || !dates.checkOut) { setSearchError('กรุณาเลือกวันเข้าพักและวันที่ออกให้ครบถ้วนครับ'); return; }
                 if (dates.checkIn >= dates.checkOut) { setSearchError('วันเช็คเอาท์ต้องอยู่หลังจากวันเช็คอินครับ'); return; }
@@ -310,137 +240,51 @@
                 setLoading(true);
                 fetch(`${GOOGLE_SCRIPT_URL}?action=getAvailability&checkIn=${dates.checkIn}&checkOut=${dates.checkOut}`).then(r => r.json()).then(data => { setAvailability(data); setStep(2); setLoading(false); }).catch(e => { alert('Error: ' + e); setLoading(false); });
             };
-
-            const openRoomModal = (roomId) => {
-                const room = roomConfig[roomId]; if (!room) return;
-                if(roomId === 'Z8') setGuestCount(1); else setGuestCount(room.min || 1);
-                setCurrentImgIdx(0); setSelectedRoomId(roomId);
-            };
-
+            const openRoomModal = (roomId) => { const room = roomConfig[roomId]; if (!room) return; if(roomId === 'Z8') setGuestCount(1); else setGuestCount(room.min || 1); setCurrentImgIdx(0); setSelectedRoomId(roomId); };
             const openFoodModal = (food) => { setSelectedFood(food); setFoodCount(1); };
-
             const confirmFoodSelection = () => {
-                const targetCart = mode === 'manage' ? addOnCart : cart;
-                const setTargetCart = mode === 'manage' ? setAddOnCart : setCart;
+                const targetCart = mode === 'manage' ? addOnCart : cart; const setTargetCart = mode === 'manage' ? setAddOnCart : setCart;
                 const exist = targetCart.find(c => c.id === selectedFood.id);
-                if (exist) setTargetCart(targetCart.map(c => c.id === selectedFood.id ? { ...c, qty: c.qty + foodCount } : c));
-                else setTargetCart([...targetCart, { ...selectedFood, type: 'food', qty: foodCount }]);
+                if (exist) setTargetCart(targetCart.map(c => c.id === selectedFood.id ? { ...c, qty: c.qty + foodCount } : c)); else setTargetCart([...targetCart, { ...selectedFood, type: 'food', qty: foodCount }]);
                 setSelectedFood(null);
             };
-
             const nextImage = () => { if(!selectedRoomId) return; const images = siteConfig.roomImages[selectedRoomId] || []; setCurrentImgIdx((prev) => (prev + 1) % images.length); };
             const prevImage = () => { if(!selectedRoomId) return; const images = siteConfig.roomImages[selectedRoomId] || []; setCurrentImgIdx((prev) => (prev - 1 + images.length) % images.length); };
-
             const confirmRoomSelection = () => {
                 const roomId = selectedRoomId; const guests = guestCount; const roomInfo = roomConfig[roomId];
-                if (roomId === 'Z8') {
-                    const currentZ8 = cart.filter(c => c.id === 'Z8').reduce((sum, c) => sum + c.guests, 0);
-                    if (currentZ8 + guests > availability.zone8Available) { alert(`ลานกางเต็นท์ว่างอีก ${availability.zone8Available - currentZ8} ท่าน`); return; }
-                }
-                let price = 0;
-                if (roomId === 'Z8') { price = roomInfo.pricing.priceHead; } else { const tier = roomInfo.pricing.tiers.find(t => guests <= t.max); if (!tier) { const maxTier = roomInfo.pricing.tiers[roomInfo.pricing.tiers.length - 1]; price = maxTier.price; } else { price = tier.price; } }
-                setCart([...cart, { id: roomId, name: roomInfo.name, type: roomInfo.type, guests, pricePerNight: price, nights: calculateNights() }]);
-                setSelectedRoomId(null);
+                if (roomId === 'Z8') { const currentZ8 = cart.filter(c => c.id === 'Z8').reduce((sum, c) => sum + c.guests, 0); if (currentZ8 + guests > availability.zone8Available) { alert(`ลานกางเต็นท์ว่างอีก ${availability.zone8Available - currentZ8} ท่าน`); return; } }
+                let price = 0; if (roomId === 'Z8') { price = roomInfo.pricing.priceHead; } else { const tier = roomInfo.pricing.tiers.find(t => guests <= t.max); if (!tier) { const maxTier = roomInfo.pricing.tiers[roomInfo.pricing.tiers.length - 1]; price = maxTier.price; } else { price = tier.price; } }
+                setCart([...cart, { id: roomId, name: roomInfo.name, type: roomInfo.type, guests, pricePerNight: price, nights: calculateNights() }]); setSelectedRoomId(null);
             };
-
             const checkDiscountCode = () => { 
-                if(!discount.code) return; 
-                setCheckingDiscount(true); 
-                fetch(`${GOOGLE_SCRIPT_URL}?action=checkDiscount&code=${discount.code}`)
-                    .then(r=>r.json())
-                    .then(d => { 
-                        setCheckingDiscount(false);
-                        if(d.status === 'success') setDiscount({...discount, val: parseInt(d.value), type: d.type, message: `ใช้โค้ดสำเร็จ ลด ${d.value} ${d.type==='PERCENT'?'%':'บาท'}`, status: 'success'}); 
-                        else setDiscount({...discount, val: 0, type: '', message: 'ไม่พบโค้ดส่วนลดนี้', status: 'error'}); 
-                    })
-                    .catch(() => {
-                        setCheckingDiscount(false);
-                        setDiscount({...discount, val: 0, type: '', message: 'เกิดข้อผิดพลาดในการตรวจสอบ', status: 'error'});
-                    }); 
+                if(!discount.code) return; setCheckingDiscount(true); 
+                fetch(`${GOOGLE_SCRIPT_URL}?action=checkDiscount&code=${discount.code}`).then(r=>r.json()).then(d => { setCheckingDiscount(false); if(d.status === 'success') setDiscount({...discount, val: parseInt(d.value), type: d.type, message: `ใช้โค้ดสำเร็จ ลด ${d.value} ${d.type==='PERCENT'?'%':'บาท'}`, status: 'success'}); else setDiscount({...discount, val: 0, type: '', message: 'ไม่พบโค้ดส่วนลดนี้', status: 'error'}); }).catch(() => { setCheckingDiscount(false); setDiscount({...discount, val: 0, type: '', message: 'เกิดข้อผิดพลาด', status: 'error'}); }); 
             };
-
             const handleSubmit = () => {
-                if (!canSubmit) return;
-                setLoading(true);
-                const payload = {
-                    action: 'saveBooking',
-                    customer, checkIn: dates.checkIn, checkOut: dates.checkOut,
-                    totalGuests: cart.filter(c => c.type !== 'food').reduce((s, c) => s + c.guests, 0),
-                    cart, pricing, discountCode: discount.code, slipImage: slipImg
-                };
-                fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) })
-                .then(r => r.json()).then(res => { if (res.status === 'success') { setBookingResult(res.bookingId); setStep(5); } else { alert('Error: ' + res.message); } setLoading(false); }).catch(e => { alert('Failed: ' + e); setLoading(false); });
+                if (!canSubmit) return; setLoading(true);
+                const payload = { action: 'saveBooking', customer, checkIn: dates.checkIn, checkOut: dates.checkOut, totalGuests: cart.filter(c => c.type !== 'food').reduce((s, c) => s + c.guests, 0), cart, pricing, discountCode: discount.code, slipImage: slipImg };
+                fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) }).then(r => r.json()).then(res => { if (res.status === 'success') { setBookingResult(res.bookingId); setStep(5); } else { alert('Error: ' + res.message); } setLoading(false); }).catch(e => { alert('Failed: ' + e); setLoading(false); });
             };
-
-            const handleDownloadQr = () => {
-                if(!qrUrl) return;
-                try { const blob = base64ToBlob(qrUrl); const url = window.URL.createObjectURL(blob); const link = document.createElement('a'); link.style.display = 'none'; link.href = url; link.download = 'payment-qr.png'; document.body.appendChild(link); link.click(); setTimeout(() => { document.body.removeChild(link); window.URL.revokeObjectURL(url); }, 100); } catch (e) { alert('ไม่สามารถดาวน์โหลดได้อัตโนมัติ กรุณากดค้างที่รูปเพื่อบันทึก'); }
-            };
-
-            // --- MANAGE BOOKING HANDLERS ---
+            const selectBookingToManage = (booking, tab = 'info') => { setManageData(booking); setManageForm({ bookingId: booking.id, phone: booking.phone }); setManageTab(tab); }
             
-            const selectBookingToManage = (booking, tab = 'info') => {
-                setManageData(booking);
-                setManageForm({ bookingId: booking.id, phone: booking.phone });
-                setManageTab(tab);
-            }
-
             const handleCustomerReschedule = () => {
                 if(!rescheduleDates.checkIn || !rescheduleDates.checkOut) return setModalAlert({ show: true, type: 'warning', title: 'แจ้งเตือน', text: 'กรุณาเลือกวันเข้าพักและวันออกใหม่' });
-
-                // --- NEW CONDITION: Forbid selecting today or past dates ---
                 if(rescheduleDates.checkIn < getTommorow()) return setModalAlert({ show: true, type: 'warning', title: 'แจ้งเตือน', text: 'ไม่สามารถเลือกวันที่ปัจจุบันหรือย้อนหลังได้' });
-                
                 if(rescheduleDates.checkIn >= rescheduleDates.checkOut) return setModalAlert({ show: true, type: 'warning', title: 'แจ้งเตือน', text: 'วันเช็คเอาท์ต้องอยู่หลังวันเช็คอิน' });
-                
-                // Check 7 Days Condition
+                // Check if current booking check-in is at least 7 days from now
                 const today = new Date(); today.setHours(0,0,0,0);
                 const currentCheckIn = new Date(manageData.checkIn); currentCheckIn.setHours(0,0,0,0);
                 const diffTime = currentCheckIn.getTime() - today.getTime();
                 const diffDays = Math.ceil(diffTime / (1000 * 3600 * 24));
                 if (diffDays < 7) return setModalAlert({ show: true, type: 'warning', title: 'ไม่สามารถเลื่อนได้', text: `ต้องทำการเลื่อนล่วงหน้าอย่างน้อย 7 วัน (เหลืออีก ${diffDays} วัน)` });
 
-                setModalConfirm({
-                    show: true,
-                    title: 'ยืนยันการเลื่อนวัน',
-                    text: `เปลี่ยนเป็น\n${formatThaiDate(rescheduleDates.checkIn)} - ${formatThaiDate(rescheduleDates.checkOut)}`,
-                    onConfirm: () => {
-                        setModalConfirm({ ...modalConfirm, show: false });
-                        executeReschedule();
-                    }
-                });
+                setModalConfirm({ show: true, title: 'ยืนยันการเลื่อนวัน', text: `เปลี่ยนเป็น\n${formatThaiDate(rescheduleDates.checkIn)} - ${formatThaiDate(rescheduleDates.checkOut)}`, onConfirm: () => { setModalConfirm({ ...modalConfirm, show: false }); executeReschedule(); } });
             };
-
             const executeReschedule = () => {
                 setLoading(true);
-                fetch(GOOGLE_SCRIPT_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        action: 'customerReschedule',
-                        bookingId: manageData.id,
-                        phone: manageForm.phone,
-                        newCheckIn: rescheduleDates.checkIn,
-                        newCheckOut: rescheduleDates.checkOut
-                    })
-                })
-                .then(r => r.json())
-                .then(res => {
-                    setLoading(false);
-                    if(res.status === 'success') {
-                        setModalAlert({ show: true, type: 'success', title: 'สำเร็จ!', text: 'เลื่อนวันเข้าพักเรียบร้อย ระบบได้ส่งใบนัดหมายใหม่ทาง LINE แล้วครับ' });
-                        setManageData(null);
-                        setManageForm({bookingId: '', phone: ''});
-                        setMode('booking');
-                    } else {
-                        setModalAlert({ show: true, type: 'error', title: 'ไม่สามารถทำรายการได้', text: res.message });
-                    }
-                })
-                .catch(e => { 
-                    setLoading(false); 
-                    setModalAlert({ show: true, type: 'error', title: 'Error', text: 'เกิดข้อผิดพลาด: ' + e });
-                });
+                fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'customerReschedule', bookingId: manageData.id, phone: manageData.phone, newCheckIn: rescheduleDates.checkIn, newCheckOut: rescheduleDates.checkOut }) })
+                .then(r => r.json()).then(res => { setLoading(false); if(res.status === 'success') { setModalAlert({ show: true, type: 'success', title: 'สำเร็จ!', text: 'เลื่อนวันเรียบร้อย' }); setManageData(null); setMode('booking'); } else { setModalAlert({ show: true, type: 'error', title: 'ไม่สำเร็จ', text: res.message }); } }).catch(e => { setLoading(false); setModalAlert({ show: true, type: 'error', title: 'Error', text: e }); });
             };
-
             const handleCustomerAddFood = () => {
                 if(addOnCart.length === 0) return setModalAlert({ show: true, type: 'warning', title: 'แจ้งเตือน', text: 'กรุณาเลือกอาหาร' });
                 if(!addOnSlip) return setModalAlert({ show: true, type: 'warning', title: 'แจ้งเตือน', text: 'กรุณาแนบสลิป' });
@@ -452,75 +296,24 @@
                 const diffDays = Math.ceil(diffTime / (1000 * 3600 * 24));
                 if (diffDays < 1) return setModalAlert({ show: true, type: 'warning', title: 'ไม่สามารถสั่งเพิ่มได้', text: 'ต้องสั่งอาหารล่วงหน้าอย่างน้อย 1 วันก่อนเข้าพัก' });
 
-                setModalConfirm({
-                    show: true,
-                    title: 'ยืนยันการสั่งอาหาร',
-                    text: `รายการ:\n${addOnCart.map(i => '- '+i.name).join('\n')}`,
-                    onConfirm: () => {
-                        setModalConfirm({ ...modalConfirm, show: false });
-                        executeAddFood();
-                    }
-                });
+                setModalConfirm({ show: true, title: 'ยืนยันการสั่งอาหาร', text: `รายการ:\n${addOnCart.map(i => '- '+i.name).join('\n')}`, onConfirm: () => { setModalConfirm({ ...modalConfirm, show: false }); executeAddFood(); } });
             };
-
             const executeAddFood = () => {
                 setLoading(true);
-                fetch(GOOGLE_SCRIPT_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        action: 'customerAddFood',
-                        bookingId: manageData.id,
-                        phone: manageForm.phone,
-                        newFoodItems: addOnCart,
-                        slipImage: addOnSlip // Send slip
-                    })
-                })
-                .then(r => r.json())
-                .then(res => {
-                    setLoading(false);
-                    if(res.status === 'success') {
-                        setModalAlert({ show: true, type: 'success', title: 'สั่งอาหารสำเร็จ!', text: 'ระบบได้บันทึกและส่งรายการทาง LINE เรียบร้อยแล้วครับ' });
-                        setManageData(null);
-                        setManageForm({bookingId: '', phone: ''});
-                        setAddOnCart([]);
-                        setAddOnSlip(null);
-                        setMode('booking');
-                    } else {
-                        setModalAlert({ show: true, type: 'error', title: 'ไม่สามารถทำรายการได้', text: res.message });
-                    }
-                })
-                .catch(e => { 
-                    setLoading(false); 
-                    setModalAlert({ show: true, type: 'error', title: 'Error', text: 'เกิดข้อผิดพลาด: ' + e });
-                });
+                fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'customerAddFood', bookingId: manageData.id, phone: manageData.phone, newFoodItems: addOnCart, slipImage: addOnSlip }) })
+                .then(r => r.json()).then(res => { setLoading(false); if(res.status === 'success') { setModalAlert({ show: true, type: 'success', title: 'สำเร็จ!', text: 'สั่งอาหารเรียบร้อย' }); setManageData(null); setAddOnCart([]); setAddOnSlip(null); setMode('booking'); } else { setModalAlert({ show: true, type: 'error', title: 'ไม่สำเร็จ', text: res.message }); } }).catch(e => { setLoading(false); setModalAlert({ show: true, type: 'error', title: 'Error', text: e }); });
             };
 
             return (
                 <div className={isDark ? "dark" : ""}>
                     <div className="min-h-screen bg-[#f3f4f6] dark:bg-gray-900 text-gray-800 dark:text-gray-100 transition-colors duration-300">
-                        {/* FIXED FLOATING BUTTONS (Top Right) */}
-                        <button 
-                            onClick={() => setIsDark(!isDark)} 
-                            className="fixed top-4 right-4 z-50 bg-white dark:bg-gray-700 p-2 rounded-full shadow-lg border border-gray-200 dark:border-gray-600 w-10 h-10 flex items-center justify-center transition-transform hover:scale-110"
-                        >
-                            {isDark ? '☀️' : '🌙'}
-                        </button>
+                        {/* THEME TOGGLE */}
+                        <button onClick={() => setIsDark(!isDark)} className="fixed top-4 right-4 z-50 bg-white dark:bg-gray-700 p-2 rounded-full shadow-lg border border-gray-200 dark:border-gray-600 w-10 h-10 flex items-center justify-center transition-transform hover:scale-110"> {isDark ? '☀️' : '🌙'} </button>
+                        
+                        {/* MODE TOGGLE */}
+                        <button onClick={() => { setMode(mode === 'booking' ? 'manage' : 'booking'); setStep(1); setManageData(null); setManageTab('info'); }} className="fixed top-16 right-4 z-50 bg-white dark:bg-gray-700 p-2 rounded-full shadow-lg border border-gray-200 dark:border-gray-600 w-10 h-10 flex items-center justify-center transition-transform hover:scale-110 text-gray-800 dark:text-white"> {mode === 'booking' ? <i className="fas fa-search"></i> : <i className="fas fa-home"></i>} </button>
 
-                        <button 
-                            onClick={() => {
-                                setMode(mode === 'booking' ? 'manage' : 'booking');
-                                setStep(1);
-                                setManageData(null);
-                                setManageTab('info');
-                                setAddOnCart([]);
-                                setAddOnSlip(null);
-                            }}
-                            className="fixed top-16 right-4 z-50 bg-white dark:bg-gray-700 p-2 rounded-full shadow-lg border border-gray-200 dark:border-gray-600 w-10 h-10 flex items-center justify-center transition-transform hover:scale-110 text-gray-800 dark:text-white"
-                        >
-                             {mode === 'booking' ? <i className="fas fa-search"></i> : <i className="fas fa-home"></i>}
-                        </button>
-
-                        {/* --- MODE: MANAGE BOOKING --- */}
+                        {/* --- MANAGE MODE --- */}
                         {mode === 'manage' && (
                             <div className="max-w-md mx-auto p-4 pt-16">
                                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 min-h-[300px]">
@@ -622,7 +415,7 @@
                                                         <div className="flex justify-between"><span>เข้าพัก:</span> <b>{formatThaiDate(manageData.checkIn)}</b></div>
                                                         <div className="flex justify-between"><span>ออก:</span> <b>{formatThaiDate(manageData.checkOut)}</b></div>
                                                         <div className="flex justify-between"><span>จำนวนผู้เข้าพัก:</span> <b>{manageData.guests} คน</b></div>
-                                                        <div className="flex justify-between"><span>ห้องพัก:</span> <span className="text-right">{manageData.rooms}</span></div>
+                                                        <div className="flex justify-between"><span>ห้องพัก:</span> <span>{manageData.rooms}</span></div>
                                                     </div>
                                                     
                                                     {/* แสดงรายการอาหารที่สั่งไปแล้ว */}
@@ -790,41 +583,21 @@
 
                         {mode === 'booking' && step === 3 && (
                             <div className="max-w-md mx-auto p-6 bg-white dark:bg-gray-800 shadow-xl rounded-xl">
-                                <div className="flex items-center gap-2 mb-4">
-                                    <button onClick={()=>setStep(2)} className="text-gray-500 dark:text-gray-300 hover:text-green-600 font-bold text-sm"><i className="fas fa-chevron-left"></i> ย้อนกลับ</button>
-                                    <h2 className="text-xl font-bold dark:text-white">สรุปยอดและชำระเงิน</h2>
-                                </div>
+                                <div className="flex items-center gap-2 mb-4"><button onClick={()=>setStep(2)} className="text-gray-500 dark:text-gray-300 hover:text-green-600 font-bold text-sm"><i className="fas fa-chevron-left"></i> ย้อนกลับ</button><h2 className="text-xl font-bold dark:text-white">สรุปยอดและชำระเงิน</h2></div>
                                 <div className="space-y-2 mb-4 text-sm dark:text-gray-200">
-                                    <p><strong>เข้าพัก:</strong> {formatThaiDate(dates.checkIn)}</p>
-                                    <p><strong>คืนห้อง:</strong> {formatThaiDate(dates.checkOut)}</p>
-                                    <p><strong>จำนวน:</strong> {calculateNights()} คืน</p>
-                                    {pricing.isHighSeason && <div className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 p-1 rounded">ℹ️ ช่วงเทศกาล/วันพิเศษ คิดมัดจำ 100%</div>}
+                                    <p><strong>เข้าพัก:</strong> {formatThaiDate(dates.checkIn)} - {formatThaiDate(dates.checkOut)} ({calculateNights()} คืน)</p>
                                     <hr className="dark:border-gray-600"/>
                                     {cart.map((c, i) => <div key={i} className="flex justify-between"><span>{c.name}</span><span>{c.type==='food' ? c.price*c.qty : (c.id === 'Z8' ? c.pricePerNight * calculateNights() * c.guests : c.pricePerNight*calculateNights())} บ.</span></div>)}
-                                    <hr className="dark:border-gray-600"/>
-                                    {pricing.discount > 0 && <div className="flex justify-between text-red-500 font-bold"><span>ส่วนลดที่พัก</span><span>-{pricing.discount} บ.</span></div>}
+                                    {pricing.discount > 0 && <div className="flex justify-between text-red-500"><span>ส่วนลด</span><span>-{pricing.discount} บ.</span></div>}
                                     <div className="flex justify-between font-bold text-lg"><span>สุทธิ</span><span>{pricing.netTotal} บ.</span></div>
-                                    <div className="bg-yellow-100 dark:bg-yellow-900 p-2 rounded text-center border border-yellow-300 dark:border-yellow-700 mt-2">
-                                        <span className="block text-sm text-yellow-800 dark:text-yellow-200">ยอดมัดจำที่ต้องโอน</span>
-                                        <span className="text-2xl font-bold text-red-600 dark:text-red-400">{pricing.deposit} บาท</span>
-                                    </div>
+                                    <div className="bg-yellow-100 p-2 rounded text-center"><span className="block text-sm text-yellow-800">มัดจำที่ต้องโอน</span><span className="text-2xl font-bold text-red-600">{pricing.deposit} บาท</span></div>
                                 </div>
-                                <div className="mb-4">
-                                    <div className="flex gap-2"> <input placeholder="กรอกโค้ดส่วนลด" className="border p-2 rounded flex-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white" onChange={e => setDiscount({...discount, code: e.target.value})} /> <button className="bg-gray-800 dark:bg-gray-600 text-white px-4 rounded" onClick={checkDiscountCode}>กดใช้โค้ด</button> </div>
-                                    {discount.message && <p className={`text-xs mt-1 ${discount.status==='success'?'text-green-600 dark:text-green-400':'text-red-500 dark:text-red-400'}`}>{discount.message}</p>}
-                                </div>
-                                <div className="space-y-3 mb-6">
-                                    <input placeholder="ชื่อผู้จอง" className="w-full border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" value={customer.name} onChange={e => setCustomer({...customer, name: e.target.value})} />
-                                    <input placeholder="เบอร์โทรศัพท์" className="w-full border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" type="tel" value={customer.phone} onChange={e => setCustomer({...customer, phone: e.target.value})} />
-                                </div>
-                                <div className="text-center mb-6">
-                                    <p className="mb-2 font-bold dark:text-white">สแกนจ่ายมัดจำ (พร้อมเพย์)</p>
-                                    {qrUrl ? ( <div className="flex flex-col items-center"> <img src={qrUrl} className="mx-auto border-2 border-gray-200 dark:border-gray-600 rounded-lg mb-3 shadow-sm p-1 bg-white" alt="QR Code" width="200" height="200" /> <p className="text-sm text-blue-600 dark:text-blue-400 font-bold mt-2"> กรุณาแคปหน้าจอหรือกดค้างที่รูปเพื่อบันทึก</p> </div> ) : ( <div className="h-[200px] flex items-center justify-center text-gray-400">กำลังสร้าง QR Code...</div> )}
-                                    <div className="mt-4 bg-gray-50 dark:bg-gray-700 p-2 rounded"> <p className="text-sm font-bold text-gray-800 dark:text-white">{PROMPTPAY_NAME}</p> <p className="text-xs text-gray-500 dark:text-gray-400 font-mono tracking-wider">{PROMPTPAY_PHONE}</p> </div>
-                                </div>
-                                <div className="mb-4"> <label className="block mb-1 text-sm dark:text-gray-300">สลิปโอนเงิน <span className="text-red-500">*</span></label> <input type="file" accept="image/*" onChange={async (e) => { const f = e.target.files[0]; if (f) { try { const resizedBase64 = await compressImage(f); setSlipImg(resizedBase64); } catch (err) { alert('ไม่สามารถประมวลผลรูปภาพได้'); } } }} className="w-full text-sm dark:text-gray-300" /> </div>
-                                <div className="flex items-start gap-2 mb-4 text-xs text-gray-600 dark:text-gray-400"> <input type="checkbox" className="mt-1" checked={agreed} onChange={e => setAgreed(e.target.checked)} /> <p>ฉันอ่านกฎระเบียบและยอมรับเงื่อนไขของ ขนำลุงดำ แคมป์ปิ้ง ทุกประการ </p> </div>
-                                <button onClick={handleSubmit} disabled={loading || !canSubmit} className={`w-full p-3 rounded-lg font-bold text-white transition ${loading || !canSubmit ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}>{loading ? 'กำลังเตรียมเต็นท์...' : 'ยืนยันการจอง'}</button>
+                                <div className="mb-4 flex gap-2"> <input placeholder="โค้ดส่วนลด" className="border p-2 rounded flex-1" onChange={e => setDiscount({...discount, code: e.target.value})} /> <button className="bg-gray-800 text-white px-4 rounded" onClick={checkDiscountCode}>ใช้</button> </div>
+                                <div className="space-y-3 mb-6"><input placeholder="ชื่อผู้จอง" className="w-full border p-2 rounded" value={customer.name} onChange={e => setCustomer({...customer, name: e.target.value})} /><input placeholder="เบอร์โทรศัพท์" className="w-full border p-2 rounded" type="tel" value={customer.phone} onChange={e => setCustomer({...customer, phone: e.target.value})} /></div>
+                                <div className="text-center mb-6"> {qrUrl ? <img src={qrUrl} className="mx-auto border-2 rounded-lg mb-3 shadow-sm p-1 bg-white" width="200" /> : <div className="h-[200px] flex items-center justify-center text-gray-400">QR Code...</div> } <p className="text-xs text-gray-500">{PROMPTPAY_NAME} - {PROMPTPAY_PHONE}</p> </div>
+                                <div className="mb-4"><label className="block mb-1 text-sm">สลิปโอนเงิน *</label><input type="file" accept="image/*" onChange={async (e) => { const f = e.target.files[0]; if (f) setSlipImg(await compressImage(f)); }} className="w-full text-sm" /></div>
+                                <div className="flex items-center gap-2 mb-4 text-xs text-gray-600"><input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)} />ยอมรับเงื่อนไขการจอง</div>
+                                <button onClick={handleSubmit} disabled={loading || !canSubmit} className="w-full p-3 rounded-lg font-bold text-white bg-green-600 disabled:bg-gray-400">ยืนยันการจอง</button>
                             </div>
                         )}
 
@@ -833,7 +606,7 @@
                                 <div className="text-6xl mb-4">🎉</div>
                                 <h2 className="text-2xl font-bold text-green-700 dark:text-green-400 mb-2">จองสำเร็จ!</h2>
                                 <p className="text-gray-600 dark:text-gray-300 mb-4">รหัส: <strong>{bookingResult}</strong></p>
-                                <button onClick={() => liff.closeWindow()} className="mt-8 bg-gray-800 dark:bg-gray-600 text-white px-6 py-2 rounded-full">ปิดหน้าต่าง</button>
+                                <button onClick={() => liff.closeWindow()} className="mt-8 bg-gray-800 text-white px-6 py-2 rounded-full">ปิดหน้าต่าง</button>
                             </div>
                         )}
 
