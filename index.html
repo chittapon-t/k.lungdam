@@ -141,7 +141,7 @@
             });
 
             const [discount, setDiscount] = React.useState({ code: '', val: 0, type: '', message: '', status: '' });
-            const [checkingDiscount, setCheckingDiscount] = React.useState(false); // New state for loading popup
+            const [checkingDiscount, setCheckingDiscount] = React.useState(false);
 
             const [slipImg, setSlipImg] = React.useState(null);
             const [bookingResult, setBookingResult] = React.useState(null);
@@ -327,26 +327,11 @@
                         setLoading(false);
                         if(res.status === 'success') {
                             setManageData(res.booking);
-                            // Pre-fill phone for verification logic in subsequent steps if needed
-                            // (backend relies on original logic for updates, but for display we are good)
-                            // We should store phone to ensure update logic works as before
-                            // Actually, backend for 'customerReschedule' uses bookingId and phone for verification.
-                            // We must ensure we have the phone. 
-                            // Since we got the booking, we trust it. 
-                            // Let's set manageForm phone for consistency with existing functions.
-                            // But wait, the phone from booking might have extra chars, let's just use it.
-                            const phoneRaw = res.booking.phone || ''; // The API doesn't return phone in the `booking` object explicitly in `findBooking` response unless we add it. 
-                            // Wait, looking at Code.gs `findBooking` response:
-                            // booking: { id, name, checkIn, checkOut, rooms, guests, food, status }
-                            // It does NOT return phone. We need phone for `customerReschedule` verification in backend!
-                            // I should have updated Code.gs to return phone too, or update backend to verify via userId.
-                            // Since I can't edit Code.gs logic arbitrarily without instruction, but I AM editing Code.gs in this step.
-                            // I will ensure Code.gs returns phone in findBooking response so the frontend can use it for verification calls.
-                            setManageForm({ bookingId: res.booking.id, phone: res.booking.phone }); // Assumption: I will add phone to Code.gs response
+                            // Set manageForm phone from the result for verification
+                            setManageForm({ bookingId: res.booking.id, phone: res.booking.phone }); 
                             setManageTab('info');
                         } else {
-                            // If not found, stay on manage page but maybe show a message
-                            // setModalAlert({ show: true, type: 'error', title: 'ไม่พบข้อมูล', text: 'ไม่พบประวัติการจองของคุณ' });
+                            // Do nothing here, let the UI show "Not Found" state
                         }
                     })
                     .catch(e => { 
@@ -409,11 +394,11 @@
 
             const checkDiscountCode = () => { 
                 if(!discount.code) return; 
-                setCheckingDiscount(true); // Show Popup
+                setCheckingDiscount(true); 
                 fetch(`${GOOGLE_SCRIPT_URL}?action=checkDiscount&code=${discount.code}`)
                     .then(r=>r.json())
                     .then(d => { 
-                        setCheckingDiscount(false); // Hide Popup
+                        setCheckingDiscount(false);
                         if(d.status === 'success') { 
                             setDiscount({...discount, val: parseInt(d.value), type: d.type, message: `ใช้โค้ดสำเร็จ ลด ${d.value} ${d.type==='PERCENT'?'%':'บาท'}`, status: 'success'}); 
                         } else { 
@@ -445,8 +430,7 @@
             };
 
             // --- MANAGE BOOKING HANDLERS ---
-            // Removed handleFindBooking since we use Auto Fetch
-
+            
             const handleCustomerReschedule = () => {
                 if(!rescheduleDates.checkIn || !rescheduleDates.checkOut) {
                     setModalAlert({ show: true, type: 'warning', title: 'แจ้งเตือน', text: 'กรุณาเลือกวันเข้าพักและวันออกใหม่ให้ครบถ้วน' });
@@ -458,8 +442,7 @@
                      setModalAlert({ show: true, type: 'warning', title: 'แจ้งเตือน', text: 'ไม่สามารถเลือกวันที่ปัจจุบันหรือวันที่ผ่านมาแล้วได้ครับ' });
                      return;
                 }
-                // -----------------------------------------------------------
-
+                
                 if(rescheduleDates.checkIn >= rescheduleDates.checkOut) {
                     setModalAlert({ show: true, type: 'warning', title: 'แจ้งเตือน', text: 'วันเช็คเอาท์ต้องอยู่หลังจากวันเช็คอิน' });
                     return;
