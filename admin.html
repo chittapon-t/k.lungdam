@@ -21,85 +21,11 @@
         .animate-modal { animation: popIn 0.2s ease-out forwards; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        /* Map Pin */
-        .map-pin {
-            position: absolute;
-            transform: translate(-50%, -50%);
-            width: 30px;
-            height: 30px;
-            background-color: #ef4444;
-            border-radius: 50%;
-            border: 2px solid white;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 10px;
-            font-weight: bold;
-            cursor: grab;
-            transition: transform 0.1s;
-        }
+        .map-pin { position: absolute; transform: translate(-50%, -50%); width: 30px; height: 30px; background-color: #ef4444; border-radius: 50%; border: 2px solid white; box-shadow: 0 4px 6px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; color: white; font-size: 10px; font-weight: bold; cursor: grab; transition: transform 0.1s; }
         .map-pin:active { cursor: grabbing; transform: translate(-50%, -50%) scale(1.1); }
         .map-pin.active { background-color: #22c55e; z-index: 10; transform: translate(-50%, -50%) scale(1.2); }
-
-        /* ซ่อนส่วนพิมพ์ในหน้าจอปกติ */
-        #print-container {
-            display: none;
-        }
-
-        /* --- PRINT STYLES --- */
-        @media print {
-            .no-print, .no-print * {
-                display: none !important;
-            }
-
-            body, html {
-                margin: 0;
-                padding: 0;
-                background: white;
-                height: 100%;
-                overflow: visible !important;
-            }
-
-            #print-container {
-                position: absolute !important;
-                left: 0 !important;
-                top: 0 !important;
-                width: 100% !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                display: block !important;
-                background: white;
-                z-index: 9999;
-                visibility: visible !important;
-            }
-            
-            #print-container > div {
-                display: none;
-            }
-
-            #receipt-print-area {
-                width: 210mm; /* A4 Portrait */
-                min-height: 297mm;
-                padding: 15mm;
-                background-color: white !important;
-                color: black !important;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-            }
-            
-            #report-print-area {
-                width: 297mm; /* A4 Landscape */
-                min-height: 210mm;
-                padding: 15mm;
-                background-color: white !important;
-                color: black !important;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-            }
-        }
+        #print-container { display: none; }
+        @media print { .no-print, .no-print * { display: none !important; } body, html { margin: 0; padding: 0; background: white; height: 100%; overflow: visible !important; } #print-container { position: absolute !important; left: 0 !important; top: 0 !important; width: 100% !important; margin: 0 !important; padding: 0 !important; display: block !important; background: white; z-index: 9999; visibility: visible !important; } #print-container > div { display: none; } #receipt-print-area { width: 210mm; min-height: 297mm; padding: 15mm; background-color: white !important; color: black !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; } #report-print-area { width: 297mm; min-height: 210mm; padding: 15mm; background-color: white !important; color: black !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
     </style>
 </head>
 <body>
@@ -111,55 +37,17 @@
         const SHOP_PHONE = "061-592-4262"; // เบอร์พร้อมเพย์
         
         let ROOM_IDS = ['R1','R2','R3','T1','T2','K1','K2','Z8'];
-        let ROOM_NAMES = {
-            'R1': 'โฮมสเตย์หนำโป', 'R2': 'บ้านพักริมน้ำ 1', 'R3': 'บ้านพักริมน้ำ 2',
-            'T1': 'เต็นท์กระโจม 1', 'T2': 'เต็นท์กระโจม 2', 'K1': 'เช่าเต็นท์สนาม K1',
-            'K2': 'เช่าเต็นท์สนาม K2', 'Z8': 'ลานกางเต็นท์'
-        };
+        let ROOM_NAMES = { 'R1': 'โฮมสเตย์หนำโป', 'R2': 'บ้านพักริมน้ำ 1', 'R3': 'บ้านพักริมน้ำ 2', 'T1': 'เต็นท์กระโจม 1', 'T2': 'เต็นท์กระโจม 2', 'K1': 'เช่าเต็นท์สนาม K1', 'K2': 'เช่าเต็นท์สนาม K2', 'Z8': 'ลานกางเต็นท์' };
 
-        const compressImage = async (file) => {
-            return new Promise((resolve, reject) => {
-                const maxWidth = 800;
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = (event) => {
-                    const img = new Image();
-                    img.src = event.target.result;
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        let width = img.width;
-                        let height = img.height;
-                        if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; }
-                        canvas.width = width; canvas.height = height;
-                        const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.7)); 
-                    };
-                    img.onerror = (err) => reject(err);
-                };
-                reader.onerror = (err) => reject(err);
-            });
-        };
+        const compressImage = async (file) => { return new Promise((resolve, reject) => { const maxWidth = 800; const reader = new FileReader(); reader.readAsDataURL(file); reader.onload = (event) => { const img = new Image(); img.src = event.target.result; img.onload = () => { const canvas = document.createElement('canvas'); let width = img.width; let height = img.height; if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; } canvas.width = width; canvas.height = height; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height); resolve(canvas.toDataURL('image/jpeg', 0.7)); }; img.onerror = (err) => reject(err); }; reader.onerror = (err) => reject(err); }); };
+        const StatusBadge = ({ status }) => { let color = 'bg-gray-100 text-gray-800'; const safeStatus = String(status || ''); if (safeStatus === 'รอตรวจสอบ') color = 'bg-yellow-100 text-yellow-800'; if (safeStatus === 'ยืนยัน') color = 'bg-green-100 text-green-800'; if (safeStatus.includes('ยกเลิก')) color = 'bg-red-100 text-red-800'; return <span className={`px-2 py-1 rounded text-xs font-bold border ${color}`}>{safeStatus}</span>; };
 
-        const StatusBadge = ({ status }) => {
-            let color = 'bg-gray-100 text-gray-800';
-            const safeStatus = String(status || '');
-            if (safeStatus === 'รอตรวจสอบ') color = 'bg-yellow-100 text-yellow-800';
-            if (safeStatus === 'ยืนยัน') color = 'bg-green-100 text-green-800';
-            if (safeStatus.includes('ยกเลิก')) color = 'bg-red-100 text-red-800';
-            return <span className={`px-2 py-1 rounded text-xs font-bold border ${color}`}>{safeStatus}</span>;
-        };
-
-        // --- NEW: BookingRow Component (Refactored) ---
-        // ใช้ React.memo เพื่อป้องกันการ Render ซ้ำถ้า props ไม่เปลี่ยน
         const BookingRow = React.memo(({ booking, onViewDetails, onUpdateStatus, onViewSlip, formatThaiDate }) => {
             const b = booking;
             return (
                 <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition p-5 border-l-4 border-green-500 relative group">
                     <div className="flex justify-between items-start mb-3">
-                        <div>
-                            <div className="text-xs text-gray-400 font-mono mb-0.5">{b.id} • {b.timestamp.split(' ')[0]}</div>
-                            <div className="font-bold text-lg text-gray-800">{b.name}</div>
-                        </div>
+                        <div><div className="text-xs text-gray-400 font-mono mb-0.5">{b.id} • {b.timestamp.split(' ')[0]}</div><div className="font-bold text-lg text-gray-800">{b.name}</div></div>
                         <StatusBadge status={b.status} />
                     </div>
                     <div className="text-sm text-gray-600 mb-3 space-y-1">
@@ -222,12 +110,9 @@
             const [adminAvailability, setAdminAvailability] = React.useState(null); 
             const [loadingAvailability, setLoadingAvailability] = React.useState(false);
 
-            // --- Room Manager State ---
             const [editingRoom, setEditingRoom] = React.useState(null); 
             const [roomsMapData, setRoomsMapData] = React.useState([]);
-
             const [calendarDate, setCalendarDate] = React.useState(new Date());
-
             const [modal, setModal] = React.useState({ isOpen: false, type: 'alert', title: '', message: '', onConfirm: null });
 
             const showModal = (title, message, type = 'alert', onConfirm = null) => { setModal({ isOpen: true, title, message, type, onConfirm }); };
@@ -308,25 +193,29 @@
             }, [roomConfig, mapConfig, siteSettings]);
 
             const handleLogin = (e) => {
-                e.preventDefault();
-                setLoading(true);
+                e.preventDefault(); setLoading(true);
                 fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'adminLogin', password: password }) })
                 .then(r => r.json()).then(res => {
                     setLoading(false);
-                    if (res.status === 'success') { 
-                        setIsLoggedIn(true); 
-                        fetchData(); 
-                        fetchSettings(); 
-                        fetchRoomConfig(); 
-                        fetchMapConfig(); 
-                    } else errorMsg('รหัสผ่านไม่ถูกต้อง');
+                    if (res.status === 'success') { setIsLoggedIn(true); fetchData(); fetchInitialData(); } else errorMsg('รหัสผ่านไม่ถูกต้อง');
                 }).catch(err => { setLoading(false); errorMsg('Connection Error: ' + err); });
             };
 
             const fetchData = () => { setLoading(true); fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'getAdminData', password: password }) }).then(r => r.json()).then(res => { setLoading(false); if (res.status === 'success') setBookings(res.data); }); };
-            const fetchSettings = () => { fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'getSettings', password: password }) }).then(r => r.json()).then(res => { if (res.status === 'success') setSettings(res); }); fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'getSiteSettings', password: password }) }).then(r => r.json()).then(res => { if (res.status === 'success') setSiteSettings(res.data); }); };
-            const fetchRoomConfig = () => { fetch(`${GOOGLE_SCRIPT_URL}?action=getRoomConfig&_t=${Date.now()}`).then(r => r.json()).then(res => { if (res.status === 'success') { setRoomConfig(res.data); const loadedIds = Object.keys(res.data); if (loadedIds.length > 0) { ROOM_IDS = loadedIds; ROOM_NAMES = {}; loadedIds.forEach(id => ROOM_NAMES[id] = res.data[id].name); } } }); };
-            const fetchMapConfig = () => { fetch(`${GOOGLE_SCRIPT_URL}?action=getMapConfig&_t=${Date.now()}`).then(r => r.json()).then(res => { if (res.status === 'success') setMapConfig(res.data); }); };
+            
+            const fetchInitialData = () => {
+                fetch(`${GOOGLE_SCRIPT_URL}?action=getInitialData`).then(r => r.json()).then(res => {
+                    if (res.status === 'success') {
+                        const { settings, siteConfig, roomConfig, mapConfig } = res.data;
+                        setSettings(settings);
+                        setSiteSettings(siteConfig);
+                        setRoomConfig(roomConfig);
+                        setMapConfig(mapConfig);
+                        const loadedIds = Object.keys(roomConfig);
+                        if (loadedIds.length > 0) { ROOM_IDS = loadedIds; ROOM_NAMES = {}; loadedIds.forEach(id => ROOM_NAMES[id] = roomConfig[id].name); }
+                    }
+                });
+            };
 
             const updateStatus = (id, newStatus) => {
                 const actionText = newStatus === 'ยกเลิก' ? 'ยกเลิกรายการ' : `เปลี่ยนสถานะเป็น "${newStatus}"`;
@@ -372,112 +261,40 @@
                 const action = editMode ? 'editSetting' : 'addSetting'; const id = editMode ? editMode.id : null;
                 if ((type !== 'discount') && (!payload.startDate || !payload.endDate)) return alertMsg('กรุณาระบุวันที่เริ่มต้นและสิ้นสุด');
                 confirmMsg('ยืนยันการบันทึกข้อมูล?', () => {
-                    fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action, type, id, payload, password: password }) }).then(r => r.json()).then(res => { if (res.status === 'success') { successMsg('บันทึกสำเร็จ'); fetchSettings(); setEditMode(null); setFormDiscount({ code: '', type: 'FIXED', value: '' }); setFormClosed({ startDate: '', endDate: '', reason: '' }); setFormSpecial({ startDate: '', endDate: '', desc: '' }); setFormRoomClosure({ startDate: '', endDate: '', roomId: 'R1', reason: '' }); } else errorMsg('บันทึกไม่สำเร็จ'); });
+                    fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action, type, id, payload, password: password }) }).then(r => r.json()).then(res => { if (res.status === 'success') { successMsg('บันทึกสำเร็จ'); fetchInitialData(); setEditMode(null); setFormDiscount({ code: '', type: 'FIXED', value: '' }); setFormClosed({ startDate: '', endDate: '', reason: '' }); setFormSpecial({ startDate: '', endDate: '', desc: '' }); setFormRoomClosure({ startDate: '', endDate: '', roomId: 'R1', reason: '' }); } else errorMsg('บันทึกไม่สำเร็จ'); });
                 });
             };
             const startEdit = (type, item) => alertMsg('การแก้ไขช่วงวันที่ต้องลบแล้วเพิ่มใหม่ครับ');
-            const handleDeleteSetting = (type, id) => confirmMsg('ยืนยันการลบรายการนี้?', () => { fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'deleteSetting', type, id, password: password }) }).then(r => r.json()).then(res => { if (res.status === 'success') fetchSettings(); }); });
-            const handleSaveSiteSettings = () => confirmMsg('ยืนยันบันทึกการตั้งค่าร้านค้า?', () => { setSavingSiteSettings(true); fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'saveSiteSettings', password: password, settings: siteSettings }) }).then(r => r.json()).then(res => { setSavingSiteSettings(false); if(res.status === 'success') { successMsg('บันทึกเรียบร้อย'); fetchSettings(); } else errorMsg('บันทึกไม่สำเร็จ'); }); });
+            const handleDeleteSetting = (type, id) => confirmMsg('ยืนยันการลบรายการนี้?', () => { fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'deleteSetting', type, id, password: password }) }).then(r => r.json()).then(res => { if (res.status === 'success') fetchInitialData(); }); });
+            const handleSaveSiteSettings = () => confirmMsg('ยืนยันบันทึกการตั้งค่าร้านค้า?', () => { setSavingSiteSettings(true); fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'saveSiteSettings', password: password, settings: siteSettings }) }).then(r => r.json()).then(res => { setSavingSiteSettings(false); if(res.status === 'success') { successMsg('บันทึกเรียบร้อย'); fetchInitialData(); } else errorMsg('บันทึกไม่สำเร็จ'); }); });
             const handleImageUpload = async (file, callback) => { if(file) { try { const base64 = await compressImage(file); callback(base64); } catch(e) { errorMsg('Upload Failed'); } } };
             const handleMultipleImageUpload = async (files, callback) => { if (!files || files.length === 0) return; try { const promises = Array.from(files).map(file => compressImage(file)); const base64List = await Promise.all(promises); callback(base64List); } catch(e) { errorMsg('Upload Failed'); } };
             const handleExport = () => { const header = ["BookingID", "Date", "Customer", "Phone", "CheckIn", "CheckOut", "Rooms", "Total", "Deposit", "Status"]; const rows = bookings.map(b => [ b.id, b.timestamp, `"${b.name}"`, `'${b.phone}`, b.checkIn, b.checkOut, `"${b.rooms.replace(/"/g, '""')}"`, b.price, b.deposit, b.status ]); const csvContent = [header.join(","), ...rows.map(r => r.join(","))].join("\n"); const blob = new Blob(["\uFEFF"+csvContent], { type: 'text/csv;charset=utf-8;' }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.setAttribute("href", url); link.setAttribute("download", "bookings_lungdam.csv"); document.body.appendChild(link); link.click(); document.body.removeChild(link); };
             
-            const handlePrintReport = () => {
-                const style = document.createElement('style');
-                style.innerHTML = `@media print { @page { size: A4 landscape; margin: 0; } body { -webkit-print-color-adjust: exact; } #print-container { display: block !important; } #report-print-area { display: block !important; } #receipt-print-area { display: none !important; } }`;
-                document.head.appendChild(style);
-                window.print();
-                setTimeout(() => document.head.removeChild(style), 100);
-            };
-
-            const handlePrintReceipt = () => {
-                const style = document.createElement('style');
-                style.innerHTML = `@media print { @page { size: A4 portrait; margin: 0; } body { -webkit-print-color-adjust: exact; } #print-container { display: block !important; } #receipt-print-area { display: block !important; } #report-print-area { display: none !important; } }`;
-                document.head.appendChild(style);
-                window.print();
-                setTimeout(() => document.head.removeChild(style), 100);
-            };
+            const handlePrintReport = () => { const style = document.createElement('style'); style.innerHTML = `@media print { @page { size: A4 landscape; margin: 0; } body { -webkit-print-color-adjust: exact; } #print-container { display: block !important; } #report-print-area { display: block !important; } #receipt-print-area { display: none !important; } }`; document.head.appendChild(style); window.print(); setTimeout(() => document.head.removeChild(style), 100); };
+            const handlePrintReceipt = () => { const style = document.createElement('style'); style.innerHTML = `@media print { @page { size: A4 portrait; margin: 0; } body { -webkit-print-color-adjust: exact; } #print-container { display: block !important; } #receipt-print-area { display: block !important; } #report-print-area { display: none !important; } }`; document.head.appendChild(style); window.print(); setTimeout(() => document.head.removeChild(style), 100); };
 
             const getDaysInMonth = (date) => new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
             const firstDayOfMonth = new Date(calendarDate.getFullYear(), calendarDate.getMonth(), 1).getDay();
             const days = []; for(let i=0; i<firstDayOfMonth; i++) days.push(null); for(let i=1; i<=getDaysInMonth(calendarDate); i++) days.push(i);
             const getBookingsForDate = (day) => { if(!day) return []; const dateStr = `${calendarDate.getFullYear()}-${String(calendarDate.getMonth()+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`; return bookings.filter(b => b.status !== 'ยกเลิก' && b.checkIn <= dateStr && b.checkOut > dateStr); };
 
-            const handleMapClick = (e) => {
-                if (!editingRoom) return;
-                const rect = e.currentTarget.getBoundingClientRect();
-                const x = ((e.clientX - rect.left) / rect.width) * 100;
-                const y = ((e.clientY - rect.top) / rect.height) * 100;
-                setEditingRoom({ ...editingRoom, x: Math.round(x), y: Math.round(y) });
-            };
+            const handleMapClick = (e) => { if (!editingRoom) return; const rect = e.currentTarget.getBoundingClientRect(); const x = ((e.clientX - rect.left) / rect.width) * 100; const y = ((e.clientY - rect.top) / rect.height) * 100; setEditingRoom({ ...editingRoom, x: Math.round(x), y: Math.round(y) }); };
 
             const saveRoomChanges = () => {
                 let finalRoomsData = [...roomsMapData];
-                if (editingRoom) {
-                    const idx = finalRoomsData.findIndex(r => r.id === editingRoom.id);
-                    if (idx > -1) {
-                        finalRoomsData[idx] = editingRoom;
-                    } else {
-                        finalRoomsData.push(editingRoom);
-                    }
-                }
-
+                if (editingRoom) { const idx = finalRoomsData.findIndex(r => r.id === editingRoom.id); if (idx > -1) { finalRoomsData[idx] = editingRoom; } else { finalRoomsData.push(editingRoom); } }
                 confirmMsg('ยืนยันการบันทึกข้อมูลห้องพักและแผนที่?', () => {
                     setSavingSiteSettings(true);
-                    
-                    const rooms = finalRoomsData.map(r => ({
-                        id: r.id, name: r.name, type: r.type, min: r.min, maxCap: r.maxCap, pricing: r.pricing, bf: r.bf
-                    }));
-                    const mapConfigObj = {};
-                    finalRoomsData.forEach(r => mapConfigObj[r.id] = { x: r.x, y: r.y });
-                    const images = {}, descs = {};
-                    finalRoomsData.forEach(r => {
-                        images[r.id] = r.images || [];
-                        descs[r.id] = r.desc || '';
-                    });
-
-                    fetch(GOOGLE_SCRIPT_URL, {
-                        method: 'POST',
-                        body: JSON.stringify({
-                            action: 'saveRoomSystem',
-                            password: password,
-                            rooms: rooms,
-                            mapConfig: mapConfigObj,
-                            siteSettings: { roomImages: images, roomDescriptions: descs }
-                        })
-                    })
-                    .then(r => r.json())
-                    .then(res => {
-                        setSavingSiteSettings(false);
-                        if(res.status === 'success') {
-                            successMsg('บันทึกข้อมูลสำเร็จ');
-                            setRoomsMapData(finalRoomsData);
-                            setMapConfig(mapConfigObj);
-                            fetchRoomConfig(); 
-                            fetchMapConfig(); 
-                            fetchSettings();
-                            setEditingRoom(null);
-                        } else errorMsg('บันทึกไม่สำเร็จ: ' + res.message);
-                    })
-                    .catch(e => {
-                         setSavingSiteSettings(false);
-                         errorMsg('Connection Error: ' + e.message);
-                    });
+                    const rooms = finalRoomsData.map(r => ({ id: r.id, name: r.name, type: r.type, min: r.min, maxCap: r.maxCap, pricing: r.pricing, bf: r.bf }));
+                    const mapConfigObj = {}; finalRoomsData.forEach(r => mapConfigObj[r.id] = { x: r.x, y: r.y });
+                    const images = {}, descs = {}; finalRoomsData.forEach(r => { images[r.id] = r.images || []; descs[r.id] = r.desc || ''; });
+                    fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'saveRoomSystem', password: password, rooms: rooms, mapConfig: mapConfigObj, siteSettings: { roomImages: images, roomDescriptions: descs } }) })
+                    .then(r => r.json()).then(res => { setSavingSiteSettings(false); if(res.status === 'success') { successMsg('บันทึกข้อมูลสำเร็จ'); setRoomsMapData(finalRoomsData); setMapConfig(mapConfigObj); fetchInitialData(); setEditingRoom(null); } else errorMsg('บันทึกไม่สำเร็จ: ' + res.message); }).catch(e => { setSavingSiteSettings(false); errorMsg('Connection Error: ' + e.message); });
                 });
             };
 
-            const updateEditingRoomInList = () => {
-                setRoomsMapData(prev => {
-                    const idx = prev.findIndex(r => r.id === editingRoom.id);
-                    if (idx > -1) {
-                        const newArr = [...prev];
-                        newArr[idx] = editingRoom;
-                        return newArr;
-                    }
-                    return [...prev, editingRoom];
-                });
-                setEditingRoom(null);
-            };
+            const updateEditingRoomInList = () => { setRoomsMapData(prev => { const idx = prev.findIndex(r => r.id === editingRoom.id); if (idx > -1) { const newArr = [...prev]; newArr[idx] = editingRoom; return newArr; } return [...prev, editingRoom]; }); setEditingRoom(null); };
 
             if (!isLoggedIn) return ( <div className="min-h-screen flex items-center justify-center bg-gray-900 px-4 relative"> <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-sm z-10"> <div className="text-center mb-6"><h1 className="text-3xl font-bold text-green-800">Admin Panel</h1><p className="text-gray-500">ขนำลุงดำ แคมป์ปิ้ง</p></div> <form onSubmit={handleLogin} className="space-y-4"> <input type="password" placeholder="รหัสผ่าน" className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" value={password} onChange={e => setPassword(e.target.value)} /> <button disabled={loading} className="w-full bg-gray-800 text-white p-3 rounded-lg hover:bg-gray-700 transition font-bold shadow-lg">{loading ? 'กำลังตรวจสอบ...' : 'เข้าสู่ระบบ'}</button> </form> </div> {modal.isOpen && ( <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60 backdrop-blur-sm transition-opacity"> <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xs overflow-hidden animate-modal"> <div className={`p-6 text-center ${modal.type==='error'?'bg-red-50':''}`}> <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${modal.type==='error'?'bg-red-100 text-red-500':'bg-gray-100 text-gray-500'}`}> <i className={`fas ${modal.type==='error'?'fa-times':'fa-info'} text-2xl`}></i> </div> <h3 className="text-xl font-bold text-gray-800 mb-2">{modal.title}</h3> <p className="text-gray-600 text-sm">{modal.message}</p> </div> <div className="p-4 bg-gray-50"> <button onClick={closeModal} className="w-full py-2.5 bg-gray-800 text-white rounded-xl font-bold hover:bg-gray-700 transition">ตกลง</button> </div> </div> </div> )} </div> );
 
@@ -500,7 +317,6 @@
                                 <button onClick={() => setActiveTab('settings')} className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${activeTab==='settings'?'bg-green-600 text-white shadow-lg transform scale-105':'bg-white text-gray-600 shadow hover:bg-gray-50'}`}><i className="fas fa-cogs mr-1"></i> ตั้งค่าระบบ</button>
                             </div>
                             
-                            {/* DASHBOARD TAB */}
                             {activeTab === 'dashboard' && (
                                 <div className="space-y-6 animate-fade-in">
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -538,7 +354,6 @@
                                 </div>
                             )}
 
-                            {/* BOOKINGS TAB (Optimized with BookingRow) */}
                             {activeTab === 'bookings' && (
                                 <div>
                                     <div className="flex flex-col md:flex-row gap-4 mb-4 items-center justify-between">
@@ -559,16 +374,7 @@
                                     </div>
                                     <div className="space-y-4">
                                         {filteredBookings.length === 0 && <div className="text-center text-gray-400 py-10">ไม่พบข้อมูลการจอง</div>}
-                                        {filteredBookings.map(b => (
-                                            <BookingRow 
-                                                key={b.id} 
-                                                booking={b} 
-                                                onViewDetails={setViewBooking} 
-                                                onUpdateStatus={updateStatus} 
-                                                onViewSlip={setViewSlip} 
-                                                formatThaiDate={formatThaiDate}
-                                            />
-                                        ))}
+                                        {filteredBookings.map(b => ( <BookingRow key={b.id} booking={b} onViewDetails={setViewBooking} onUpdateStatus={updateStatus} onViewSlip={setViewSlip} formatThaiDate={formatThaiDate} /> ))}
                                     </div>
                                 </div>
                             )}
@@ -605,10 +411,7 @@
                                         <div className="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-4">
                                             {editingRoom ? (
                                                 <div className="space-y-3">
-                                                    <div className="flex justify-between items-center mb-2">
-                                                        <span className="font-bold text-blue-600">กำลังแก้ไข: {editingRoom.name}</span>
-                                                        <button onClick={()=>updateEditingRoomInList()} className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded">เสร็จสิ้น (ชั่วคราว)</button>
-                                                    </div>
+                                                    <div className="flex justify-between items-center mb-2"><span className="font-bold text-blue-600">กำลังแก้ไข: {editingRoom.name}</span><button onClick={()=>updateEditingRoomInList()} className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded">เสร็จสิ้น (ชั่วคราว)</button></div>
                                                     <div className="grid grid-cols-2 gap-2">
                                                         <div><label className="text-xs font-bold block">ID</label><input className="w-full border p-1 rounded text-sm bg-gray-100" value={editingRoom.id} readOnly /></div>
                                                         <div><label className="text-xs font-bold block">ชื่อห้อง</label><input className="w-full border p-1 rounded text-sm" value={editingRoom.name} onChange={e=>setEditingRoom({...editingRoom, name: e.target.value})} /></div>
@@ -617,72 +420,23 @@
                                                         <div><label className="text-xs font-bold block">Min คน</label><input type="number" className="w-full border p-1 rounded text-sm" value={editingRoom.min} onChange={e=>setEditingRoom({...editingRoom, min: parseInt(e.target.value)})} /></div>
                                                         <div><label className="text-xs font-bold block">Max คน</label><input type="number" className="w-full border p-1 rounded text-sm" value={editingRoom.maxCap} onChange={e=>setEditingRoom({...editingRoom, maxCap: parseInt(e.target.value)})} /></div>
                                                     </div>
-                                                    <div>
-                                                        <label className="text-xs font-bold block">โครงสร้างราคา (JSON)</label>
-                                                        <textarea className="w-full border p-1 rounded text-xs font-mono h-20" value={JSON.stringify(editingRoom.pricing || {}, null, 2)} onChange={e=>{ try { setEditingRoom({...editingRoom, pricing: JSON.parse(e.target.value)}) } catch(err){} }}></textarea>
-                                                        <p className="text-[10px] text-gray-400">Ex: {"{\"tiers\":[{\"max\":2,\"price\":1200}]}"}</p>
-                                                    </div>
-                                                    <div>
-                                                        <label className="text-xs font-bold block">คำอธิบาย</label>
-                                                        <textarea className="w-full border p-1 rounded text-sm h-16" value={editingRoom.desc} onChange={e=>setEditingRoom({...editingRoom, desc: e.target.value})}></textarea>
-                                                    </div>
-                                                    <div>
-                                                        <label className="text-xs font-bold block">รูปภาพ</label>
-                                                        <div className="flex flex-wrap gap-2 mb-2">
-                                                            {(editingRoom.images || []).map((img, idx) => (
-                                                                <div key={idx} className="relative w-12 h-12 group">
-                                                                    <img src={img} className="w-full h-full object-cover rounded border" />
-                                                                    <button onClick={()=>setEditingRoom({...editingRoom, images: editingRoom.images.filter((_,i)=>i!==idx)})} className="absolute -top-1 -right-1 bg-red-500 text-white w-4 h-4 rounded-full flex items-center justify-center text-[10px] hidden group-hover:flex">x</button>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                        <input type="file" multiple className="text-[10px]" onChange={e => handleMultipleImageUpload(e.target.files, base64List => setEditingRoom({...editingRoom, images: [...(editingRoom.images||[]), ...base64List]}))} />
-                                                    </div>
-                                                    <div className="flex gap-2 items-center">
-                                                        <div className="flex-1">
-                                                            <label className="text-[10px] font-bold text-gray-500">Pos X</label>
-                                                            <input type="number" className="w-full border p-1 rounded text-xs bg-gray-50" value={editingRoom.x} onChange={e=>setEditingRoom({...editingRoom, x: Number(e.target.value)})} />
-                                                        </div>
-                                                        <div className="flex-1">
-                                                            <label className="text-[10px] font-bold text-gray-500">Pos Y</label>
-                                                            <input type="number" className="w-full border p-1 rounded text-xs bg-gray-50" value={editingRoom.y} onChange={e=>setEditingRoom({...editingRoom, y: Number(e.target.value)})} />
-                                                        </div>
-                                                    </div>
-                                                    <div className="pt-2 border-t flex justify-between">
-                                                        <button onClick={()=>{
-                                                            if(confirm('ลบห้องนี้?')) {
-                                                                setRoomsMapData(roomsMapData.filter(r=>r.id!==editingRoom.id));
-                                                                setEditingRoom(null);
-                                                            }
-                                                        }} className="text-red-500 text-xs underline">ลบห้องพัก</button>
-                                                    </div>
+                                                    <div><label className="text-xs font-bold block">โครงสร้างราคา (JSON)</label><textarea className="w-full border p-1 rounded text-xs font-mono h-20" value={JSON.stringify(editingRoom.pricing || {}, null, 2)} onChange={e=>{ try { setEditingRoom({...editingRoom, pricing: JSON.parse(e.target.value)}) } catch(err){} }}></textarea><p className="text-[10px] text-gray-400">Ex: {"{\"tiers\":[{\"max\":2,\"price\":1200}]}"}</p></div>
+                                                    <div><label className="text-xs font-bold block">คำอธิบาย</label><textarea className="w-full border p-1 rounded text-sm h-16" value={editingRoom.desc} onChange={e=>setEditingRoom({...editingRoom, desc: e.target.value})}></textarea></div>
+                                                    <div><label className="text-xs font-bold block">รูปภาพ</label><div className="flex flex-wrap gap-2 mb-2">{(editingRoom.images || []).map((img, idx) => ( <div key={idx} className="relative w-12 h-12 group"><img src={img} className="w-full h-full object-cover rounded border" /><button onClick={()=>setEditingRoom({...editingRoom, images: editingRoom.images.filter((_,i)=>i!==idx)})} className="absolute -top-1 -right-1 bg-red-500 text-white w-4 h-4 rounded-full flex items-center justify-center text-[10px] hidden group-hover:flex">x</button></div> ))}</div><input type="file" multiple className="text-[10px]" onChange={e => handleMultipleImageUpload(e.target.files, base64List => setEditingRoom({...editingRoom, images: [...(editingRoom.images||[]), ...base64List]}))} /></div>
+                                                    <div className="flex gap-2 items-center"><div className="flex-1"><label className="text-[10px] font-bold text-gray-500">Pos X</label><input type="number" className="w-full border p-1 rounded text-xs bg-gray-50" value={editingRoom.x} onChange={e=>setEditingRoom({...editingRoom, x: Number(e.target.value)})} /></div><div className="flex-1"><label className="text-[10px] font-bold text-gray-500">Pos Y</label><input type="number" className="w-full border p-1 rounded text-xs bg-gray-50" value={editingRoom.y} onChange={e=>setEditingRoom({...editingRoom, y: Number(e.target.value)})} /></div></div>
+                                                    <div className="pt-2 border-t flex justify-between"><button onClick={()=>{ if(confirm('ลบห้องนี้?')) { setRoomsMapData(roomsMapData.filter(r=>r.id!==editingRoom.id)); setEditingRoom(null); } }} className="text-red-500 text-xs underline">ลบห้องพัก</button></div>
                                                 </div>
                                             ) : (
-                                                <div className="space-y-2">
-                                                    {roomsMapData.map(r => (
-                                                        <div key={r.id} onClick={()=>setEditingRoom(r)} className="p-3 border rounded hover:bg-blue-50 cursor-pointer flex justify-between items-center transition">
-                                                            <div><div className="font-bold text-sm text-gray-800">{r.name}</div><div className="text-xs text-gray-500">{r.id} • {r.type}</div></div>
-                                                            <i className="fas fa-chevron-right text-gray-300"></i>
-                                                        </div>
-                                                    ))}
-                                                </div>
+                                                <div className="space-y-2">{roomsMapData.map(r => ( <div key={r.id} onClick={()=>setEditingRoom(r)} className="p-3 border rounded hover:bg-blue-50 cursor-pointer flex justify-between items-center transition"><div><div className="font-bold text-sm text-gray-800">{r.name}</div><div className="text-xs text-gray-500">{r.id} • {r.type}</div></div><i className="fas fa-chevron-right text-gray-300"></i></div> ))}</div>
                                             )}
                                         </div>
-                                        <div className="p-4 bg-gray-100 border-t">
-                                            <button onClick={saveRoomChanges} disabled={savingSiteSettings} className="w-full bg-blue-600 text-white py-3 rounded font-bold shadow hover:bg-blue-700 disabled:bg-gray-400">
-                                                {savingSiteSettings ? 'กำลังบันทึก...' : 'บันทึกการเปลี่ยนแปลงทั้งหมด'}
-                                            </button>
-                                        </div>
+                                        <div className="p-4 bg-gray-100 border-t"><button onClick={saveRoomChanges} disabled={savingSiteSettings} className="w-full bg-blue-600 text-white py-3 rounded font-bold shadow hover:bg-blue-700 disabled:bg-gray-400">{savingSiteSettings ? 'กำลังบันทึก...' : 'บันทึกการเปลี่ยนแปลงทั้งหมด'}</button></div>
                                     </div>
                                     <div className="w-full lg:w-2/3 bg-gray-200 rounded-lg shadow-inner overflow-auto flex items-center justify-center p-4">
                                         <div className="relative inline-block" onClick={handleMapClick}>
                                             <img src="https://img2.pic.in.th/3d539b84-44ce-4336-ad90-bd2f84b13eca.jpg" className="max-w-full max-h-[calc(100vh-200px)] object-contain block pointer-events-none select-none shadow-lg rounded" />
-                                            {!editingRoom && roomsMapData.map(r => (
-                                                <div key={r.id} className="map-pin" style={{ left: `${r.x}%`, top: `${r.y}%` }} onClick={(e)=>{ e.stopPropagation(); setEditingRoom(r); }}>{r.id}</div>
-                                            ))}
-                                            {editingRoom && (
-                                                <div className="map-pin active shadow-xl border-4 border-yellow-400" style={{ left: `${editingRoom.x}%`, top: `${editingRoom.y}%` }}>{editingRoom.id}</div>
-                                            )}
+                                            {!editingRoom && roomsMapData.map(r => ( <div key={r.id} className="map-pin" style={{ left: `${r.x}%`, top: `${r.y}%` }} onClick={(e)=>{ e.stopPropagation(); setEditingRoom(r); }}>{r.id}</div> ))}
+                                            {editingRoom && ( <div className="map-pin active shadow-xl border-4 border-yellow-400" style={{ left: `${editingRoom.x}%`, top: `${editingRoom.y}%` }}>{editingRoom.id}</div> )}
                                             {editingRoom && <div className="absolute top-4 left-4 bg-black/70 text-white px-4 py-2 rounded-full text-sm pointer-events-none">📍 คลิกบนแผนที่เพื่อย้ายตำแหน่ง <b>{editingRoom.name}</b></div>}
                                         </div>
                                     </div>
@@ -693,164 +447,26 @@
                                 <div className="space-y-8 animate-fade-in">
                                     {siteSettings && (
                                         <div className="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
-                                            <div className="flex justify-between items-center mb-6 border-b pb-4">
-                                                <h2 className="text-xl font-bold text-gray-800"><i className="fas fa-store mr-2"></i>ตั้งค่าหน้าร้าน (Store Config)</h2>
-                                                <button onClick={handleSaveSiteSettings} disabled={savingSiteSettings} className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 disabled:bg-gray-400"> {savingSiteSettings ? 'กำลังบันทึก...' : 'บันทึกข้อมูลร้าน'} </button>
-                                            </div>
+                                            <div className="flex justify-between items-center mb-6 border-b pb-4"><h2 className="text-xl font-bold text-gray-800"><i className="fas fa-store mr-2"></i>ตั้งค่าหน้าร้าน (Store Config)</h2><button onClick={handleSaveSiteSettings} disabled={savingSiteSettings} className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 disabled:bg-gray-400"> {savingSiteSettings ? 'กำลังบันทึก...' : 'บันทึกข้อมูลร้าน'} </button></div>
                                             <div className="mb-8">
                                                 <h3 className="font-bold text-lg mb-4 text-blue-600">ข้อมูลทั่วไป</h3>
-                                                
-                                                {/* --- Logo & Banner Upload Section --- */}
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                                                    {/* Logo */}
-                                                    <div className="border p-4 rounded-xl bg-gray-50">
-                                                        <label className="block text-sm font-bold mb-3 text-gray-700">โลโก้ร้าน (Logo)</label>
-                                                        <div className="flex items-center gap-4">
-                                                            <div className="w-24 h-24 bg-white border-2 border-dashed border-gray-300 rounded-full overflow-hidden relative group shadow-sm flex-shrink-0">
-                                                                {siteSettings.logoUrl ? (
-                                                                    <img src={siteSettings.logoUrl} className="w-full h-full object-cover" />
-                                                                ) : (
-                                                                    <div className="w-full h-full flex items-center justify-center text-gray-400"><i className="fas fa-store text-2xl"></i></div>
-                                                                )}
-                                                                <label className="absolute inset-0 bg-black/50 text-white flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition duration-200">
-                                                                    <i className="fas fa-camera mb-1"></i>
-                                                                    <span className="text-[10px]">เปลี่ยนรูป</span>
-                                                                    <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e.target.files[0], base64 => setSiteSettings({...siteSettings, logoUrl: base64}))} />
-                                                                </label>
-                                                            </div>
-                                                            <div className="flex-1">
-                                                                <p className="text-xs text-gray-500 mb-2">แนะนำรูปสี่เหลี่ยมจัตุรัส (1:1)</p>
-                                                                {siteSettings.logoUrl && <button onClick={() => setSiteSettings({...siteSettings, logoUrl: ''})} className="text-xs text-red-500 hover:text-red-700 border border-red-200 bg-white px-2 py-1 rounded transition">ลบรูปภาพ</button>}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Banner */}
-                                                    <div className="border p-4 rounded-xl bg-gray-50">
-                                                        <label className="block text-sm font-bold mb-3 text-gray-700">ภาพปก (Banner)</label>
-                                                        <div className="w-full h-24 bg-white border-2 border-dashed border-gray-300 rounded-lg overflow-hidden relative group shadow-sm">
-                                                            {siteSettings.bannerUrl ? (
-                                                                <img src={siteSettings.bannerUrl} className="w-full h-full object-cover" />
-                                                            ) : (
-                                                                <div className="w-full h-full flex items-center justify-center text-gray-400"><i className="fas fa-image text-2xl"></i></div>
-                                                            )}
-                                                            <label className="absolute inset-0 bg-black/50 text-white flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition duration-200">
-                                                                <i className="fas fa-cloud-upload-alt mb-1"></i>
-                                                                <span className="text-xs">อัพโหลดภาพปก</span>
-                                                                <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e.target.files[0], base64 => setSiteSettings({...siteSettings, bannerUrl: base64}))} />
-                                                            </label>
-                                                        </div>
-                                                        <div className="flex justify-between items-center mt-2">
-                                                            <p className="text-xs text-gray-500">แนะนำรูปแนวนอน (16:9)</p>
-                                                            {siteSettings.bannerUrl && <button onClick={() => setSiteSettings({...siteSettings, bannerUrl: ''})} className="text-xs text-red-500 hover:text-red-700">ลบรูปภาพ</button>}
-                                                        </div>
-                                                    </div>
+                                                    <div className="border p-4 rounded-xl bg-gray-50"><label className="block text-sm font-bold mb-3 text-gray-700">โลโก้ร้าน (Logo)</label><div className="flex items-center gap-4"><div className="w-24 h-24 bg-white border-2 border-dashed border-gray-300 rounded-full overflow-hidden relative group shadow-sm flex-shrink-0">{siteSettings.logoUrl ? ( <img src={siteSettings.logoUrl} className="w-full h-full object-cover" /> ) : ( <div className="w-full h-full flex items-center justify-center text-gray-400"><i className="fas fa-store text-2xl"></i></div> )}<label className="absolute inset-0 bg-black/50 text-white flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition duration-200"><i className="fas fa-camera mb-1"></i><span className="text-[10px]">เปลี่ยนรูป</span><input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e.target.files[0], base64 => setSiteSettings({...siteSettings, logoUrl: base64}))} /></label></div><div className="flex-1"><p className="text-xs text-gray-500 mb-2">แนะนำรูปสี่เหลี่ยมจัตุรัส (1:1)</p>{siteSettings.logoUrl && <button onClick={() => setSiteSettings({...siteSettings, logoUrl: ''})} className="text-xs text-red-500 hover:text-red-700 border border-red-200 bg-white px-2 py-1 rounded transition">ลบรูปภาพ</button>}</div></div></div>
+                                                    <div className="border p-4 rounded-xl bg-gray-50"><label className="block text-sm font-bold mb-3 text-gray-700">ภาพปก (Banner)</label><div className="w-full h-24 bg-white border-2 border-dashed border-gray-300 rounded-lg overflow-hidden relative group shadow-sm">{siteSettings.bannerUrl ? ( <img src={siteSettings.bannerUrl} className="w-full h-full object-cover" /> ) : ( <div className="w-full h-full flex items-center justify-center text-gray-400"><i className="fas fa-image text-2xl"></i></div> )}<label className="absolute inset-0 bg-black/50 text-white flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition duration-200"><i className="fas fa-cloud-upload-alt mb-1"></i><span className="text-xs">อัพโหลดภาพปก</span><input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e.target.files[0], base64 => setSiteSettings({...siteSettings, bannerUrl: base64}))} /></label></div><div className="flex justify-between items-center mt-2"><p className="text-xs text-gray-500">แนะนำรูปแนวนอน (16:9)</p>{siteSettings.bannerUrl && <button onClick={() => setSiteSettings({...siteSettings, bannerUrl: ''})} className="text-xs text-red-500 hover:text-red-700">ลบรูปภาพ</button>}</div></div>
                                                 </div>
-                                                {/* --- End Logo & Banner --- */}
-
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                                    <div><label className="block text-sm font-bold mb-1">ชื่อร้าน (Title)</label><input className="w-full border p-2 rounded" value={siteSettings.headerTitle} onChange={e => setSiteSettings({...siteSettings, headerTitle: e.target.value})} /></div>
-                                                    <div><label className="block text-sm font-bold mb-1">คำอธิบายร้าน (Description)</label><textarea className="w-full border p-2 rounded" rows="3" value={siteSettings.headerDesc} onChange={e => setSiteSettings({...siteSettings, headerDesc: e.target.value})}></textarea></div>
-                                                </div>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4"><div><label className="block text-sm font-bold mb-1">ชื่อร้าน (Title)</label><input className="w-full border p-2 rounded" value={siteSettings.headerTitle} onChange={e => setSiteSettings({...siteSettings, headerTitle: e.target.value})} /></div><div><label className="block text-sm font-bold mb-1">คำอธิบายร้าน (Description)</label><textarea className="w-full border p-2 rounded" rows="3" value={siteSettings.headerDesc} onChange={e => setSiteSettings({...siteSettings, headerDesc: e.target.value})}></textarea></div></div>
                                             </div>
                                             <div>
-                                                <div className="flex justify-between items-center mb-4">
-                                                    <h3 className="font-bold text-lg text-blue-600">เมนูอาหาร</h3>
-                                                    <button onClick={() => { const newFood = { id: 'F'+Date.now(), name: 'เมนูใหม่', price: 0, img: '', desc: '' }; setSiteSettings({...siteSettings, foodMenu: [...siteSettings.foodMenu, newFood]}); }} className="bg-blue-100 text-blue-600 px-3 py-1 rounded text-sm hover:bg-blue-200">+ เพิ่มเมนู</button>
-                                                </div>
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                    {siteSettings.foodMenu.map((food, idx) => (
-                                                        <div key={food.id} className="border p-3 rounded flex gap-3 bg-white items-start">
-                                                            <div className="w-16 h-16 bg-gray-200 rounded flex-shrink-0 relative overflow-hidden group">
-                                                                {food.img ? <img src={food.img} className="w-full h-full object-cover" /> : <div className="flex items-center justify-center h-full text-gray-400 text-xs">No Img</div>}
-                                                                <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={e => handleImageUpload(e.target.files[0], base64 => { const newFoods = [...siteSettings.foodMenu]; newFoods[idx].img = base64; setSiteSettings({...siteSettings, foodMenu: newFoods}); })} />
-                                                            </div>
-                                                            <div className="flex-1 space-y-1">
-                                                                <input className="w-full border p-1 rounded text-sm" placeholder="ชื่อเมนู" value={food.name} onChange={e => { const newFoods = [...siteSettings.foodMenu]; newFoods[idx].name = e.target.value; setSiteSettings({...siteSettings, foodMenu: newFoods}); }} />
-                                                                <textarea className="w-full border p-1 rounded text-xs resize-none" rows="2" placeholder="คำอธิบายอาหาร..." value={food.desc || ''} onChange={e => { const newFoods = [...siteSettings.foodMenu]; newFoods[idx].desc = e.target.value; setSiteSettings({...siteSettings, foodMenu: newFoods}); }}></textarea>
-                                                                <div className="flex items-center gap-2">
-                                                                    <input type="number" className="w-20 border p-1 rounded text-sm" placeholder="ราคา" value={food.price} onChange={e => { const newFoods = [...siteSettings.foodMenu]; newFoods[idx].price = parseInt(e.target.value) || 0; setSiteSettings({...siteSettings, foodMenu: newFoods}); }} />
-                                                                    <span className="text-sm text-gray-500">บาท</span>
-                                                                </div>
-                                                            </div>
-                                                            <button onClick={() => { const newFoods = siteSettings.foodMenu.filter((_, i) => i !== idx); setSiteSettings({...siteSettings, foodMenu: newFoods}); }} className="text-red-500 hover:text-red-700"><i className="fas fa-trash"></i></button>
-                                                        </div>
-                                                    ))}
-                                                </div>
+                                                <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg text-blue-600">เมนูอาหาร</h3><button onClick={() => { const newFood = { id: 'F'+Date.now(), name: 'เมนูใหม่', price: 0, img: '', desc: '' }; setSiteSettings({...siteSettings, foodMenu: [...siteSettings.foodMenu, newFood]}); }} className="bg-blue-100 text-blue-600 px-3 py-1 rounded text-sm hover:bg-blue-200">+ เพิ่มเมนู</button></div>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">{siteSettings.foodMenu.map((food, idx) => ( <div key={food.id} className="border p-3 rounded flex gap-3 bg-white items-start"><div className="w-16 h-16 bg-gray-200 rounded flex-shrink-0 relative overflow-hidden group">{food.img ? <img src={food.img} className="w-full h-full object-cover" /> : <div className="flex items-center justify-center h-full text-gray-400 text-xs">No Img</div>}<input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={e => handleImageUpload(e.target.files[0], base64 => { const newFoods = [...siteSettings.foodMenu]; newFoods[idx].img = base64; setSiteSettings({...siteSettings, foodMenu: newFoods}); })} /></div><div className="flex-1 space-y-1"><input className="w-full border p-1 rounded text-sm" placeholder="ชื่อเมนู" value={food.name} onChange={e => { const newFoods = [...siteSettings.foodMenu]; newFoods[idx].name = e.target.value; setSiteSettings({...siteSettings, foodMenu: newFoods}); }} /><textarea className="w-full border p-1 rounded text-xs resize-none" rows="2" placeholder="คำอธิบายอาหาร..." value={food.desc || ''} onChange={e => { const newFoods = [...siteSettings.foodMenu]; newFoods[idx].desc = e.target.value; setSiteSettings({...siteSettings, foodMenu: newFoods}); }}></textarea><div className="flex items-center gap-2"><input type="number" className="w-20 border p-1 rounded text-sm" placeholder="ราคา" value={food.price} onChange={e => { const newFoods = [...siteSettings.foodMenu]; newFoods[idx].price = parseInt(e.target.value) || 0; setSiteSettings({...siteSettings, foodMenu: newFoods}); }} /><span className="text-sm text-gray-500">บาท</span></div></div><button onClick={() => { const newFoods = siteSettings.foodMenu.filter((_, i) => i !== idx); setSiteSettings({...siteSettings, foodMenu: newFoods}); }} className="text-red-500 hover:text-red-700"><i className="fas fa-trash"></i></button></div> ))}</div>
                                             </div>
                                         </div>
                                     )}
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="bg-white p-4 rounded-lg shadow border-l-4 border-green-500">
-                                            <h3 className="font-bold text-lg mb-4 text-green-800"><i className="fas fa-tags"></i> โค้ดส่วนลด</h3>
-                                            <div className="flex gap-2 mb-4 flex-wrap items-end bg-gray-50 p-2 rounded">
-                                                <div><label className="text-xs text-gray-500">Code</label><input className="border p-2 rounded text-sm w-24 block" value={formDiscount.code} onChange={e=>setFormDiscount({...formDiscount, code:e.target.value})} /></div>
-                                                <div><label className="text-xs text-gray-500">Type</label><select className="border p-2 rounded text-sm block" value={formDiscount.type} onChange={e=>setFormDiscount({...formDiscount, type:e.target.value})}><option value="FIXED">บาท</option><option value="PERCENT">%</option></select></div>
-                                                <div><label className="text-xs text-gray-500">Value</label><input type="number" className="border p-2 rounded text-sm w-20 block" value={formDiscount.value} onChange={e=>setFormDiscount({...formDiscount, value:e.target.value})} /></div>
-                                                <button onClick={()=>handleSaveSetting('discount', formDiscount)} className={`px-3 py-2 rounded text-sm text-white ${editMode?.code===formDiscount.code ? 'bg-orange-500':'bg-green-600'}`}>{editMode?.code===formDiscount.code ? 'บันทึกแก้ไข':'เพิ่ม'}</button>
-                                                {editMode && <button onClick={()=>{setEditMode(null); setFormDiscount({code:'',type:'FIXED',value:''})}} className="text-gray-500 text-sm">ยกเลิก</button>}
-                                            </div>
-                                            <ul className="divide-y max-h-40 overflow-y-auto">
-                                                {settings.discounts.map((d, i) => (
-                                                    <li key={i} className="flex justify-between items-center p-2 text-sm">
-                                                        <span><b>{d.code}</b> : ลด {d.value} {d.type}</span>
-                                                        <div className="flex gap-2"><button onClick={()=>startEdit('discount', d)} className="text-blue-500"><i className="fas fa-edit"></i></button><button onClick={()=>handleDeleteSetting('discount', d.id)} className="text-red-500"><i className="fas fa-trash"></i></button></div>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </div>
-                                        <div className="bg-white p-4 rounded-lg shadow border-l-4 border-red-500">
-                                            <h3 className="font-bold text-lg mb-4 text-red-800"><i className="fas fa-calendar-times"></i> วันปิดบริการ (ทั้งรีสอร์ท)</h3>
-                                            <div className="flex gap-2 mb-4 flex-wrap items-end bg-gray-50 p-2 rounded">
-                                                <div><label className="text-xs text-gray-500 block">เริ่ม</label><input type="date" className="border p-2 rounded text-sm" value={formClosed.startDate} onChange={e=>setFormClosed({...formClosed, startDate:e.target.value})} /></div>
-                                                <div><label className="text-xs text-gray-500 block">สิ้นสุด</label><input type="date" className="border p-2 rounded text-sm" value={formClosed.endDate} onChange={e=>setFormClosed({...formClosed, endDate:e.target.value})} /></div>
-                                                <div className="flex-1"><label className="text-xs text-gray-500 block">เหตุผล</label><input placeholder="เหตุผล" className="border p-2 rounded text-sm w-full" value={formClosed.reason} onChange={e=>setFormClosed({...formClosed, reason:e.target.value})} /></div>
-                                                <button onClick={()=>handleSaveSetting('closed', formClosed)} className="px-3 py-2 rounded text-sm text-white bg-red-600 mb-0.5">ปิด</button>
-                                            </div>
-                                            <ul className="divide-y max-h-40 overflow-y-auto">
-                                                {settings.closed.map((c, i) => (
-                                                    <li key={i} className="flex justify-between items-center p-2 text-sm text-red-800">
-                                                        <span>{formatThaiDate(c.date)} ({c.reason})</span>
-                                                        <button onClick={()=>handleDeleteSetting('closed', c.id)} className="text-red-500"><i className="fas fa-trash"></i></button>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </div>
-                                        <div className="bg-white p-4 rounded-lg shadow border-l-4 border-gray-500">
-                                            <h3 className="font-bold text-lg mb-4 text-gray-800"><i className="fas fa-ban"></i> ปิดปรับปรุงห้องพัก (รายห้อง)</h3>
-                                            <div className="flex gap-2 mb-4 flex-wrap items-end bg-gray-50 p-2 rounded">
-                                                <div><label className="text-xs text-gray-500 block">เริ่ม</label><input type="date" className="border p-2 rounded text-sm" value={formRoomClosure.startDate} onChange={e=>setFormRoomClosure({...formRoomClosure, startDate:e.target.value})} /></div>
-                                                <div><label className="text-xs text-gray-500 block">สิ้นสุด</label><input type="date" className="border p-2 rounded text-sm" value={formRoomClosure.endDate} onChange={e=>setFormRoomClosure({...formRoomClosure, endDate:e.target.value})} /></div>
-                                                <div><label className="text-xs text-gray-500 block">ห้อง</label><select className="border p-2 rounded text-sm" value={formRoomClosure.roomId} onChange={e=>setFormRoomClosure({...formRoomClosure, roomId:e.target.value})}>{ROOM_IDS.map(r => <option key={r} value={r}>{ROOM_NAMES[r]}</option>)}</select></div>
-                                                <div className="flex-1"><label className="text-xs text-gray-500 block">สาเหตุ</label><input placeholder="สาเหตุ" className="border p-2 rounded text-sm w-full" value={formRoomClosure.reason} onChange={e=>setFormRoomClosure({...formRoomClosure, reason:e.target.value})} /></div>
-                                                <button onClick={()=>handleSaveSetting('room_closure', formRoomClosure)} className="px-3 py-2 rounded text-sm text-white bg-gray-600 mb-0.5">ปิด</button>
-                                            </div>
-                                            <ul className="divide-y max-h-40 overflow-y-auto">
-                                                {(settings.roomClosures || []).map((rc, i) => (
-                                                    <li key={i} className="flex justify-between items-center p-2 text-sm text-gray-700">
-                                                        <span>{formatThaiDate(rc.date)} : <b>{ROOM_NAMES[rc.roomId] || rc.roomId}</b> ({rc.reason})</span>
-                                                        <button onClick={()=>handleDeleteSetting('room_closure', rc.id)} className="text-red-500"><i className="fas fa-trash"></i></button>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </div>
-                                        <div className="bg-white p-4 rounded-lg shadow border-l-4 border-blue-800">
-                                            <h3 className="font-bold text-lg mb-4 text-blue-800"><i className="fas fa-star"></i> วันพิเศษ (มัดจำ 100%)</h3>
-                                            <div className="flex gap-2 mb-4 flex-wrap items-end bg-gray-50 p-2 rounded">
-                                                <div><label className="text-xs text-gray-500 block">เริ่ม</label><input type="date" className="border p-2 rounded text-sm" value={formSpecial.startDate} onChange={e=>setFormSpecial({...formSpecial, startDate:e.target.value})} /></div>
-                                                <div><label className="text-xs text-gray-500 block">สิ้นสุด</label><input type="date" className="border p-2 rounded text-sm" value={formSpecial.endDate} onChange={e=>setFormSpecial({...formSpecial, endDate:e.target.value})} /></div>
-                                                <div className="flex-1"><label className="text-xs text-gray-500 block">รายละเอียด</label><input placeholder="รายละเอียด" className="border p-2 rounded text-sm w-full" value={formSpecial.desc} onChange={e=>setFormSpecial({...formSpecial, desc:e.target.value})} /></div>
-                                                <button onClick={()=>handleSaveSetting('special', formSpecial)} className={`px-3 py-2 rounded text-sm text-white ${editMode?.desc===formSpecial.desc ? 'bg-orange-500':'bg-blue-600'} mb-0.5`}>{editMode?'บันทึก':'เพิ่ม'}</button>
-                                            </div>
-                                            <ul className="divide-y max-h-40 overflow-y-auto">
-                                                {settings.special.map((s, i) => (
-                                                    <li key={i} className="flex justify-between items-center p-2 text-sm text-blue-800">
-                                                        <span>{formatThaiDate(s.date)} ({s.desc})</span>
-                                                        <div className="flex gap-2"><button onClick={()=>startEdit('special', s)} className="text-blue-500"><i className="fas fa-edit"></i></button><button onClick={()=>handleDeleteSetting('special', s.id)} className="text-red-500"><i className="fas fa-trash"></i></button></div>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </div>
+                                        <div className="bg-white p-4 rounded-lg shadow border-l-4 border-green-500"><h3 className="font-bold text-lg mb-4 text-green-800"><i className="fas fa-tags"></i> โค้ดส่วนลด</h3><div className="flex gap-2 mb-4 flex-wrap items-end bg-gray-50 p-2 rounded"><div><label className="text-xs text-gray-500">Code</label><input className="border p-2 rounded text-sm w-24 block" value={formDiscount.code} onChange={e=>setFormDiscount({...formDiscount, code:e.target.value})} /></div><div><label className="text-xs text-gray-500">Type</label><select className="border p-2 rounded text-sm block" value={formDiscount.type} onChange={e=>setFormDiscount({...formDiscount, type:e.target.value})}><option value="FIXED">บาท</option><option value="PERCENT">%</option></select></div><div><label className="text-xs text-gray-500">Value</label><input type="number" className="border p-2 rounded text-sm w-20 block" value={formDiscount.value} onChange={e=>setFormDiscount({...formDiscount, value:e.target.value})} /></div><button onClick={()=>handleSaveSetting('discount', formDiscount)} className={`px-3 py-2 rounded text-sm text-white ${editMode?.code===formDiscount.code ? 'bg-orange-500':'bg-green-600'}`}>{editMode?.code===formDiscount.code ? 'บันทึกแก้ไข':'เพิ่ม'}</button>{editMode && <button onClick={()=>{setEditMode(null); setFormDiscount({code:'',type:'FIXED',value:''})}} className="text-gray-500 text-sm">ยกเลิก</button>}</div><ul className="divide-y max-h-40 overflow-y-auto">{settings.discounts.map((d, i) => ( <li key={i} className="flex justify-between items-center p-2 text-sm"><span><b>{d.code}</b> : ลด {d.value} {d.type}</span><div className="flex gap-2"><button onClick={()=>startEdit('discount', d)} className="text-blue-500"><i className="fas fa-edit"></i></button><button onClick={()=>handleDeleteSetting('discount', d.id)} className="text-red-500"><i className="fas fa-trash"></i></button></div></li> ))}</ul></div>
+                                        <div className="bg-white p-4 rounded-lg shadow border-l-4 border-red-500"><h3 className="font-bold text-lg mb-4 text-red-800"><i className="fas fa-calendar-times"></i> วันปิดบริการ (ทั้งรีสอร์ท)</h3><div className="flex gap-2 mb-4 flex-wrap items-end bg-gray-50 p-2 rounded"><div><label className="text-xs text-gray-500 block">เริ่ม</label><input type="date" className="border p-2 rounded text-sm" value={formClosed.startDate} onChange={e=>setFormClosed({...formClosed, startDate:e.target.value})} /></div><div><label className="text-xs text-gray-500 block">สิ้นสุด</label><input type="date" className="border p-2 rounded text-sm" value={formClosed.endDate} onChange={e=>setFormClosed({...formClosed, endDate:e.target.value})} /></div><div className="flex-1"><label className="text-xs text-gray-500 block">เหตุผล</label><input placeholder="เหตุผล" className="border p-2 rounded text-sm w-full" value={formClosed.reason} onChange={e=>setFormClosed({...formClosed, reason:e.target.value})} /></div><button onClick={()=>handleSaveSetting('closed', formClosed)} className="px-3 py-2 rounded text-sm text-white bg-red-600 mb-0.5">ปิด</button></div><ul className="divide-y max-h-40 overflow-y-auto">{settings.closed.map((c, i) => ( <li key={i} className="flex justify-between items-center p-2 text-sm text-red-800"><span>{formatThaiDate(c.date)} ({c.reason})</span><button onClick={()=>handleDeleteSetting('closed', c.id)} className="text-red-500"><i className="fas fa-trash"></i></button></li> ))}</ul></div>
+                                        <div className="bg-white p-4 rounded-lg shadow border-l-4 border-gray-500"><h3 className="font-bold text-lg mb-4 text-gray-800"><i className="fas fa-ban"></i> ปิดปรับปรุงห้องพัก (รายห้อง)</h3><div className="flex gap-2 mb-4 flex-wrap items-end bg-gray-50 p-2 rounded"><div><label className="text-xs text-gray-500 block">เริ่ม</label><input type="date" className="border p-2 rounded text-sm" value={formRoomClosure.startDate} onChange={e=>setFormRoomClosure({...formRoomClosure, startDate:e.target.value})} /></div><div><label className="text-xs text-gray-500 block">สิ้นสุด</label><input type="date" className="border p-2 rounded text-sm" value={formRoomClosure.endDate} onChange={e=>setFormRoomClosure({...formRoomClosure, endDate:e.target.value})} /></div><div><label className="text-xs text-gray-500 block">ห้อง</label><select className="border p-2 rounded text-sm" value={formRoomClosure.roomId} onChange={e=>setFormRoomClosure({...formRoomClosure, roomId:e.target.value})}>{ROOM_IDS.map(r => <option key={r} value={r}>{ROOM_NAMES[r]}</option>)}</select></div><div className="flex-1"><label className="text-xs text-gray-500 block">สาเหตุ</label><input placeholder="สาเหตุ" className="border p-2 rounded text-sm w-full" value={formRoomClosure.reason} onChange={e=>setFormRoomClosure({...formRoomClosure, reason:e.target.value})} /></div><button onClick={()=>handleSaveSetting('room_closure', formRoomClosure)} className="px-3 py-2 rounded text-sm text-white bg-gray-600 mb-0.5">ปิด</button></div><ul className="divide-y max-h-40 overflow-y-auto">{(settings.roomClosures || []).map((rc, i) => ( <li key={i} className="flex justify-between items-center p-2 text-sm text-gray-700"><span>{formatThaiDate(rc.date)} : <b>{ROOM_NAMES[rc.roomId] || rc.roomId}</b> ({rc.reason})</span><button onClick={()=>handleDeleteSetting('room_closure', rc.id)} className="text-red-500"><i className="fas fa-trash"></i></button></li> ))}</ul></div>
+                                        <div className="bg-white p-4 rounded-lg shadow border-l-4 border-blue-800"><h3 className="font-bold text-lg mb-4 text-blue-800"><i className="fas fa-star"></i> วันพิเศษ (มัดจำ 100%)</h3><div className="flex gap-2 mb-4 flex-wrap items-end bg-gray-50 p-2 rounded"><div><label className="text-xs text-gray-500 block">เริ่ม</label><input type="date" className="border p-2 rounded text-sm" value={formSpecial.startDate} onChange={e=>setFormSpecial({...formSpecial, startDate:e.target.value})} /></div><div><label className="text-xs text-gray-500 block">สิ้นสุด</label><input type="date" className="border p-2 rounded text-sm" value={formSpecial.endDate} onChange={e=>setFormSpecial({...formSpecial, endDate:e.target.value})} /></div><div className="flex-1"><label className="text-xs text-gray-500 block">รายละเอียด</label><input placeholder="รายละเอียด" className="border p-2 rounded text-sm w-full" value={formSpecial.desc} onChange={e=>setFormSpecial({...formSpecial, desc:e.target.value})} /></div><button onClick={()=>handleSaveSetting('special', formSpecial)} className={`px-3 py-2 rounded text-sm text-white ${editMode?.desc===formSpecial.desc ? 'bg-orange-500':'bg-blue-600'} mb-0.5`}>{editMode?'บันทึก':'เพิ่ม'}</button></div><ul className="divide-y max-h-40 overflow-y-auto">{settings.special.map((s, i) => ( <li key={i} className="flex justify-between items-center p-2 text-sm text-blue-800"><span>{formatThaiDate(s.date)} ({s.desc})</span><div className="flex gap-2"><button onClick={()=>startEdit('special', s)} className="text-blue-500"><i className="fas fa-edit"></i></button><button onClick={()=>handleDeleteSetting('special', s.id)} className="text-red-500"><i className="fas fa-trash"></i></button></div></li> ))}</ul></div>
                                     </div>
                                 </div>
                             )}
