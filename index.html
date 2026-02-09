@@ -211,10 +211,15 @@
                 } else { setIsLiffReady(true); }
                 
                 // Fetch other configs
-                fetch(`${GOOGLE_SCRIPT_URL}?action=getMapConfig`).then(r => r.json()).then(res => { if (res.status === 'success') setPinPos(res.data); });
-                fetch(`${GOOGLE_SCRIPT_URL}?action=getSettings`).then(r => r.json()).then(res => { if (res.status === 'success') setSystemSettings({ closed: res.closed, special: res.special }); });
-                fetch(`${GOOGLE_SCRIPT_URL}?action=getSiteSettings`).then(r => r.json()).then(res => { if (res.status === 'success') setSiteConfig(prev => ({ ...prev, ...res.data })); });
-                fetch(`${GOOGLE_SCRIPT_URL}?action=getRoomConfig`).then(r => r.json()).then(res => { if (res.status === 'success') setRoomConfig(res.data); });
+                fetch(`${GOOGLE_SCRIPT_URL}?action=getInitialData`).then(r => r.json()).then(res => {
+                    if (res.status === 'success') {
+                        const { settings, siteConfig, roomConfig, mapConfig } = res.data;
+                        setSystemSettings({ closed: settings.closed, special: settings.special });
+                        setSiteConfig(prev => ({ ...prev, ...siteConfig }));
+                        setRoomConfig(roomConfig);
+                        setPinPos(mapConfig);
+                    }
+                });
             }, []);
 
             React.useEffect(() => {
@@ -661,87 +666,14 @@
                             </div>
                         )}
                         
-                        {/* --- MOVED FOOD SELECTION MODAL HERE (GLOBAL) --- */}
-                        {selectedFood && ( <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"> <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-sm relative animate-pop"> <img src={selectedFood.img} className="w-full h-40 object-cover rounded-lg mb-4 shadow-md" /> <h3 className="text-xl font-bold mb-1 text-green-800 dark:text-green-400">{selectedFood.name}</h3> {selectedFood.desc && <p className="text-gray-600 dark:text-gray-300 text-sm mb-2">{selectedFood.desc}</p>} <p className="text-gray-500 dark:text-gray-400 text-sm mb-4 font-bold">ราคาชุดละ {selectedFood.price} บาท</p> <div className="flex items-center justify-center gap-4 mb-6"> <button onClick={() => setFoodCount(Math.max(1, foodCount - 1))} className="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-full text-xl font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-200">-</button> <span className="text-2xl font-bold w-10 text-center dark:text-white">{foodCount}</span> <button onClick={() => setFoodCount(foodCount + 1)} className="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-full text-xl font-bold text-green-600 hover:bg-green-100">+</button> </div> <div className="flex gap-2"> <button onClick={() => setSelectedFood(null)} className="flex-1 py-3 text-gray-500 bg-gray-200 dark:bg-gray-600 dark:text-gray-300 rounded-lg font-bold">ยกเลิก</button> <button onClick={confirmFoodSelection} className="flex-1 py-3 text-white bg-green-600 hover:bg-green-700 rounded-lg font-bold shadow-lg">ยืนยัน ({selectedFood.price * foodCount}.-)</button> </div> </div> </div> )}
+                        {/* --- FOOD MODAL (GLOBAL) --- */}
+                        {selectedFood && ( <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity"> <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-sm relative animate-pop"> <img src={selectedFood.img} className="w-full h-40 object-cover rounded-lg mb-4 shadow-md" /> <h3 className="text-xl font-bold mb-1 text-green-800 dark:text-green-400">{selectedFood.name}</h3> {selectedFood.desc && <p className="text-gray-600 dark:text-gray-300 text-sm mb-2">{selectedFood.desc}</p>} <p className="text-gray-500 dark:text-gray-400 text-sm mb-4 font-bold">ราคาชุดละ {selectedFood.price} บาท</p> <div className="flex items-center justify-center gap-4 mb-6"> <button onClick={() => setFoodCount(Math.max(1, foodCount - 1))} className="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-full text-xl font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-200">-</button> <span className="text-2xl font-bold w-10 text-center dark:text-white">{foodCount}</span> <button onClick={() => setFoodCount(foodCount + 1)} className="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-full text-xl font-bold text-green-600 hover:bg-green-100">+</button> </div> <div className="flex gap-2"> <button onClick={() => setSelectedFood(null)} className="flex-1 py-3 text-gray-500 bg-gray-200 dark:bg-gray-600 dark:text-gray-300 rounded-lg font-bold">ยกเลิก</button> <button onClick={confirmFoodSelection} className="flex-1 py-3 text-white bg-green-600 hover:bg-green-700 rounded-lg font-bold shadow-lg">ยืนยัน ({selectedFood.price * foodCount}.-)</button> </div> </div> </div> )}
 
                         {/* Modals & Popups */}
-                        {modalAlert.show && (
-                            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity">
-                                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-100 animate-pop">
-                                    <div className={`p-6 text-center ${
-                                        modalAlert.type === 'error' ? 'bg-red-50 dark:bg-red-900/30' : 
-                                        modalAlert.type === 'success' ? 'bg-green-50 dark:bg-green-900/30' : 
-                                        modalAlert.type === 'warning' ? 'bg-yellow-50 dark:bg-yellow-900/30' : 'bg-blue-50 dark:bg-blue-900/30'
-                                    }`}>
-                                        <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm ${
-                                            modalAlert.type === 'error' ? 'bg-red-100 text-red-500' : 
-                                            modalAlert.type === 'success' ? 'bg-green-100 text-green-500' : 
-                                            modalAlert.type === 'warning' ? 'bg-yellow-100 text-yellow-500' : 'bg-blue-100 text-blue-500'
-                                        }`}>
-                                            <i className={`fas ${
-                                                modalAlert.type === 'error' ? 'fa-times' : 
-                                                modalAlert.type === 'success' ? 'fa-check' : 
-                                                modalAlert.type === 'warning' ? 'fa-exclamation' : 'fa-info'
-                                            } text-3xl`}></i>
-                                        </div>
-                                        <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">{modalAlert.title}</h3>
-                                        <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed">{modalAlert.text}</p>
-                                    </div>
-                                    <div className="p-4 bg-gray-50 dark:bg-gray-700">
-                                        <button onClick={() => setModalAlert({ ...modalAlert, show: false })} className={`w-full py-3 rounded-xl font-bold text-white shadow-lg transition transform active:scale-95 ${modalAlert.type === 'error' ? 'bg-red-500 hover:bg-red-600' : modalAlert.type === 'success' ? 'bg-green-500 hover:bg-green-600' : modalAlert.type === 'warning' ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-600 hover:bg-blue-700'}`}>
-                                            ตกลง
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* --- BEAUTIFUL CONFIRM MODAL --- */}
-                        {modalConfirm.show && (
-                            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity">
-                                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-100 animate-pop">
-                                    <div className="p-6 text-center bg-white dark:bg-gray-800">
-                                        <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300">
-                                            <i className="fas fa-question text-3xl"></i>
-                                        </div>
-                                        <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">{modalConfirm.title}</h3>
-                                        <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed whitespace-pre-line">{modalConfirm.text}</p>
-                                    </div>
-                                    <div className="p-4 bg-gray-50 dark:bg-gray-700 flex gap-3">
-                                        <button onClick={() => setModalConfirm({ ...modalConfirm, show: false })} className="flex-1 py-3 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200 rounded-xl font-bold hover:bg-gray-100 dark:hover:bg-gray-500 transition shadow-sm">ยกเลิก</button>
-                                        <button onClick={modalConfirm.onConfirm} className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow-lg transform active:scale-95">ยืนยัน</button>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* --- NEW: CHECKING DISCOUNT POPUP --- */}
-                        {checkingDiscount && (
-                            <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm transition-opacity">
-                                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-xs p-6 text-center animate-pop">
-                                    <div className="w-12 h-12 border-4 border-gray-200 border-t-green-500 rounded-full animate-spin mx-auto mb-4"></div>
-                                    <h3 className="text-lg font-bold text-gray-800 dark:text-white">กำลังตรวจสอบโค้ด...</h3>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">กรุณารอสักครู่</p>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* --- GENERIC LOADING POPUP --- */}
-                        {loading && (
-                            <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center p-4 bg-black/80 backdrop-blur-sm transition-opacity text-white">
-                                <div className="relative mb-6">
-                                    <div className="w-24 h-24 rounded-full border-4 border-white/20 border-t-green-400 animate-spin absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></div>
-                                    <div className="flex items-end gap-1 relative z-10">
-                                        <i className="fas fa-tree text-green-500 text-2xl animate-bounce" style={{animationDuration: '1.5s'}}></i>
-                                        <i className="fas fa-campground text-orange-500 text-5xl"></i>
-                                        <i className="fas fa-fire text-red-500 text-xl animate-pulse"></i>
-                                    </div>
-                                </div>
-                                <h3 className="text-2xl font-bold text-white mb-2 animate-pulse">กำลังโหลดข้อมูล...</h3>
-                                <p className="text-sm text-gray-300">กรุณารอสักครู่ ธรรมชาติกำลังเรียกหา 🍃</p>
-                            </div>
-                        )}
-
+                        {modalAlert.show && ( <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity"> <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-100 animate-pop"> <div className={`p-6 text-center ${modalAlert.type === 'error' ? 'bg-red-50 dark:bg-red-900/30' : modalAlert.type === 'success' ? 'bg-green-50 dark:bg-green-900/30' : modalAlert.type === 'warning' ? 'bg-yellow-50 dark:bg-yellow-900/30' : 'bg-blue-50 dark:bg-blue-900/30'}`}> <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm ${modalAlert.type === 'error' ? 'bg-red-100 text-red-500' : modalAlert.type === 'success' ? 'bg-green-100 text-green-500' : modalAlert.type === 'warning' ? 'bg-yellow-100 text-yellow-500' : 'bg-blue-100 text-blue-500'}`}> <i className={`fas ${modalAlert.type === 'error' ? 'fa-times' : modalAlert.type === 'success' ? 'fa-check' : modalAlert.type === 'warning' ? 'fa-exclamation' : 'fa-info'} text-3xl`}></i> </div> <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">{modalAlert.title}</h3> <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed">{modalAlert.text}</p> </div> <div className="p-4 bg-gray-50 dark:bg-gray-700"> <button onClick={() => setModalAlert({ ...modalAlert, show: false })} className={`w-full py-3 rounded-xl font-bold text-white shadow-lg transition transform active:scale-95 ${modalAlert.type === 'error' ? 'bg-red-500 hover:bg-red-600' : modalAlert.type === 'success' ? 'bg-green-500 hover:bg-green-600' : modalAlert.type === 'warning' ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-600 hover:bg-blue-700'}`}> ตกลง </button> </div> </div> </div> )}
+                        {modalConfirm.show && ( <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity"> <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-100 animate-pop"> <div className="p-6 text-center bg-white dark:bg-gray-800"> <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300"> <i className="fas fa-question text-3xl"></i> </div> <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">{modalConfirm.title}</h3> <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed whitespace-pre-line">{modalConfirm.text}</p> </div> <div className="p-4 bg-gray-50 dark:bg-gray-700 flex gap-3"> <button onClick={() => setModalConfirm({ ...modalConfirm, show: false })} className="flex-1 py-3 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200 rounded-xl font-bold hover:bg-gray-100 dark:hover:bg-gray-500 transition shadow-sm">ยกเลิก</button> <button onClick={modalConfirm.onConfirm} className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow-lg transform active:scale-95">ยืนยัน</button> </div> </div> </div> )}
+                        {checkingDiscount && ( <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm transition-opacity"> <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-xs p-6 text-center animate-pop"> <div className="w-12 h-12 border-4 border-gray-200 border-t-green-500 rounded-full animate-spin mx-auto mb-4"></div> <h3 className="text-lg font-bold text-gray-800 dark:text-white">กำลังตรวจสอบโค้ด...</h3> <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">กรุณารอสักครู่</p> </div> </div> )}
+                        {loading && ( <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center p-4 bg-black/80 backdrop-blur-sm transition-opacity text-white"> <div className="relative mb-6"> <div className="w-24 h-24 rounded-full border-4 border-white/20 border-t-green-400 animate-spin absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></div> <div className="flex items-end gap-1 relative z-10"> <i className="fas fa-tree text-green-500 text-2xl animate-bounce" style={{animationDuration: '1.5s'}}></i> <i className="fas fa-campground text-orange-500 text-5xl"></i> <i className="fas fa-fire text-red-500 text-xl animate-pulse"></i> </div> </div> <h3 className="text-2xl font-bold text-white mb-2 animate-pulse">กำลังโหลดข้อมูล...</h3> <p className="text-sm text-gray-300">กรุณารอสักครู่ ธรรมชาติกำลังเรียกหา 🍃</p> </div> )}
                     </div>
                 </div>
             );
