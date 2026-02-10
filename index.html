@@ -249,6 +249,7 @@
                         setLoading(false);
                         if(res.status === 'success' && res.bookings && res.bookings.length > 0) { 
                             setBookingList(res.bookings); 
+                            // Check URL params for specific ID (Deep Linking Logic)
                             const params = new URLSearchParams(window.location.search);
                             const targetId = params.get('id');
                             if (targetId) {
