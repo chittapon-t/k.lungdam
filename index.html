@@ -57,7 +57,7 @@
 
     <script type="text/babel">
         // --- CONFIGURATION ---
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzvZ_-MemhoUtHLxgaX9m8ZSZovPE8Q839IKLrOmv6fwgO53fgF7C2PuW6Ok-FtZ56X3A/exec"; 
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwk268Q6Q0fVWWAJV0A3u_11X1qlXYLyCzTkqH_bwRAxkWeSJtKLuaihDu_-FAnEVJ_cA/exec"; 
         const LIFF_ID = "2008803474-hRJaVbm7"; 
         const PROMPTPAY_PHONE = "0615924262";
         const PROMPTPAY_NAME = "อลงกต ทวีผ่อง";
@@ -465,7 +465,17 @@
                                                         {siteConfig.foodMenu.map(f => {
                                                             const inCart = addOnCart.find(c => c.id === f.id);
                                                             return (
-                                                                <div key={f.id} onClick={() => openFoodModal(f)} className={`cursor-pointer rounded-lg overflow-hidden border-2 transition-all shadow-sm relative ${inCart ? 'border-green-500 bg-green-50 dark:bg-green-900 dark:border-green-500' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700'}`}>
+                                                                <div key={f.id} onClick={() => {
+                                                                    const today = new Date(); today.setHours(0,0,0,0);
+                                                                    const currentCheckIn = new Date(manageData.checkIn); currentCheckIn.setHours(0,0,0,0);
+                                                                    const diffTime = currentCheckIn.getTime() - today.getTime();
+                                                                    const diffDays = Math.ceil(diffTime / (1000 * 3600 * 24));
+                                                                    if (diffDays < 1) {
+                                                                        setModalAlert({ show: true, type: 'warning', title: 'ไม่สามารถสั่งเพิ่มได้', text: 'ต้องสั่งอาหารล่วงหน้าอย่างน้อย 1 วันก่อนเข้าพัก' });
+                                                                        return;
+                                                                    }
+                                                                    openFoodModal(f);
+                                                                }} className={`cursor-pointer rounded-lg overflow-hidden border-2 transition-all shadow-sm relative ${inCart ? 'border-green-500 bg-green-50 dark:bg-green-900 dark:border-green-500' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700'}`}>
                                                                     <img src={f.img} className="w-full h-20 object-cover" />
                                                                     <div className="p-1"><h4 className="font-bold text-xs line-clamp-1">{f.name}</h4><div className="flex justify-between items-center mt-1"><span className="text-green-600 text-xs font-bold">{f.price}.-</span>{inCart && <span className="bg-green-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">x{inCart.qty}</span>}</div></div>
                                                                 </div>
