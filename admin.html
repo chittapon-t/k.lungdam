@@ -594,7 +594,20 @@
                                             </div>
                                             <div className="bg-green-50 p-3 rounded-lg border border-green-100">
                                                 <p className="font-bold text-green-800 mb-1"><i className="fas fa-bed mr-1"></i> ห้องพัก</p>
-                                                <p className="whitespace-pre-wrap">{viewBooking.rooms}</p>
+                                                {(() => {
+                                                    try {
+                                                        const cart = typeof viewBooking.cart === 'string' ? JSON.parse(viewBooking.cart) : viewBooking.cart;
+                                                        const rooms = cart.filter(c => c.type !== 'food');
+                                                        return rooms.map((r, i) => (
+                                                            <div key={i} className="flex justify-between text-sm text-green-900 mb-1">
+                                                                <span>- {r.name}</span>
+                                                                <span className="text-gray-600">จำนวน {r.guests} ท่าน</span>
+                                                            </div>
+                                                        ));
+                                                    } catch(e) {
+                                                        return <p className="whitespace-pre-wrap">{viewBooking.rooms}</p>;
+                                                    }
+                                                })()}
                                                 {viewBooking.food !== '-' && ( <div className="mt-2 pt-2 border-t border-green-200"><p className="font-bold text-orange-600 mb-1"><i className="fas fa-utensils mr-1"></i> อาหาร</p><p>{viewBooking.food}</p></div> )}
                                             </div>
                                             <div className="flex justify-between items-center pt-2 bg-blue-50 p-3 rounded-lg border border-blue-100">
