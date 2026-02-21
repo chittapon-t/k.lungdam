@@ -133,6 +133,11 @@
             const [rescheduleData, setRescheduleData] = React.useState(null);
             const [selectedAddFood, setSelectedAddFood] = React.useState('');
             const [addFoodQty, setAddFoodQty] = React.useState(1);
+            
+            // New states for Custom Add-on
+            const [isCustomAddon, setIsCustomAddon] = React.useState(false);
+            const [customAddonName, setCustomAddonName] = React.useState('');
+            const [customAddonPrice, setCustomAddonPrice] = React.useState('');
 
             const [editMode, setEditMode] = React.useState(null); 
             const [formDiscount, setFormDiscount] = React.useState({ code: '', type: 'FIXED', value: '' });
@@ -309,13 +314,46 @@
             };
 
             const handleAddFood = () => {
-                if(!selectedAddFood) return alertMsg('กรุณาเลือกเมนูอาหาร');
-                const foodItem = siteSettings.foodMenu.find(f => f.id === selectedAddFood);
-                if(!foodItem) return;
-                confirmMsg(`ยืนยันเพิ่ม ${foodItem.name} จำนวน ${addFoodQty} ชุด?`, () => {
+                let foodPayload;
+                
+                if (isCustomAddon) {
+                    if (!customAddonName || !customAddonPrice) return alertMsg('กรุณากรอกชื่อรายการและราคาให้ครบถ้วน');
+                    foodPayload = { 
+                        id: 'CUST_' + Date.now(), 
+                        name: customAddonName, 
+                        price: parseFloat(customAddonPrice), 
+                        qty: parseInt(addFoodQty) 
+                    };
+                } else {
+                    if(!selectedAddFood) return alertMsg('กรุณาเลือกเมนูอาหาร');
+                    const foodItem = siteSettings.foodMenu.find(f => f.id === selectedAddFood);
+                    if(!foodItem) return;
+                    foodPayload = { 
+                        id: foodItem.id, 
+                        name: foodItem.name, 
+                        price: foodItem.price, 
+                        qty: parseInt(addFoodQty) 
+                    };
+                }
+
+                confirmMsg(`ยืนยันเพิ่ม ${foodPayload.name} จำนวน ${foodPayload.qty} รายการ?`, () => {
                     setLoading(true);
-                    fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'addFoodToBooking', bookingId: viewBooking.id, foodItem: { id: foodItem.id, name: foodItem.name, price: foodItem.price, qty: parseInt(addFoodQty) }, password: password })
-                    }).then(r => r.json()).then(res => { setLoading(false); if(res.status === 'success') { successMsg('เพิ่มรายการอาหารเรียบร้อย'); fetchData(); setViewBooking(null); } else { errorMsg('Error: ' + res.message); } });
+                    fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'addFoodToBooking', bookingId: viewBooking.id, foodItem: foodPayload, password: password })
+                    }).then(r => r.json()).then(res => { 
+                        setLoading(false); 
+                        if(res.status === 'success') { 
+                            successMsg('เพิ่มรายการเรียบร้อย'); 
+                            fetchData(); 
+                            setViewBooking(null); 
+                            
+                            // Reset inputs after success
+                            setCustomAddonName('');
+                            setCustomAddonPrice('');
+                            setAddFoodQty(1);
+                        } else { 
+                            errorMsg('Error: ' + res.message); 
+                        } 
+                    });
                 });
             };
 
@@ -612,17 +650,38 @@
                                                 <div className="text-center w-1/3"><div className="text-[10px] text-gray-500">คงเหลือ</div><div className="font-bold text-green-600">{(parseInt(viewBooking.price) - parseInt(viewBooking.deposit)).toLocaleString()}</div></div>
                                             </div>
                                         </div>
+                                        
+                                        {/* แก้ไขส่วนการ Add-on แบบระบุเอง */}
                                         <div className="mt-6 border-t pt-4">
-                                            <h4 className="font-bold text-sm mb-3 text-blue-700 flex items-center"><i className="fas fa-plus-circle mr-2"></i> เพิ่มรายการอาหาร (Add-on)</h4>
-                                            <div className="flex gap-2 mb-2">
-                                                <select className="border p-2 rounded-lg text-sm flex-1 bg-gray-50 focus:ring-2 focus:ring-blue-200 focus:outline-none" value={selectedAddFood} onChange={e => setSelectedAddFood(e.target.value)}>
-                                                    <option value="">-- เลือกเมนู --</option>
-                                                    {siteSettings && siteSettings.foodMenu.map(f => ( <option key={f.id} value={f.id}>{f.name} ({f.price}.-)</option> ))}
-                                                </select>
-                                                <input type="number" className="border p-2 rounded-lg text-sm w-16 bg-gray-50 text-center focus:ring-2 focus:ring-blue-200 focus:outline-none" min="1" value={addFoodQty} onChange={e => setAddFoodQty(e.target.value)} />
+                                            <div className="flex justify-between items-center mb-3">
+                                                <h4 className="font-bold text-sm text-blue-700 flex items-center"><i className="fas fa-plus-circle mr-2"></i> เพิ่มบริการ/อาหาร (Add-on)</h4>
+                                                <div className="flex items-center gap-2">
+                                                    <input type="checkbox" id="customToggle" checked={isCustomAddon} onChange={e => setIsCustomAddon(e.target.checked)} className="rounded cursor-pointer" />
+                                                    <label htmlFor="customToggle" className="text-xs text-gray-600 cursor-pointer font-bold select-none">พิมพ์กำหนดเอง</label>
+                                                </div>
                                             </div>
-                                            <button onClick={handleAddFood} className="w-full py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 text-sm font-bold shadow transition"><i className="fas fa-save mr-1"></i> บันทึกเพิ่มรายการอาหาร</button>
+                                            
+                                            {!isCustomAddon ? (
+                                                <div className="flex gap-2 mb-2">
+                                                    <select className="border p-2 rounded-lg text-sm flex-1 bg-gray-50 focus:ring-2 focus:ring-blue-200 focus:outline-none" value={selectedAddFood} onChange={e => setSelectedAddFood(e.target.value)}>
+                                                        <option value="">-- เลือกเมนู --</option>
+                                                        {siteSettings && siteSettings.foodMenu.map(f => ( <option key={f.id} value={f.id}>{f.name} ({f.price}.-)</option> ))}
+                                                    </select>
+                                                    <input type="number" className="border p-2 rounded-lg text-sm w-16 bg-gray-50 text-center focus:ring-2 focus:ring-blue-200 focus:outline-none" min="1" value={addFoodQty} onChange={e => setAddFoodQty(e.target.value)} />
+                                                </div>
+                                            ) : (
+                                                <div className="flex flex-col gap-2 mb-2">
+                                                    <input type="text" placeholder="ชื่อรายการ (เช่น น้ำแข็ง, น้ำเปล่า)" className="border p-2 rounded-lg text-sm w-full bg-gray-50 focus:ring-2 focus:ring-blue-200 focus:outline-none" value={customAddonName} onChange={e => setCustomAddonName(e.target.value)} />
+                                                    <div className="flex gap-2 items-center">
+                                                        <input type="number" placeholder="ราคา/หน่วย" className="border p-2 rounded-lg text-sm flex-1 bg-gray-50 focus:ring-2 focus:ring-blue-200 focus:outline-none" value={customAddonPrice} onChange={e => setCustomAddonPrice(e.target.value)} />
+                                                        <span className="text-sm font-bold text-gray-600">บาท</span>
+                                                        <input type="number" placeholder="จำนวน" className="border p-2 rounded-lg text-sm w-20 bg-gray-50 text-center focus:ring-2 focus:ring-blue-200 focus:outline-none" min="1" value={addFoodQty} onChange={e => setAddFoodQty(e.target.value)} title="จำนวน" />
+                                                    </div>
+                                                </div>
+                                            )}
+                                            <button onClick={handleAddFood} className="w-full py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 text-sm font-bold shadow transition mt-1"><i className="fas fa-save mr-1"></i> บันทึกเพิ่มรายการ</button>
                                         </div>
+
                                         <div className="mt-6 flex flex-col gap-2 border-t pt-4">
                                             {!rescheduleData ? (
                                                 <button onClick={() => setRescheduleData({ id: viewBooking.id, checkIn: '', checkOut: '' })} className="w-full py-2.5 bg-orange-50 text-orange-600 border border-orange-200 rounded-xl hover:bg-orange-100 font-bold transition text-sm"><i className="fas fa-calendar-alt mr-1"></i> เลื่อนวันเข้าพัก</button>
@@ -688,7 +747,6 @@
                                     <div className="text-right"><h2 className="text-3xl font-bold text-gray-800 uppercase tracking-widest">RECEIPT</h2><p className="text-sm text-gray-500">ใบเสร็จรับเงิน</p><div className="mt-4 text-sm"><p><b>เลขที่:</b> {viewBooking.id}</p><p><b>วันที่:</b> {new Date().toLocaleDateString('th-TH')}</p></div></div>
                                 </div>
                                 
-                                {/* FIX: เปลี่ยนจาก w-1/2 เป็น flex-1 เพื่อให้กางเต็มความกว้างอย่างสวยงาม */}
                                 <div className="flex w-full justify-between mb-6 bg-gray-50 p-4 rounded border border-gray-200">
                                     <div className="flex-1 pr-4 border-r border-gray-200"><h3 className="font-bold text-gray-700 mb-2 border-b pb-1">ลูกค้า (Customer)</h3><p className="text-sm mb-1"><b>ชื่อ:</b> {viewBooking.name}</p><p className="text-sm mb-1"><b>เบอร์โทร:</b> {viewBooking.phone}</p><p className="text-sm"><b>LINE ID:</b> {viewBooking.lineProfile}</p></div>
                                     <div className="flex-1 pl-4 text-right"><h3 className="font-bold text-gray-700 mb-2 border-b pb-1">รายละเอียดการเข้าพัก</h3><p className="text-sm mb-1"><b>เช็คอิน:</b> {formatThaiDate(viewBooking.checkIn)}</p><p className="text-sm mb-1"><b>เช็คเอาท์:</b> {formatThaiDate(viewBooking.checkOut)}</p><p className="text-sm"><b>จำนวน:</b> {viewBooking.totalGuests} ท่าน</p></div>
@@ -717,12 +775,11 @@
                                             const netPrice = parseInt(viewBooking.price); const deposit = parseInt(viewBooking.deposit);
                                             const totalCalculated = roomSum + foodSum; const discount = totalCalculated - netPrice;
                                             
-                                            // FIX: คำนวณจำนวนบรรทัดของกล่องหมายเหตุให้ตรงกับบรรทัดสรุปยอดจริง ป้องกันตารางเบี้ยว
                                             const noteRowSpan = discount > 0 ? 5 : 4; 
 
                                             return ( <>
                                                 <tr><td colSpan="2" rowSpan={noteRowSpan} className="align-top pt-4 pr-4"><div className="border border-gray-300 rounded p-3 text-xs text-gray-600 h-full w-full"><p className="font-bold mb-1">หมายเหตุ:</p><p>- กรุณาตรวจสอบรายการให้ถูกต้อง</p><p>- ขอบคุณที่ใช้บริการขนำลุงดำ</p></div></td><td className="pt-4 text-right font-bold text-gray-700 text-sm">รวมค่าที่พัก</td><td className="pt-4 text-right font-medium text-sm">{roomSum.toLocaleString()}</td></tr>
-                                                <tr><td className="pt-1 text-right font-bold text-gray-700 text-sm">รวมค่าอาหาร</td><td className="pt-1 text-right font-medium text-sm">{foodSum.toLocaleString()}</td></tr>
+                                                <tr><td className="pt-1 text-right font-bold text-gray-700 text-sm">รวมค่าบริการ</td><td className="pt-1 text-right font-medium text-sm">{foodSum.toLocaleString()}</td></tr>
                                                 {discount > 0 && ( <tr><td className="pt-1 text-right font-bold text-green-600 text-sm">ส่วนลด</td><td className="pt-1 text-right font-medium text-green-600 text-sm">-{discount.toLocaleString()}</td></tr> )}
                                                 <tr><td className="pt-1 text-right font-bold text-gray-800 text-sm border-t border-gray-300 mt-1">ยอดสุทธิ</td><td className="pt-1 text-right font-bold text-gray-800 text-sm border-t border-gray-300 mt-1">{netPrice.toLocaleString()}</td></tr>
                                                 <tr><td className="pt-1 text-right text-sm text-red-500">หัก มัดจำ</td><td className="pt-1 text-right text-sm text-red-500">-{deposit.toLocaleString()}</td></tr>
@@ -732,7 +789,6 @@
                                     </tfoot>
                                 </table>
                                 
-                                {/* FIX: จัดความกว้างให้ตรงกลางขนานกันอย่างสมบูรณ์ */}
                                 <div className="mt-auto pt-8 flex w-full justify-between items-end px-8">
                                     <div className="text-center flex-1"><div className="border-b border-black w-48 mx-auto mb-2"></div><p className="text-sm font-bold">ผู้รับเงิน (Payee)</p><p className="text-xs text-gray-500">วันที่: ...../...../.......</p></div>
                                     <div className="text-center flex-1"><div className="border-b border-black w-48 mx-auto mb-2"></div><p className="text-sm font-bold">ผู้จ่ายเงิน (Payer)</p><p className="text-xs text-gray-500">วันที่: ...../...../.......</p></div>
