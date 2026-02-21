@@ -696,8 +696,8 @@
                                     <div className="w-1/2 pr-4 border-r border-gray-200"><h3 className="font-bold text-gray-700 mb-2 border-b pb-1">ลูกค้า (Customer)</h3><p className="text-sm mb-1"><b>ชื่อ:</b> {viewBooking.name}</p><p className="text-sm mb-1"><b>เบอร์โทร:</b> {viewBooking.phone}</p><p className="text-sm"><b>LINE ID:</b> {viewBooking.lineProfile}</p></div>
                                     <div className="w-1/2 pl-4 text-right"><h3 className="font-bold text-gray-700 mb-2 border-b pb-1">รายละเอียดการเข้าพัก</h3><p className="text-sm mb-1"><b>เช็คอิน:</b> {formatThaiDate(viewBooking.checkIn)}</p><p className="text-sm mb-1"><b>เช็คเอาท์:</b> {formatThaiDate(viewBooking.checkOut)}</p><p className="text-sm"><b>จำนวน:</b> {viewBooking.totalGuests} ท่าน</p></div>
                                 </div>
-                                <div className="bg-white p-4 rounded border border-gray-200">
-                                <table className="w-full mb-4 border-collapse">
+                                <table className="bg-white p-4 rounded border border-gray-200">
+                                
                                     <thead><tr className="bg-gray-800 text-white text-sm"><th className="py-2 px-3 text-left rounded-tl w-12">#</th><th className="py-2 px-3 text-left">รายการ (Description)</th><th className="py-2 px-3 text-right w-24">จำนวน</th><th className="py-2 px-3 text-right w-32 rounded-tr">จำนวนเงิน</th></tr></thead>
                                     <tbody className="text-sm">
                                         {(() => {
@@ -730,7 +730,7 @@
                                         })()}
                                     </tfoot>
                                 </table>
-                                </div>
+                                
                                 <div className="mt-auto pt-8 flex justify-between items-end px-8">
                                     <div className="text-center"><div className="border-b border-black w-48 mb-2"></div><p className="text-sm font-bold">ผู้รับเงิน (Payee)</p><p className="text-xs text-gray-500">วันที่: ...../...../.......</p></div>
                                     <div className="text-center"><div className="border-b border-black w-48 mb-2"></div><p className="text-sm font-bold">ผู้จ่ายเงิน (Payer)</p><p className="text-xs text-gray-500">วันที่: ...../...../.......</p></div>
