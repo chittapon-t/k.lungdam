@@ -40,7 +40,6 @@
         let ROOM_NAMES = { 'R1': 'โฮมสเตย์หนำโป', 'R2': 'บ้านพักริมน้ำ 1', 'R3': 'บ้านพักริมน้ำ 2', 'T1': 'เต็นท์กระโจม 1', 'T2': 'เต็นท์กระโจม 2', 'K1': 'เช่าเต็นท์สนาม K1', 'K2': 'เช่าเต็นท์สนาม K2', 'Z8': 'ลานกางเต็นท์' };
 
         // --- GOD-TIER IMAGE COMPRESSION ---
-        // บีบอัดภาพแบบ Recursive จนกว่าจะได้ขนาด < 500KB เพื่อป้องกัน GAS Timeout
         const compressImage = async (file, quality = 0.9, maxWidth = 1000) => {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -59,14 +58,11 @@
                         ctx.drawImage(img, 0, 0, width, height);
                         
                         let dataUrl = canvas.toDataURL('image/jpeg', quality);
-                        
-                        // Check size (Head approximation)
                         const head = 'data:image/jpeg;base64,';
                         const sizeInBytes = Math.round((dataUrl.length - head.length) * 3 / 4);
                         
-                        if (sizeInBytes > 500000 && quality > 0.3) { // ถ้ายังใหญ่กว่า 500KB และคุณภาพยังลดได้
+                        if (sizeInBytes > 500000 && quality > 0.3) { 
                             console.log(`Image too large (${sizeInBytes} bytes), compressing again at quality ${quality - 0.2}`);
-                            // Recursive call with lower quality and smaller width
                             resolve(compressImage(file, quality - 0.2, maxWidth * 0.8)); 
                         } else {
                             console.log(`Final Image Size: ${sizeInBytes} bytes`);
@@ -334,7 +330,6 @@
             const handleDeleteSetting = (type, id) => confirmMsg('ยืนยันการลบรายการนี้?', () => { fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'deleteSetting', type, id, password: password }) }).then(r => r.json()).then(res => { if (res.status === 'success') fetchInitialData(); }); });
             const handleSaveSiteSettings = () => confirmMsg('ยืนยันบันทึกการตั้งค่าร้านค้า?', () => { setSavingSiteSettings(true); fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'saveSiteSettings', password: password, settings: siteSettings }) }).then(r => r.json()).then(res => { setSavingSiteSettings(false); if(res.status === 'success') { successMsg('บันทึกเรียบร้อย'); fetchInitialData(); } else errorMsg('บันทึกไม่สำเร็จ'); }); });
             
-            // ใช้ Optimized Image Compression
             const handleImageUpload = async (file, callback) => { if(file) { try { const base64 = await compressImage(file); callback(base64); } catch(e) { errorMsg('Upload Failed'); } } };
             const handleMultipleImageUpload = async (files, callback) => { if (!files || files.length === 0) return; try { const promises = Array.from(files).map(file => compressImage(file)); const base64List = await Promise.all(promises); callback(base64List); } catch(e) { errorMsg('Upload Failed'); } };
             
@@ -531,7 +526,6 @@
                                             </div>
                                         </div>
                                     )}
-                                    {/* ... (ส่วนตั้งค่าส่วนลด/วันปิด เหมือนเดิม) ... */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div className="bg-white p-4 rounded-lg shadow border-l-4 border-green-500"><h3 className="font-bold text-lg mb-4 text-green-800"><i className="fas fa-tags"></i> โค้ดส่วนลด</h3><div className="flex gap-2 mb-4 flex-wrap items-end bg-gray-50 p-2 rounded"><div><label className="text-xs text-gray-500">Code</label><input className="border p-2 rounded text-sm w-24 block" value={formDiscount.code} onChange={e=>setFormDiscount({...formDiscount, code:e.target.value})} /></div><div><label className="text-xs text-gray-500">Type</label><select className="border p-2 rounded text-sm block" value={formDiscount.type} onChange={e=>setFormDiscount({...formDiscount, type:e.target.value})}><option value="FIXED">บาท</option><option value="PERCENT">%</option></select></div><div><label className="text-xs text-gray-500">Value</label><input type="number" className="border p-2 rounded text-sm w-20 block" value={formDiscount.value} onChange={e=>setFormDiscount({...formDiscount, value:e.target.value})} /></div><button onClick={()=>handleSaveSetting('discount', formDiscount)} className={`px-3 py-2 rounded text-sm text-white ${editMode?.code===formDiscount.code ? 'bg-orange-500':'bg-green-600'}`}>{editMode?.code===formDiscount.code ? 'บันทึกแก้ไข':'เพิ่ม'}</button>{editMode && <button onClick={()=>{setEditMode(null); setFormDiscount({code:'',type:'FIXED',value:''})}} className="text-gray-500 text-sm">ยกเลิก</button>}</div><ul className="divide-y max-h-40 overflow-y-auto">{settings.discounts.map((d, i) => ( <li key={i} className="flex justify-between items-center p-2 text-sm"><span><b>{d.code}</b> : ลด {d.value} {d.type}</span><div className="flex gap-2"><button onClick={()=>startEdit('discount', d)} className="text-blue-500"><i className="fas fa-edit"></i></button><button onClick={()=>handleDeleteSetting('discount', d.id)} className="text-red-500"><i className="fas fa-trash"></i></button></div></li> ))}</ul></div>
                                         <div className="bg-white p-4 rounded-lg shadow border-l-4 border-red-500"><h3 className="font-bold text-lg mb-4 text-red-800"><i className="fas fa-calendar-times"></i> วันปิดบริการ (ทั้งรีสอร์ท)</h3><div className="flex gap-2 mb-4 flex-wrap items-end bg-gray-50 p-2 rounded"><div><label className="text-xs text-gray-500 block">เริ่ม</label><input type="date" className="border p-2 rounded text-sm" value={formClosed.startDate} onChange={e=>setFormClosed({...formClosed, startDate:e.target.value})} /></div><div><label className="text-xs text-gray-500 block">สิ้นสุด</label><input type="date" className="border p-2 rounded text-sm" value={formClosed.endDate} onChange={e=>setFormClosed({...formClosed, endDate:e.target.value})} /></div><div className="flex-1"><label className="text-xs text-gray-500 block">เหตุผล</label><input placeholder="เหตุผล" className="border p-2 rounded text-sm w-full" value={formClosed.reason} onChange={e=>setFormClosed({...formClosed, reason:e.target.value})} /></div><button onClick={()=>handleSaveSetting('closed', formClosed)} className="px-3 py-2 rounded text-sm text-white bg-red-600 mb-0.5">ปิด</button></div><ul className="divide-y max-h-40 overflow-y-auto">{settings.closed.map((c, i) => ( <li key={i} className="flex justify-between items-center p-2 text-sm text-red-800"><span>{formatThaiDate(c.date)} ({c.reason})</span><button onClick={()=>handleDeleteSetting('closed', c.id)} className="text-red-500"><i className="fas fa-trash"></i></button></li> ))}</ul></div>
@@ -560,7 +554,7 @@
                                 </div>
                             </div>
                         )}
-                        {/* View Slip Modal & Receipt Modal (เหมือนเดิม) */}
+                        {/* View Slip Modal & Receipt Modal */}
                         {viewSlip && (
                             <div className="fixed inset-0 bg-black/95 flex items-center justify-center z-50 p-4 backdrop-blur-md modal-overlay" onClick={() => setViewSlip(null)}>
                                 <div className="relative max-w-full">
@@ -656,7 +650,7 @@
                     </div>
                     
                     <div id="print-container">
-                        {/* Report & Receipt Templates (Same as original but condensed for brevity) */}
+                        {/* Report Template */}
                         <div id="report-print-area">
                             <div className="flex justify-between items-center mb-4 border-b-2 border-gray-800 pb-2">
                                 <div className="flex items-center gap-3">
@@ -681,6 +675,7 @@
                             </table>
                         </div>
                         
+                        {/* Receipt Template */}
                         {viewBooking && (
                             <div id="receipt-print-area">
                                 <div className="flex justify-between items-start mb-6 border-b-2 border-gray-800 pb-4">
@@ -692,12 +687,14 @@
                                     </div>
                                     <div className="text-right"><h2 className="text-3xl font-bold text-gray-800 uppercase tracking-widest">RECEIPT</h2><p className="text-sm text-gray-500">ใบเสร็จรับเงิน</p><div className="mt-4 text-sm"><p><b>เลขที่:</b> {viewBooking.id}</p><p><b>วันที่:</b> {new Date().toLocaleDateString('th-TH')}</p></div></div>
                                 </div>
-                                <div className="flex justify-between mb-6 bg-gray-50 p-4 rounded border border-gray-200">
-                                    <div className="w-1/2 pr-4 border-r border-gray-200"><h3 className="font-bold text-gray-700 mb-2 border-b pb-1">ลูกค้า (Customer)</h3><p className="text-sm mb-1"><b>ชื่อ:</b> {viewBooking.name}</p><p className="text-sm mb-1"><b>เบอร์โทร:</b> {viewBooking.phone}</p><p className="text-sm"><b>LINE ID:</b> {viewBooking.lineProfile}</p></div>
-                                    <div className="w-1/2 pl-4 text-right"><h3 className="font-bold text-gray-700 mb-2 border-b pb-1">รายละเอียดการเข้าพัก</h3><p className="text-sm mb-1"><b>เช็คอิน:</b> {formatThaiDate(viewBooking.checkIn)}</p><p className="text-sm mb-1"><b>เช็คเอาท์:</b> {formatThaiDate(viewBooking.checkOut)}</p><p className="text-sm"><b>จำนวน:</b> {viewBooking.totalGuests} ท่าน</p></div>
-                                </div>
-                                <table className="bg-white p-4 rounded border border-gray-200">
                                 
+                                {/* FIX: เปลี่ยนจาก w-1/2 เป็น flex-1 เพื่อให้กางเต็มความกว้างอย่างสวยงาม */}
+                                <div className="flex w-full justify-between mb-6 bg-gray-50 p-4 rounded border border-gray-200">
+                                    <div className="flex-1 pr-4 border-r border-gray-200"><h3 className="font-bold text-gray-700 mb-2 border-b pb-1">ลูกค้า (Customer)</h3><p className="text-sm mb-1"><b>ชื่อ:</b> {viewBooking.name}</p><p className="text-sm mb-1"><b>เบอร์โทร:</b> {viewBooking.phone}</p><p className="text-sm"><b>LINE ID:</b> {viewBooking.lineProfile}</p></div>
+                                    <div className="flex-1 pl-4 text-right"><h3 className="font-bold text-gray-700 mb-2 border-b pb-1">รายละเอียดการเข้าพัก</h3><p className="text-sm mb-1"><b>เช็คอิน:</b> {formatThaiDate(viewBooking.checkIn)}</p><p className="text-sm mb-1"><b>เช็คเอาท์:</b> {formatThaiDate(viewBooking.checkOut)}</p><p className="text-sm"><b>จำนวน:</b> {viewBooking.totalGuests} ท่าน</p></div>
+                                </div>
+
+                                <table className="w-full mb-4 border-collapse">
                                     <thead><tr className="bg-gray-800 text-white text-sm"><th className="py-2 px-3 text-left rounded-tl w-12">#</th><th className="py-2 px-3 text-left">รายการ (Description)</th><th className="py-2 px-3 text-right w-24">จำนวน</th><th className="py-2 px-3 text-right w-32 rounded-tr">จำนวนเงิน</th></tr></thead>
                                     <tbody className="text-sm">
                                         {(() => {
@@ -719,8 +716,12 @@
                                             const foodSum = foodItems.reduce((s, i) => s + ((i.price||0) * (i.qty||1)), 0);
                                             const netPrice = parseInt(viewBooking.price); const deposit = parseInt(viewBooking.deposit);
                                             const totalCalculated = roomSum + foodSum; const discount = totalCalculated - netPrice;
+                                            
+                                            // FIX: คำนวณจำนวนบรรทัดของกล่องหมายเหตุให้ตรงกับบรรทัดสรุปยอดจริง ป้องกันตารางเบี้ยว
+                                            const noteRowSpan = discount > 0 ? 5 : 4; 
+
                                             return ( <>
-                                                <tr><td colSpan="2" rowSpan="5" className="align-top pt-4"><div className="border border-gray-300 rounded p-3 text-xs text-gray-600 h-full"><p className="font-bold mb-1">หมายเหตุ:</p><p>- กรุณาตรวจสอบรายการให้ถูกต้อง</p><p>- ขอบคุณที่ใช้บริการขนำลุงดำ</p></div></td><td className="pt-4 text-right font-bold text-gray-700 text-sm">รวมค่าที่พัก</td><td className="pt-4 text-right font-medium text-sm">{roomSum.toLocaleString()}</td></tr>
+                                                <tr><td colSpan="2" rowSpan={noteRowSpan} className="align-top pt-4 pr-4"><div className="border border-gray-300 rounded p-3 text-xs text-gray-600 h-full w-full"><p className="font-bold mb-1">หมายเหตุ:</p><p>- กรุณาตรวจสอบรายการให้ถูกต้อง</p><p>- ขอบคุณที่ใช้บริการขนำลุงดำ</p></div></td><td className="pt-4 text-right font-bold text-gray-700 text-sm">รวมค่าที่พัก</td><td className="pt-4 text-right font-medium text-sm">{roomSum.toLocaleString()}</td></tr>
                                                 <tr><td className="pt-1 text-right font-bold text-gray-700 text-sm">รวมค่าอาหาร</td><td className="pt-1 text-right font-medium text-sm">{foodSum.toLocaleString()}</td></tr>
                                                 {discount > 0 && ( <tr><td className="pt-1 text-right font-bold text-green-600 text-sm">ส่วนลด</td><td className="pt-1 text-right font-medium text-green-600 text-sm">-{discount.toLocaleString()}</td></tr> )}
                                                 <tr><td className="pt-1 text-right font-bold text-gray-800 text-sm border-t border-gray-300 mt-1">ยอดสุทธิ</td><td className="pt-1 text-right font-bold text-gray-800 text-sm border-t border-gray-300 mt-1">{netPrice.toLocaleString()}</td></tr>
@@ -731,9 +732,10 @@
                                     </tfoot>
                                 </table>
                                 
-                                <div className="mt-auto pt-8 flex justify-between items-end px-8">
-                                    <div className="text-center"><div className="border-b border-black w-48 mb-2"></div><p className="text-sm font-bold">ผู้รับเงิน (Payee)</p><p className="text-xs text-gray-500">วันที่: ...../...../.......</p></div>
-                                    <div className="text-center"><div className="border-b border-black w-48 mb-2"></div><p className="text-sm font-bold">ผู้จ่ายเงิน (Payer)</p><p className="text-xs text-gray-500">วันที่: ...../...../.......</p></div>
+                                {/* FIX: จัดความกว้างให้ตรงกลางขนานกันอย่างสมบูรณ์ */}
+                                <div className="mt-auto pt-8 flex w-full justify-between items-end px-8">
+                                    <div className="text-center flex-1"><div className="border-b border-black w-48 mx-auto mb-2"></div><p className="text-sm font-bold">ผู้รับเงิน (Payee)</p><p className="text-xs text-gray-500">วันที่: ...../...../.......</p></div>
+                                    <div className="text-center flex-1"><div className="border-b border-black w-48 mx-auto mb-2"></div><p className="text-sm font-bold">ผู้จ่ายเงิน (Payer)</p><p className="text-xs text-gray-500">วันที่: ...../...../.......</p></div>
                                 </div>
                                 <div className="absolute bottom-4 w-full text-center text-[10px] text-gray-400 left-0"><p>ขอบคุณที่ใช้บริการ ขนำลุงดำ แคมป์ปิ้ง | System Generated</p></div>
                             </div>
