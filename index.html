@@ -62,8 +62,31 @@
         const PROMPTPAY_PHONE = "0615924262";
         const PROMPTPAY_NAME = "อลงกต ทวีผ่อง";
 
+        // (BUG FIX 2): ฟังก์ชันกันแอปพังเวลาดึงข้อมูล JSON
+        const safeJsonParse = (str, fallback = []) => {
+            if (!str || str === '-') return fallback;
+            if (typeof str !== 'string') return str;
+            try { return JSON.parse(str); } catch (e) { console.warn('JSON Parse Error:', str); return fallback; }
+        };
+
+        const formatMoney = (val) => Number(val || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+
+        // (BUG FIX 4): ฟังก์ชัน fetch ที่มี Timeout กันการโหลดค้างชั่วนิรันดร์
+        const fetchWithTimeout = async (resource, options = {}) => {
+            const { timeout = 30000 } = options;
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), timeout);
+            try {
+                const response = await fetch(resource, { ...options, signal: controller.signal });
+                clearTimeout(id);
+                return response;
+            } catch (error) {
+                clearTimeout(id);
+                throw error;
+            }
+        };
+
         // --- GOD-TIER IMAGE COMPRESSION ---
-        // บีบอัดภาพแบบ Recursive จนกว่าจะได้ขนาด < 500KB
         const compressImage = async (file, quality = 0.9, maxWidth = 1000) => {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -83,7 +106,6 @@
                         
                         let dataUrl = canvas.toDataURL('image/jpeg', quality);
                         
-                        // Check size (Head approximation)
                         const head = 'data:image/jpeg;base64,';
                         const sizeInBytes = Math.round((dataUrl.length - head.length) * 3 / 4);
                         
@@ -177,7 +199,10 @@
                 while(current < end) { const dStr = current.toISOString().split('T')[0]; if (systemSettings.special.some(s => s.date === dStr)) return true; current.setDate(current.getDate() + 1); }
                 return false;
             };
-            const calculateNights = () => { if(!dates.checkIn || !dates.checkOut) return 0; return (new Date(dates.checkOut) - new Date(dates.checkIn)) / (1000 * 3600 * 24); }
+
+            // (BUG FIX 6): ใช้ Math.round ป้องกันบั๊ก Timezone
+            const calculateNights = () => { if(!dates.checkIn || !dates.checkOut) return 0; return Math.round((new Date(dates.checkOut) - new Date(dates.checkIn)) / (1000 * 3600 * 24)); }
+            
             const getPricing = () => {
                 const nights = calculateNights(); let roomTotal = 0; let foodTotal = 0; let z8Total = 0;
                 cart.forEach(item => { if (item.type === 'food') foodTotal += item.price * item.qty; else if (item.id === 'Z8') z8Total += item.pricePerNight * nights * item.guests; else roomTotal += item.pricePerNight * nights; });
@@ -215,7 +240,7 @@
                     }).catch(err => { console.error('LIFF Error', err); setIsLiffReady(true); });
                 } else { setIsLiffReady(true); }
                 
-                fetch(`${GOOGLE_SCRIPT_URL}?action=getInitialData`).then(r => r.json()).then(res => {
+                fetchWithTimeout(`${GOOGLE_SCRIPT_URL}?action=getInitialData`).then(r => r.json()).then(res => {
                     if (res.status === 'success') {
                         const { settings, siteConfig, roomConfig, mapConfig } = res.data;
                         setSystemSettings({ closed: settings.closed, special: settings.special });
@@ -223,7 +248,7 @@
                         setRoomConfig(roomConfig);
                         setPinPos(mapConfig);
                     }
-                });
+                }).catch(e=>console.error(e));
             }, []);
 
             React.useEffect(() => {
@@ -243,13 +268,12 @@
             React.useEffect(() => {
                 if (mode === 'manage' && isLiffReady && customer.userId && !manageData) {
                     setLoading(true);
-                    fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'findBooking', userId: customer.userId }) })
+                    fetchWithTimeout(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'findBooking', userId: customer.userId }) })
                     .then(r => r.json())
                     .then(res => {
                         setLoading(false);
                         if(res.status === 'success' && res.bookings && res.bookings.length > 0) { 
                             setBookingList(res.bookings); 
-                            // Check URL params for specific ID (Deep Linking Logic)
                             const params = new URLSearchParams(window.location.search);
                             const targetId = params.get('id');
                             if (targetId) {
@@ -259,7 +283,9 @@
                                 }
                             }
                         } else { setBookingList([]); }
-                    }).catch(() => setLoading(false));
+                    }).catch(e => {
+                        setLoading(false);
+                    });
                 }
             }, [mode, isLiffReady, customer.userId, manageData]);
 
@@ -269,7 +295,9 @@
                 if (dates.checkIn >= dates.checkOut) { setSearchError('วันเช็คเอาท์ต้องอยู่หลังจากวันเช็คอินครับ'); return; }
                 const closedFound = getClosedDateOverlap(dates.checkIn, dates.checkOut); if (closedFound) { setClosedModal(closedFound); return; }
                 setLoading(true);
-                fetch(`${GOOGLE_SCRIPT_URL}?action=getAvailability&checkIn=${dates.checkIn}&checkOut=${dates.checkOut}`).then(r => r.json()).then(data => { setAvailability(data); setStep(2); setLoading(false); }).catch(e => { alert('Error: ' + e); setLoading(false); });
+                fetchWithTimeout(`${GOOGLE_SCRIPT_URL}?action=getAvailability&checkIn=${dates.checkIn}&checkOut=${dates.checkOut}`)
+                .then(r => r.json()).then(data => { setAvailability(data); setStep(2); setLoading(false); })
+                .catch(e => { setLoading(false); alert(e.name === 'AbortError' ? 'การเชื่อมต่อใช้เวลานานเกินไป กรุณาลองอีกครั้งครับ' : 'Error: ' + e); });
             };
             const openRoomModal = (roomId) => { const room = roomConfig[roomId]; if (!room) return; if(roomId === 'Z8') setGuestCount(1); else setGuestCount(room.min || 1); setCurrentImgIdx(0); setSelectedRoomId(roomId); };
             const openFoodModal = (food) => { setSelectedFood(food); setFoodCount(1); };
@@ -289,12 +317,12 @@
             };
             const checkDiscountCode = () => { 
                 if(!discount.code) return; setCheckingDiscount(true); 
-                fetch(`${GOOGLE_SCRIPT_URL}?action=checkDiscount&code=${discount.code}`).then(r=>r.json()).then(d => { setCheckingDiscount(false); if(d.status === 'success') setDiscount({...discount, val: parseInt(d.value), type: d.type, message: `ใช้โค้ดสำเร็จ ลด ${d.value} ${d.type==='PERCENT'?'%':'บาท'}`, status: 'success'}); else setDiscount({...discount, val: 0, type: '', message: 'ไม่พบโค้ดส่วนลดนี้', status: 'error'}); }).catch(() => { setCheckingDiscount(false); setDiscount({...discount, val: 0, type: '', message: 'เกิดข้อผิดพลาด', status: 'error'}); }); 
+                fetchWithTimeout(`${GOOGLE_SCRIPT_URL}?action=checkDiscount&code=${discount.code}`).then(r=>r.json()).then(d => { setCheckingDiscount(false); if(d.status === 'success') setDiscount({...discount, val: Number(d.value), type: d.type, message: `ใช้โค้ดสำเร็จ ลด ${d.value} ${d.type==='PERCENT'?'%':'บาท'}`, status: 'success'}); else setDiscount({...discount, val: 0, type: '', message: 'ไม่พบโค้ดส่วนลดนี้', status: 'error'}); }).catch(e => { setCheckingDiscount(false); setDiscount({...discount, val: 0, type: '', message: e.name === 'AbortError' ? 'เน็ตหมดเวลา' : 'เกิดข้อผิดพลาด', status: 'error'}); }); 
             };
             const handleSubmit = () => {
                 if (!canSubmit) return; setLoading(true);
                 const payload = { action: 'saveBooking', customer, checkIn: dates.checkIn, checkOut: dates.checkOut, totalGuests: cart.filter(c => c.type !== 'food').reduce((s, c) => s + c.guests, 0), cart, pricing, discountCode: discount.code, slipImage: slipImg };
-                fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) }).then(r => r.json()).then(res => { if (res.status === 'success') { setBookingResult(res.bookingId); setStep(5); } else { alert('Error: ' + res.message); } setLoading(false); }).catch(e => { alert('Failed: ' + e); setLoading(false); });
+                fetchWithTimeout(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) }).then(r => r.json()).then(res => { if (res.status === 'success') { setBookingResult(res.bookingId); setStep(5); } else { alert('Error: ' + res.message); } setLoading(false); }).catch(e => { setLoading(false); alert(e.name === 'AbortError' ? 'การเชื่อมต่อใช้เวลานานเกินไป กรุณาลองอีกครั้งครับ (เน็ตอาจจะไม่เสถียร)' : 'Failed: ' + e); });
             };
             const selectBookingToManage = (booking, tab = 'info') => { setManageData(booking); setManageForm({ bookingId: booking.id, phone: booking.phone }); setManageTab(tab); }
             
@@ -312,8 +340,8 @@
             };
             const executeReschedule = () => {
                 setLoading(true);
-                fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'customerReschedule', bookingId: manageData.id, phone: manageData.phone, newCheckIn: rescheduleDates.checkIn, newCheckOut: rescheduleDates.checkOut }) })
-                .then(r => r.json()).then(res => { setLoading(false); if(res.status === 'success') { setModalAlert({ show: true, type: 'success', title: 'สำเร็จ!', text: 'เลื่อนวันเรียบร้อย' }); setManageData(null); setMode('booking'); } else { setModalAlert({ show: true, type: 'error', title: 'ไม่สำเร็จ', text: res.message }); } }).catch(e => { setLoading(false); setModalAlert({ show: true, type: 'error', title: 'Error', text: e }); });
+                fetchWithTimeout(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'customerReschedule', bookingId: manageData.id, phone: manageData.phone, newCheckIn: rescheduleDates.checkIn, newCheckOut: rescheduleDates.checkOut }) })
+                .then(r => r.json()).then(res => { setLoading(false); if(res.status === 'success') { setModalAlert({ show: true, type: 'success', title: 'สำเร็จ!', text: 'เลื่อนวันเรียบร้อย' }); setManageData(null); setMode('booking'); } else { setModalAlert({ show: true, type: 'error', title: 'ไม่สำเร็จ', text: res.message }); } }).catch(e => { setLoading(false); setModalAlert({ show: true, type: 'error', title: 'Error', text: e.name === 'AbortError' ? 'การเชื่อมต่อใช้เวลานานเกินไป' : String(e) }); });
             };
             const handleCustomerAddFood = () => {
                 if(addOnCart.length === 0) return setModalAlert({ show: true, type: 'warning', title: 'แจ้งเตือน', text: 'กรุณาเลือกอาหาร' });
@@ -327,8 +355,8 @@
             };
             const executeAddFood = () => {
                 setLoading(true);
-                fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'customerAddFood', bookingId: manageData.id, phone: manageData.phone, newFoodItems: addOnCart, slipImage: addOnSlip }) })
-                .then(r => r.json()).then(res => { setLoading(false); if(res.status === 'success') { setModalAlert({ show: true, type: 'success', title: 'สำเร็จ!', text: 'สั่งอาหารเรียบร้อย' }); setManageData(null); setAddOnCart([]); setAddOnSlip(null); setMode('booking'); } else { setModalAlert({ show: true, type: 'error', title: 'ไม่สำเร็จ', text: res.message }); } }).catch(e => { setLoading(false); setModalAlert({ show: true, type: 'error', title: 'Error', text: e }); });
+                fetchWithTimeout(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'customerAddFood', bookingId: manageData.id, phone: manageData.phone, newFoodItems: addOnCart, slipImage: addOnSlip }) })
+                .then(r => r.json()).then(res => { setLoading(false); if(res.status === 'success') { setModalAlert({ show: true, type: 'success', title: 'สำเร็จ!', text: 'สั่งอาหารเรียบร้อย' }); setManageData(null); setAddOnCart([]); setAddOnSlip(null); setMode('booking'); } else { setModalAlert({ show: true, type: 'error', title: 'ไม่สำเร็จ', text: res.message }); } }).catch(e => { setLoading(false); setModalAlert({ show: true, type: 'error', title: 'Error', text: e.name === 'AbortError' ? 'การเชื่อมต่อใช้เวลานานเกินไป' : String(e) }); });
             };
 
             return (
@@ -487,7 +515,7 @@
                                                         <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded mb-4">
                                                             <h4 className="font-bold text-xs mb-2">รายการที่เลือก ({addOnCart.length})</h4>
                                                             {addOnCart.map((c,i)=><div key={i} className="flex justify-between text-xs mt-1"><span>{c.name} x{c.qty}</span><button onClick={()=>setAddOnCart(addOnCart.filter((_,idx)=>idx!==i))} className="text-red-500">ลบ</button></div>)}
-                                                            <div className="mt-2 pt-2 border-t text-right font-bold text-sm text-green-600 mb-2">รวม {addOnCart.reduce((sum,c)=>sum+(c.price*c.qty),0).toLocaleString()} บ.</div>
+                                                            <div className="mt-2 pt-2 border-t text-right font-bold text-sm text-green-600 mb-2">รวม {formatMoney(addOnCart.reduce((sum,c)=>sum+(c.price*c.qty),0))} บ.</div>
                                                             <div className="bg-white dark:bg-gray-800 p-3 rounded border border-gray-200 dark:border-gray-600">
                                                                 <p className="text-xs font-bold mb-2 text-center">สแกนจ่ายเพื่อยืนยันออเดอร์</p>
                                                                 {addOnQr && <img src={addOnQr} className="mx-auto w-32 h-32 mb-2 border p-1" />}
@@ -506,7 +534,7 @@
                             </div>
                         )}
 
-                        {/* --- MODE: BOOKING (Existing Steps with updated logic) --- */}
+                        {/* --- MODE: BOOKING --- */}
                         {mode === 'booking' && step === 1 && (
                             <div className="max-w-md mx-auto bg-white dark:bg-gray-800 shadow-xl rounded-xl mt-4 border dark:border-gray-700 overflow-hidden">
                                 <div className="h-48 relative"><img src={siteConfig.bannerUrl} referrerPolicy="no-referrer" className="w-full h-full object-cover" /><div className="absolute inset-0 bg-black bg-opacity-10"></div></div>
@@ -582,11 +610,11 @@
                                     <p><strong>จำนวน:</strong> {calculateNights()} คืน</p>
                                     {pricing.isHighSeason && <div className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 p-1 rounded">ℹ️ ช่วงเทศกาล/วันพิเศษ คิดมัดจำ 100%</div>}
                                     <hr className="dark:border-gray-600"/>
-                                    {cart.map((c, i) => <div key={i} className="flex justify-between"><span>{c.name}</span><span>{c.type==='food' ? c.price*c.qty : (c.id === 'Z8' ? c.pricePerNight * calculateNights() * c.guests : c.pricePerNight*calculateNights())} บ.</span></div>)}
+                                    {cart.map((c, i) => <div key={i} className="flex justify-between"><span>{c.name}</span><span>{formatMoney(c.type==='food' ? c.price*c.qty : (c.id === 'Z8' ? c.pricePerNight * calculateNights() * c.guests : c.pricePerNight*calculateNights()))} บ.</span></div>)}
                                     <hr className="dark:border-gray-600"/>
-                                    {pricing.discount > 0 && <div className="flex justify-between text-red-500 font-bold"><span>ส่วนลดที่พัก</span><span>-{pricing.discount} บ.</span></div>}
-                                    <div className="flex justify-between font-bold text-lg"><span>สุทธิ</span><span>{pricing.netTotal} บ.</span></div>
-                                    <div className="bg-yellow-100 dark:bg-yellow-900 p-2 rounded text-center border border-yellow-300 dark:border-yellow-700 mt-2"><span className="block text-sm text-yellow-800 dark:text-yellow-200">ยอดมัดจำที่ต้องโอน</span><span className="text-2xl font-bold text-red-600 dark:text-red-400">{pricing.deposit} บาท</span></div>
+                                    {pricing.discount > 0 && <div className="flex justify-between text-red-500 font-bold"><span>ส่วนลดที่พัก</span><span>-{formatMoney(pricing.discount)} บ.</span></div>}
+                                    <div className="flex justify-between font-bold text-lg"><span>สุทธิ</span><span>{formatMoney(pricing.netTotal)} บ.</span></div>
+                                    <div className="bg-yellow-100 dark:bg-yellow-900 p-2 rounded text-center border border-yellow-300 dark:border-yellow-700 mt-2"><span className="block text-sm text-yellow-800 dark:text-yellow-200">ยอดมัดจำที่ต้องโอน</span><span className="text-2xl font-bold text-red-600 dark:text-red-400">{formatMoney(pricing.deposit)} บาท</span></div>
                                 </div>
                                 <div className="mb-4">
                                     <div className="flex gap-2"> <input placeholder="กรอกโค้ดส่วนลด" className="border p-2 rounded flex-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white" onChange={e => setDiscount({...discount, code: e.target.value})} /> <button className="bg-gray-800 dark:bg-gray-600 text-white px-4 rounded" onClick={checkDiscountCode}>กดใช้โค้ด</button> </div>
@@ -603,32 +631,61 @@
                                 </div>
                                 <div className="mb-4"> <label className="block mb-1 text-sm dark:text-gray-300">สลิปโอนเงิน <span className="text-red-500">*</span></label> <input type="file" accept="image/*" onChange={async (e) => { const f = e.target.files[0]; if (f) { try { const resizedBase64 = await compressImage(f); setSlipImg(resizedBase64); } catch (err) { alert('ไม่สามารถประมวลผลรูปภาพได้'); } } }} className="w-full text-sm dark:text-gray-300" /> </div>
                                 <div className="flex items-start gap-2 mb-4 text-xs text-gray-600 dark:text-gray-400"> <input type="checkbox" className="mt-1" checked={agreed} onChange={e => setAgreed(e.target.checked)} /> <p>ฉันอ่านกฎระเบียบและยอมรับเงื่อนไขของ ขนำลุงดำ แคมป์ปิ้ง ทุกประการ </p> </div>
-                                <button onClick={handleSubmit} disabled={loading || !canSubmit} className={`w-full p-3 rounded-lg font-bold text-white transition ${loading || !canSubmit ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}>{loading ? 'กำลังเตรียมเต็นท์...' : 'ยืนยันการจอง'}</button>
+                                <button onClick={handleSubmit} disabled={loading || !canSubmit} className={`w-full p-3 rounded-lg font-bold text-white transition ${loading || !canSubmit ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700 shadow-lg'}`}>{loading ? 'กำลังยืนยันการจอง...' : 'ยืนยันการจองที่พัก'}</button>
                             </div>
                         )}
 
                         {mode === 'booking' && step === 5 && (
-                            <div className="max-w-md mx-auto p-10 text-center bg-white dark:bg-gray-800 shadow-xl rounded-xl mt-10">
-                                <div className="text-6xl mb-4">🎉</div>
-                                <h2 className="text-2xl font-bold text-green-700 dark:text-green-400 mb-2">จองสำเร็จ!</h2>
-                                <p className="text-gray-600 dark:text-gray-300 mb-4">รหัส: <strong>{bookingResult}</strong></p>
-                                <p className="text-gray-600 dark:text-gray-300 mb-6">อย่าลืมมมม กดเมนูอื่นอ่านเพิ่มเติมด้วยนะครับ กรณีสั่งหมู/ไก่กระทะ  ชาบูหรืออาหารพื้นบ้าน สั่งล่วงหน้าได้เลยนะครับ ถ้าสั่งที่แคมป์วันพักเลย จะไม่มีน๊าาา ☺️</p>
-                                <p className="text-gray-600 dark:text-gray-300 mb-6">เช็คอินหลัง 14.00 เช็คเอาท์ก่อน 12.00 น.</p>
-                                <button onClick={() => liff.closeWindow()} className="mt-8 bg-gray-800 dark:bg-gray-600 text-white px-6 py-2 rounded-full">กดปิดเบาๆ นะ</button>
+                            <div className="max-w-md mx-auto p-8 text-center bg-white dark:bg-gray-800 shadow-xl rounded-xl mt-10">
+                                <div className="w-20 h-20 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mx-auto mb-6 text-green-500 text-4xl shadow-inner animate-pop"><i className="fas fa-check"></i></div>
+                                <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">จองสำเร็จ!</h2>
+                                <p className="text-gray-600 dark:text-gray-300 mb-6">รหัสการจอง: <span className="font-bold text-green-600">{bookingResult}</span></p>
+                                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg text-sm text-gray-700 dark:text-gray-300 mb-6">
+                                    ระบบได้ส่งข้อมูลการจองไปที่ LINE ของท่านแล้ว<br/>แอดมินจะตรวจสอบสลิปและอัปเดตสถานะเร็วๆ นี้ครับ
+                                </div>
+                                <button onClick={() => window.location.reload()} className="w-full bg-gray-800 dark:bg-gray-600 text-white p-3 rounded-lg hover:bg-gray-700 transition font-bold shadow">กลับหน้าแรก</button>
+                            </div>
+                        )}
+
+                        {/* --- MODALS --- */}
+                        {selectedFood && (
+                            <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 backdrop-blur-sm transition-opacity">
+                                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm relative animate-pop overflow-hidden">
+                                    <button onClick={() => setSelectedFood(null)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 z-10 w-8 h-8 flex items-center justify-center bg-white rounded-full shadow-sm"><i className="fas fa-times text-lg"></i></button>
+                                    <div className="w-full h-48 -mt-6 -mx-6 mb-4 relative"><img src={selectedFood.img} className="w-full h-full object-cover" /><div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div></div>
+                                    <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-1">{selectedFood.name}</h3>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 h-10 overflow-y-auto custom-scrollbar">{selectedFood.desc || 'ไม่มีคำอธิบาย'}</p>
+                                    <div className="flex items-center justify-between mb-6 bg-gray-50 dark:bg-gray-700 p-4 rounded-xl border border-gray-100 dark:border-gray-600">
+                                        <div className="text-lg font-bold text-green-600 dark:text-green-400">{selectedFood.price} ฿ <span className="text-xs text-gray-500">/ ชุด</span></div>
+                                        <div className="flex items-center gap-3">
+                                            <button onClick={() => setFoodCount(Math.max(1, foodCount - 1))} className="w-8 h-8 bg-white dark:bg-gray-600 rounded-full shadow-sm text-gray-600 font-bold hover:bg-gray-100">-</button>
+                                            <span className="text-lg font-bold w-6 text-center dark:text-white">{foodCount}</span>
+                                            <button onClick={() => setFoodCount(foodCount + 1)} className="w-8 h-8 bg-white dark:bg-gray-600 rounded-full shadow-sm text-gray-600 font-bold hover:bg-gray-100">+</button>
+                                        </div>
+                                    </div>
+                                    <button onClick={confirmFoodSelection} className="w-full bg-green-600 text-white py-3 rounded-xl font-bold shadow-lg hover:bg-green-700 transition flex items-center justify-center gap-2"><i className="fas fa-cart-plus"></i> เพิ่มลงตะกร้า</button>
+                                </div>
                             </div>
                         )}
                         
-                        {/* --- FOOD MODAL (GLOBAL) --- */}
-                        {selectedFood && ( <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity"> <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-sm relative animate-pop"> <img src={selectedFood.img} className="w-full h-40 object-cover rounded-lg mb-4 shadow-md" /> <h3 className="text-xl font-bold mb-1 text-green-800 dark:text-green-400">{selectedFood.name}</h3> {selectedFood.desc && <p className="text-gray-600 dark:text-gray-300 text-sm mb-2">{selectedFood.desc}</p>} <p className="text-gray-500 dark:text-gray-400 text-sm mb-4 font-bold">ราคาชุดละ {selectedFood.price} บาท</p> <div className="flex items-center justify-center gap-4 mb-6"> <button onClick={() => setFoodCount(Math.max(1, foodCount - 1))} className="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-full text-xl font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-200">-</button> <span className="text-2xl font-bold w-10 text-center dark:text-white">{foodCount}</span> <button onClick={() => setFoodCount(foodCount + 1)} className="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-full text-xl font-bold text-green-600 hover:bg-green-100">+</button> </div> <div className="flex gap-2"> <button onClick={() => setSelectedFood(null)} className="flex-1 py-3 text-gray-500 bg-gray-200 dark:bg-gray-600 dark:text-gray-300 rounded-lg font-bold">ยกเลิก</button> <button onClick={confirmFoodSelection} className="flex-1 py-3 text-white bg-green-600 hover:bg-green-700 rounded-lg font-bold shadow-lg">ยืนยัน ({selectedFood.price * foodCount}.-)</button> </div> </div> </div> )}
-
-                        {/* Modals & Popups */}
-                        {modalAlert.show && ( <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity"> <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-100 animate-pop"> <div className={`p-6 text-center ${modalAlert.type === 'error' ? 'bg-red-50 dark:bg-red-900/30' : modalAlert.type === 'success' ? 'bg-green-50 dark:bg-green-900/30' : modalAlert.type === 'warning' ? 'bg-yellow-50 dark:bg-yellow-900/30' : 'bg-blue-50 dark:bg-blue-900/30'}`}> <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm ${modalAlert.type === 'error' ? 'bg-red-100 text-red-500' : modalAlert.type === 'success' ? 'bg-green-100 text-green-500' : modalAlert.type === 'warning' ? 'bg-yellow-100 text-yellow-500' : 'bg-blue-100 text-blue-500'}`}> <i className={`fas ${modalAlert.type === 'error' ? 'fa-times' : modalAlert.type === 'success' ? 'fa-check' : modalAlert.type === 'warning' ? 'fa-exclamation' : 'fa-info'} text-3xl`}></i> </div> <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">{modalAlert.title}</h3> <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed">{modalAlert.text}</p> </div> <div className="p-4 bg-gray-50 dark:bg-gray-700"> <button onClick={() => setModalAlert({ ...modalAlert, show: false })} className={`w-full py-3 rounded-xl font-bold text-white shadow-lg transition transform active:scale-95 ${modalAlert.type === 'error' ? 'bg-red-500 hover:bg-red-600' : modalAlert.type === 'success' ? 'bg-green-500 hover:bg-green-600' : modalAlert.type === 'warning' ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-600 hover:bg-blue-700'}`}> ตกลง </button> </div> </div> </div> )}
-                        {modalConfirm.show && ( <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity"> <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-100 animate-pop"> <div className="p-6 text-center bg-white dark:bg-gray-800"> <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300"> <i className="fas fa-question text-3xl"></i> </div> <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">{modalConfirm.title}</h3> <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed whitespace-pre-line">{modalConfirm.text}</p> </div> <div className="p-4 bg-gray-50 dark:bg-gray-700 flex gap-3"> <button onClick={() => setModalConfirm({ ...modalConfirm, show: false })} className="flex-1 py-3 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200 rounded-xl font-bold hover:bg-gray-100 dark:hover:bg-gray-500 transition shadow-sm">ยกเลิก</button> <button onClick={modalConfirm.onConfirm} className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow-lg transform active:scale-95">ยืนยัน</button> </div> </div> </div> )}
-                        {checkingDiscount && ( <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm transition-opacity"> <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-xs p-6 text-center animate-pop"> <div className="w-12 h-12 border-4 border-gray-200 border-t-green-500 rounded-full animate-spin mx-auto mb-4"></div> <h3 className="text-lg font-bold text-gray-800 dark:text-white">กำลังตรวจสอบโค้ด...</h3> <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">กรุณารอสักครู่</p> </div> </div> )}
-                        {loading && ( <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center p-4 bg-black/80 backdrop-blur-sm transition-opacity text-white"> <div className="relative mb-6"> <div className="w-24 h-24 rounded-full border-4 border-white/20 border-t-green-400 animate-spin absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></div> <div className="flex items-end gap-1 relative z-10"> <i className="fas fa-tree text-green-500 text-2xl animate-bounce" style={{animationDuration: '1.5s'}}></i> <i className="fas fa-campground text-orange-500 text-5xl"></i> <i className="fas fa-fire text-red-500 text-xl animate-pulse"></i> </div> </div> <h3 className="text-2xl font-bold text-white mb-2 animate-pulse">กำลังโหลดข้อมูล...</h3> <p className="text-sm text-gray-300">กรุณารอสักครู่ ธรรมชาติกำลังเรียกหา 🍃</p> </div> )}
-                        {showRoomRequiredModal && ( <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm transition-opacity"> <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-xs p-6 text-center animate-pop"> <div className="w-16 h-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mx-auto mb-4"> <i className="fas fa-bed text-3xl text-red-500 dark:text-red-300"></i> </div> <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-2">ยังไม่ได้เลือกที่พัก</h3> <p className="text-gray-600 dark:text-gray-300 mb-6 text-sm">กรุณาเลือกบ้านพักหรือเต็นท์อย่างน้อย 1 รายการก่อนดำเนินการต่อ</p> <button onClick={() => setShowRoomRequiredModal(false)} className="w-full bg-gray-800 dark:bg-gray-600 text-white py-2 rounded-xl font-bold hover:bg-gray-700 transition">รับทราบ</button> </div> </div> )}
-                        {closedModal && ( <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-6"> <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center relative animate-pop"> <div className="w-16 h-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mx-auto mb-4"> <i className="fas fa-store-slash text-3xl text-red-500 dark:text-red-300"></i> </div> <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">วันปิดให้บริการ</h3> <p className="text-gray-600 dark:text-gray-300 mb-1">วันที่ <strong>{formatThaiDate(closedModal.date)}</strong></p> <p className="text-red-500 dark:text-red-400 font-medium mb-6">"{closedModal.reason}"</p> <button onClick={() => setClosedModal(null)} className="w-full bg-gray-800 dark:bg-gray-600 text-white py-3 rounded-xl font-bold hover:bg-gray-700 transition">เลือกวันใหม่</button> </div> </div> )}
-                        {searchError && ( <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-6"> <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center relative animate-pop"> <div className="w-16 h-16 bg-yellow-100 dark:bg-yellow-900 rounded-full flex items-center justify-center mx-auto mb-4"> <i className="fas fa-exclamation-triangle text-3xl text-yellow-500 dark:text-yellow-300"></i> </div> <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">แจ้งเตือน</h3> <p className="text-gray-600 dark:text-gray-300 mb-6">{searchError}</p> <button onClick={() => setSearchError(null)} className="w-full bg-gray-800 dark:bg-gray-600 text-white py-3 rounded-xl font-bold hover:bg-gray-700 transition">ตกลง</button> </div> </div> )}
+                        {showRoomRequiredModal && (
+                            <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-6">
+                                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center relative animate-pop">
+                                    <div className="w-16 h-16 bg-yellow-100 dark:bg-yellow-900 rounded-full flex items-center justify-center mx-auto mb-4"><i className="fas fa-campground text-3xl text-yellow-500 dark:text-yellow-300"></i></div>
+                                    <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">กรุณาเลือกที่พัก</h3>
+                                    <p className="text-gray-600 dark:text-gray-300 mb-6 text-sm">คุณต้องเลือกห้องพักหรือลานกางเต็นท์อย่างน้อย 1 รายการก่อนดำเนินการต่อครับ</p>
+                                    <button onClick={() => setShowRoomRequiredModal(false)} className="w-full bg-yellow-500 text-white py-3 rounded-xl font-bold hover:bg-yellow-600 transition shadow">รับทราบ</button>
+                                </div>
+                            </div>
+                        )}
+                        
+                        {closedModal && ( <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-6"> <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center relative animate-pop"> <div className="w-16 h-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mx-auto mb-4"> <i className="fas fa-ban text-3xl text-red-500 dark:text-red-300"></i> </div> <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">วันปิดให้บริการ</h3> <p className="text-gray-600 dark:text-gray-300 mb-1">วันที่ <strong>{formatThaiDate(closedModal.date)}</strong></p> <p className="text-red-500 dark:text-red-400 font-medium mb-6">"{closedModal.reason}"</p> <button onClick={() => setClosedModal(null)} className="w-full bg-gray-800 dark:bg-gray-600 text-white py-3 rounded-xl font-bold hover:bg-gray-700 transition">เลือกวันใหม่</button> </div> </div> )}
+                        
+                        {searchError && ( <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-6"> <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center relative animate-pop"> <div className="w-16 h-16 bg-yellow-100 dark:bg-yellow-900 rounded-full flex items-center justify-center mx-auto mb-4"> <i className="fas fa-exclamation-triangle text-3xl text-yellow-500 dark:text-yellow-300"></i> </div> <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">แจ้งเตือน</h3> <p className="text-gray-600 dark:text-gray-300 mb-6 text-sm">{searchError}</p> <button onClick={() => setSearchError(null)} className="w-full bg-yellow-500 text-white py-3 rounded-xl font-bold hover:bg-yellow-600 transition">ตกลง</button> </div> </div> )}
+                        
+                        {modalAlert.show && ( <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60 backdrop-blur-sm transition-opacity"> <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-xs overflow-hidden animate-pop"> <div className={`p-6 text-center ${modalAlert.type==='error'?'bg-red-50 dark:bg-red-900/20':''}`}> <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${modalAlert.type==='error'?'bg-red-100 text-red-500': modalAlert.type==='success'?'bg-green-100 text-green-500':'bg-yellow-100 text-yellow-500'}`}> <i className={`fas ${modalAlert.type==='error'?'fa-times':modalAlert.type==='success'?'fa-check':'fa-exclamation'} text-2xl`}></i> </div> <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">{modalAlert.title}</h3> <p className="text-gray-600 dark:text-gray-300 text-sm whitespace-pre-wrap">{modalAlert.text}</p> </div> <div className="p-4 bg-gray-50 dark:bg-gray-700"> <button onClick={() => setModalAlert({ ...modalAlert, show: false })} className="w-full py-2.5 bg-gray-800 dark:bg-gray-600 text-white rounded-xl font-bold hover:bg-gray-700 transition">ตกลง</button> </div> </div> </div> )}
+                        
+                        {modalConfirm.show && ( <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60 backdrop-blur-sm transition-opacity"> <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-xs overflow-hidden animate-pop"> <div className="p-6 text-center"> <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-blue-100 text-blue-500"> <i className="fas fa-question text-3xl"></i> </div> <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">{modalConfirm.title}</h3> <p className="text-gray-600 dark:text-gray-300 text-sm whitespace-pre-wrap">{modalConfirm.text}</p> </div> <div className="p-4 bg-gray-50 dark:bg-gray-700 flex gap-2"> <button onClick={() => setModalConfirm({ ...modalConfirm, show: false })} className="flex-1 py-2.5 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200 rounded-xl font-bold hover:bg-gray-50 transition">ยกเลิก</button> <button onClick={modalConfirm.onConfirm} className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow">ยืนยัน</button> </div> </div> </div> )}
                     </div>
                 </div>
             );
