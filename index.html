@@ -62,7 +62,6 @@
         const PROMPTPAY_PHONE = "0615924262";
         const PROMPTPAY_NAME = "อลงกต ทวีผ่อง";
 
-        // (BUG FIX 2): ฟังก์ชันกันแอปพังเวลาดึงข้อมูล JSON
         const safeJsonParse = (str, fallback = []) => {
             if (!str || str === '-') return fallback;
             if (typeof str !== 'string') return str;
@@ -71,7 +70,6 @@
 
         const formatMoney = (val) => Number(val || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 
-        // (BUG FIX 4): ฟังก์ชัน fetch ที่มี Timeout กันการโหลดค้างชั่วนิรันดร์
         const fetchWithTimeout = async (resource, options = {}) => {
             const { timeout = 30000 } = options;
             const controller = new AbortController();
@@ -86,7 +84,6 @@
             }
         };
 
-        // --- GOD-TIER IMAGE COMPRESSION ---
         const compressImage = async (file, quality = 0.9, maxWidth = 1000) => {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -131,6 +128,26 @@
         };
 
         const DEFAULT_POSITIONS = { 'R1': {x: 20, y: 30}, 'R2': {x: 40, y: 50}, 'R3': {x: 60, y: 50}, 'T1': {x: 25, y: 70}, 'T2': {x: 35, y: 75}, 'K1': {x: 70, y: 70}, 'K2': {x: 80, y: 70}, 'Z8': {x: 50, y: 20} };
+
+        // คอมโพเนนต์ Loading Animation ธีมแคมป์ปิ้ง
+        const CampingLoaderOverlay = ({ text = "กำลังเตรียมพื้นที่กางเต็นท์..." }) => (
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] transition-opacity">
+                <div className="bg-white dark:bg-gray-800 px-10 py-8 rounded-3xl shadow-2xl flex flex-col items-center animate-pop border-t-4 border-green-500">
+                    <div className="relative w-24 h-20 mb-6 flex items-center justify-center">
+                        <i className="fas fa-tree text-green-500 text-5xl absolute -left-6 animate-pulse"></i>
+                        <i className="fas fa-campground text-green-600 text-6xl relative z-10 animate-bounce"></i>
+                        <i className="fas fa-tree text-green-600 text-4xl absolute -right-4 animate-pulse" style={{animationDelay: '0.3s'}}></i>
+                        <i className="fas fa-fire text-orange-500 text-3xl absolute bottom-0 right-2 animate-pulse" style={{animationDelay: '0.5s'}}></i>
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2 tracking-wide text-center">{text}</h3>
+                    <div className="flex gap-2 mt-2">
+                        <div className="w-3 h-3 bg-green-500 rounded-full animate-bounce" style={{animationDelay: '0s'}}></div>
+                        <div className="w-3 h-3 bg-green-500 rounded-full animate-bounce" style={{animationDelay: '0.15s'}}></div>
+                        <div className="w-3 h-3 bg-green-500 rounded-full animate-bounce" style={{animationDelay: '0.3s'}}></div>
+                    </div>
+                </div>
+            </div>
+        );
         
         const App = () => {
             const [isDark, setIsDark] = React.useState(true);
@@ -141,6 +158,7 @@
             }); 
 
             // Booking States
+            const [isInitializing, setIsInitializing] = React.useState(true); // State สำหรับเปิดหน้าเว็บครั้งแรก
             const [dates, setDates] = React.useState({ checkIn: '', checkOut: '' });
             const [availability, setAvailability] = React.useState(null);
             const [loading, setLoading] = React.useState(false);
@@ -200,7 +218,6 @@
                 return false;
             };
 
-            // (BUG FIX 6): ใช้ Math.round ป้องกันบั๊ก Timezone
             const calculateNights = () => { if(!dates.checkIn || !dates.checkOut) return 0; return Math.round((new Date(dates.checkOut) - new Date(dates.checkIn)) / (1000 * 3600 * 24)); }
             
             const getPricing = () => {
@@ -227,6 +244,7 @@
 
             // --- Effects ---
             React.useEffect(() => {
+                setIsInitializing(true);
                 if (LIFF_ID) {
                     liff.init({ liffId: LIFF_ID }).then(() => {
                         setIsLiffReady(true);
@@ -248,7 +266,11 @@
                         setRoomConfig(roomConfig);
                         setPinPos(mapConfig);
                     }
-                }).catch(e=>console.error(e));
+                    setIsInitializing(false);
+                }).catch(e=>{
+                    console.error(e);
+                    setIsInitializing(false);
+                });
             }, []);
 
             React.useEffect(() => {
@@ -350,7 +372,6 @@
                 const currentCheckIn = new Date(manageData.checkIn); currentCheckIn.setHours(0,0,0,0);
                 const diffTime = currentCheckIn.getTime() - today.getTime();
                 const diffDays = Math.ceil(diffTime / (1000 * 3600 * 24));
-                // ปรับเงื่อนไขการสั่งอาหารล่วงหน้าจาก 1 วัน เป็น 2 วัน
                 if (diffDays < 2) return setModalAlert({ show: true, type: 'warning', title: 'ไม่สามารถสั่งเพิ่มได้', text: 'ต้องสั่งอาหารล่วงหน้าอย่างน้อย 2 วันก่อนเข้าพัก' });
                 setModalConfirm({ show: true, title: 'ยืนยันการสั่งอาหาร', text: `รายการ:\n${addOnCart.map(i => '- '+i.name).join('\n')}`, onConfirm: () => { setModalConfirm({ ...modalConfirm, show: false }); executeAddFood(); } });
             };
@@ -362,7 +383,7 @@
 
             return (
                 <div className={isDark ? "dark" : ""}>
-                    <div className="min-h-screen bg-[#f3f4f6] dark:bg-gray-900 text-gray-800 dark:text-gray-100 transition-colors duration-300">
+                    <div className="min-h-screen bg-[#f3f4f6] dark:bg-gray-900 text-gray-800 dark:text-gray-100 transition-colors duration-300 relative">
                         {/* THEME TOGGLE */}
                         <button onClick={() => setIsDark(!isDark)} className="fixed top-4 right-4 z-50 bg-white dark:bg-gray-700 p-2 rounded-full shadow-lg border border-gray-200 dark:border-gray-600 w-10 h-10 flex items-center justify-center transition-transform hover:scale-110"> {isDark ? '☀️' : '🌙'} </button>
                         
@@ -379,8 +400,8 @@
                                         <div className="animate-pop">
                                             {loading ? (
                                                 <div className="flex flex-col items-center justify-center py-10">
-                                                    <div className="w-12 h-12 border-4 border-gray-200 dark:border-gray-700 border-t-green-500 rounded-full animate-spin mb-4"></div>
-                                                    <p className="text-gray-500 dark:text-gray-400 animate-pulse">กำลังค้นหาข้อมูล...</p>
+                                                    <i className="fas fa-campground text-5xl text-green-600 animate-bounce mb-4"></i>
+                                                    <p className="text-gray-500 dark:text-gray-400 font-bold">กำลังกางเต็นท์ข้อมูล...</p>
                                                 </div>
                                             ) : (
                                                 !isLiffReady ? (
@@ -490,7 +511,6 @@
 
                                             {manageTab === 'food' && (
                                                 <div className="space-y-4 animate-pop">
-                                                    {/* ปรับแจ้งเตือนเงื่อนไขเป็นสั่งอาหารล่วงหน้า 2 วัน */}
                                                     <div className="bg-green-50 dark:bg-green-900/20 text-xs p-2 rounded mb-4 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-800">🍽️ เงื่อนไข: สั่งล่วงหน้าอย่างน้อย 2 วันก่อนเข้าพัก</div>
                                                     <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto custom-scrollbar">
                                                         {siteConfig.foodMenu.map(f => {
@@ -501,7 +521,6 @@
                                                                     const currentCheckIn = new Date(manageData.checkIn); currentCheckIn.setHours(0,0,0,0);
                                                                     const diffTime = currentCheckIn.getTime() - today.getTime();
                                                                     const diffDays = Math.ceil(diffTime / (1000 * 3600 * 24));
-                                                                    // เปลี่ยนเงื่อนไขเพื่อเช็คเป็น < 2 วัน
                                                                     if (diffDays < 2) {
                                                                         setModalAlert({ show: true, type: 'warning', title: 'ไม่สามารถสั่งเพิ่มได้', text: 'ต้องสั่งอาหารล่วงหน้าอย่างน้อย 2 วันก่อนเข้าพัก' });
                                                                         return;
@@ -689,6 +708,9 @@
                         {modalAlert.show && ( <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60 backdrop-blur-sm transition-opacity"> <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-xs overflow-hidden animate-pop"> <div className={`p-6 text-center ${modalAlert.type==='error'?'bg-red-50 dark:bg-red-900/20':''}`}> <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${modalAlert.type==='error'?'bg-red-100 text-red-500': modalAlert.type==='success'?'bg-green-100 text-green-500':'bg-yellow-100 text-yellow-500'}`}> <i className={`fas ${modalAlert.type==='error'?'fa-times':modalAlert.type==='success'?'fa-check':'fa-exclamation'} text-2xl`}></i> </div> <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">{modalAlert.title}</h3> <p className="text-gray-600 dark:text-gray-300 text-sm whitespace-pre-wrap">{modalAlert.text}</p> </div> <div className="p-4 bg-gray-50 dark:bg-gray-700"> <button onClick={() => setModalAlert({ ...modalAlert, show: false })} className="w-full py-2.5 bg-gray-800 dark:bg-gray-600 text-white rounded-xl font-bold hover:bg-gray-700 transition">ตกลง</button> </div> </div> </div> )}
                         
                         {modalConfirm.show && ( <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60 backdrop-blur-sm transition-opacity"> <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-xs overflow-hidden animate-pop"> <div className="p-6 text-center"> <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-blue-100 text-blue-500"> <i className="fas fa-question text-3xl"></i> </div> <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">{modalConfirm.title}</h3> <p className="text-gray-600 dark:text-gray-300 text-sm whitespace-pre-wrap">{modalConfirm.text}</p> </div> <div className="p-4 bg-gray-50 dark:bg-gray-700 flex gap-2"> <button onClick={() => setModalConfirm({ ...modalConfirm, show: false })} className="flex-1 py-2.5 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200 rounded-xl font-bold hover:bg-gray-50 transition">ยกเลิก</button> <button onClick={modalConfirm.onConfirm} className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow">ยืนยัน</button> </div> </div> </div> )}
+
+                        {/* --- CAMPING LOADING OVERLAY --- */}
+                        {(loading || isInitializing) && <CampingLoaderOverlay text={isInitializing ? "กำลังเตรียมพื้นที่กางเต็นท์..." : "กำลังดำเนินการ..."} />}
                     </div>
                 </div>
             );
