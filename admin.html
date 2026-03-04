@@ -39,6 +39,31 @@
         let ROOM_IDS = ['R1','R2','R3','T1','T2','K1','K2','Z8'];
         let ROOM_NAMES = { 'R1': 'โฮมสเตย์หนำโป', 'R2': 'บ้านพักริมน้ำ 1', 'R3': 'บ้านพักริมน้ำ 2', 'T1': 'เต็นท์กระโจม 1', 'T2': 'เต็นท์กระโจม 2', 'K1': 'เช่าเต็นท์สนาม K1', 'K2': 'เช่าเต็นท์สนาม K2', 'Z8': 'ลานกางเต็นท์' };
 
+        // (BUG FIX 2): ฟังก์ชันกันแอปพังเวลาดึงข้อมูล JSON จาก Sheet ผิดพลาด
+        const safeJsonParse = (str, fallback = []) => {
+            if (!str || str === '-') return fallback;
+            if (typeof str !== 'string') return str;
+            try { return JSON.parse(str); } catch (e) { console.warn('JSON Parse Error:', str); return fallback; }
+        };
+
+        // (BUG FIX 3): ฟังก์ชันจัดการตัวเลขให้ปลอดภัยกว่า parseInt และจัดการทศนิยม
+        const formatMoney = (val) => Number(val || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+
+        // (BUG FIX 4): ฟังก์ชัน fetch ที่มี Timeout กันการโหลดค้างชั่วนิรันดร์
+        const fetchWithTimeout = async (resource, options = {}) => {
+            const { timeout = 30000 } = options;
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), timeout);
+            try {
+                const response = await fetch(resource, { ...options, signal: controller.signal });
+                clearTimeout(id);
+                return response;
+            } catch (error) {
+                clearTimeout(id);
+                throw error;
+            }
+        };
+
         // --- GOD-TIER IMAGE COMPRESSION ---
         const compressImage = async (file, quality = 0.9, maxWidth = 1000) => {
             return new Promise((resolve, reject) => {
@@ -97,11 +122,11 @@
                         {b.food !== '-' && <div className="text-orange-600 text-xs mt-1"><i className="fas fa-utensils mr-1"></i> {b.food}</div>}
                     </div>
                     <div className="flex justify-between items-center bg-blue-50 p-2 rounded-lg mb-3">
-                        <div className="text-center px-2"><div className="text-[10px] text-gray-500">ยอดสุทธิ</div><div className="font-bold text-gray-800">{parseInt(b.price).toLocaleString()}</div></div>
+                        <div className="text-center px-2"><div className="text-[10px] text-gray-500">ยอดสุทธิ</div><div className="font-bold text-gray-800">{formatMoney(b.price)}</div></div>
                         <div className="h-8 w-px bg-blue-200"></div>
-                        <div className="text-center px-2"><div className="text-[10px] text-gray-500">มัดจำ</div><div className="font-bold text-red-600">{parseInt(b.deposit).toLocaleString()}</div></div>
+                        <div className="text-center px-2"><div className="text-[10px] text-gray-500">มัดจำ</div><div className="font-bold text-red-600">{formatMoney(b.deposit)}</div></div>
                         <div className="h-8 w-px bg-blue-200"></div>
-                        <div className="text-center px-2"><div className="text-[10px] text-gray-500">คงเหลือ</div><div className="font-bold text-green-600">{(parseInt(b.price) - parseInt(b.deposit)).toLocaleString()}</div></div>
+                        <div className="text-center px-2"><div className="text-[10px] text-gray-500">คงเหลือ</div><div className="font-bold text-green-600">{formatMoney(Number(b.price || 0) - Number(b.deposit || 0))}</div></div>
                     </div>
                     <div className="flex justify-end gap-2">
                         {String(b.slip || '').includes('http') && <button onClick={() => onViewSlip(b.slip)} className="bg-blue-50 text-blue-600 px-3 py-2 rounded-lg hover:bg-blue-100 transition text-sm font-bold"><i className="fas fa-image mr-1"></i> สลิป</button>}
@@ -155,9 +180,9 @@
             const [calendarDate, setCalendarDate] = React.useState(new Date());
             const [modal, setModal] = React.useState({ isOpen: false, type: 'alert', title: '', message: '', onConfirm: null });
 
-            // --- AUTO LOGIN CHECK ---
+            // --- AUTO LOGIN CHECK (BUG FIX 5: ใช้ sessionStorage แทน) ---
             React.useEffect(() => {
-                const storedPwd = localStorage.getItem('admin_pwd');
+                const storedPwd = sessionStorage.getItem('admin_pwd');
                 if (storedPwd) {
                     setPassword(storedPwd);
                     setIsLoggedIn(true);
@@ -191,7 +216,7 @@
                     if (adminBookingForm.checkIn < adminBookingForm.checkOut) {
                         setLoadingAvailability(true);
                         setAdminBookingForm(prev => ({...prev, rooms: []})); 
-                        fetch(`${GOOGLE_SCRIPT_URL}?action=getAvailability&checkIn=${adminBookingForm.checkIn}&checkOut=${adminBookingForm.checkOut}&_t=${Date.now()}`)
+                        fetchWithTimeout(`${GOOGLE_SCRIPT_URL}?action=getAvailability&checkIn=${adminBookingForm.checkIn}&checkOut=${adminBookingForm.checkOut}&_t=${Date.now()}`)
                             .then(r => r.json())
                             .then(res => { setLoadingAvailability(false); if (res.status === 'success') setAdminAvailability(res); })
                             .catch(e => setLoadingAvailability(false));
@@ -203,8 +228,8 @@
                 const now = new Date();
                 const currentMonth = now.getMonth();
                 const currentYear = now.getFullYear();
-                const totalRevenue = bookings.filter(b => b.status === 'ยืนยัน').reduce((sum, b) => sum + parseInt(b.deposit || 0), 0);
-                const monthlyRevenue = bookings.filter(b => { const d = new Date(b.checkIn); return b.status === 'ยืนยัน' && d.getMonth() === currentMonth && d.getFullYear() === currentYear; }).reduce((sum, b) => sum + parseInt(b.deposit || 0), 0);
+                const totalRevenue = bookings.filter(b => b.status === 'ยืนยัน').reduce((sum, b) => sum + Number(b.deposit || 0), 0);
+                const monthlyRevenue = bookings.filter(b => { const d = new Date(b.checkIn); return b.status === 'ยืนยัน' && d.getMonth() === currentMonth && d.getFullYear() === currentYear; }).reduce((sum, b) => sum + Number(b.deposit || 0), 0);
                 const pendingCount = bookings.filter(b => b.status === 'รอตรวจสอบ').length;
                 const monthlyCounts = Array(12).fill(0);
                 bookings.forEach(b => { if (b.status !== 'ยกเลิก' && b.status !== 'Cancelled') { const d = new Date(b.checkIn); if (d.getFullYear() === currentYear) { monthlyCounts[d.getMonth()]++; } } });
@@ -251,12 +276,12 @@
 
             const handleLogin = (e) => {
                 e.preventDefault(); setLoading(true);
-                fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'adminLogin', password: password }) })
+                fetchWithTimeout(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'adminLogin', password: password }) })
                 .then(r => r.json()).then(res => {
                     setLoading(false);
                     if (res.status === 'success') { 
                         setIsLoggedIn(true); 
-                        localStorage.setItem('admin_pwd', password);
+                        sessionStorage.setItem('admin_pwd', password);
                         fetchData(); 
                         fetchInitialData(); 
                     } else errorMsg('รหัสผ่านไม่ถูกต้อง');
@@ -264,14 +289,14 @@
             };
             
             const handleLogout = () => {
-                localStorage.removeItem('admin_pwd');
+                sessionStorage.removeItem('admin_pwd');
                 window.location.reload();
             }
 
-            const fetchData = () => { setLoading(true); fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'getAdminData', password: password }) }).then(r => r.json()).then(res => { setLoading(false); if (res.status === 'success') setBookings(res.data); }); };
+            const fetchData = () => { setLoading(true); fetchWithTimeout(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'getAdminData', password: password }) }).then(r => r.json()).then(res => { setLoading(false); if (res.status === 'success') setBookings(res.data); }).catch(e=>setLoading(false)); };
             
             const fetchInitialData = () => {
-                fetch(`${GOOGLE_SCRIPT_URL}?action=getInitialData`).then(r => r.json()).then(res => {
+                fetchWithTimeout(`${GOOGLE_SCRIPT_URL}?action=getInitialData`).then(r => r.json()).then(res => {
                     if (res.status === 'success') {
                         const { settings, siteConfig, roomConfig, mapConfig } = res.data;
                         setSettings(settings);
@@ -281,14 +306,14 @@
                         const loadedIds = Object.keys(roomConfig);
                         if (loadedIds.length > 0) { ROOM_IDS = loadedIds; ROOM_NAMES = {}; loadedIds.forEach(id => ROOM_NAMES[id] = roomConfig[id].name); }
                     }
-                });
+                }).catch(e=>console.error(e));
             };
 
             const updateStatus = (id, newStatus) => {
                 const actionText = newStatus === 'ยกเลิก' ? 'ยกเลิกรายการ' : `เปลี่ยนสถานะเป็น "${newStatus}"`;
                 confirmMsg(`ยืนยันการ${actionText} ใช่หรือไม่?`, () => {
                     setBookings(prev => prev.map(b => b.id === id ? {...b, status: newStatus} : b));
-                    fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'updateStatus', bookingId: id, newStatus: newStatus, password: password }) });
+                    fetchWithTimeout(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'updateStatus', bookingId: id, newStatus: newStatus, password: password }) });
                     if (newStatus === 'ยกเลิก' && viewBooking && viewBooking.id === id) setViewBooking({...viewBooking, status: 'ยกเลิก'});
                 });
             };
@@ -299,8 +324,8 @@
                 confirmMsg('ยืนยันสร้างรายการจอง?', () => {
                     setLoading(true);
                     const cart = rooms.map(rid => ({ id: rid, name: ROOM_NAMES[rid] || rid, type: (rid==='Z8'?'ground':(rid.startsWith('K')?'tent_rent':(rid.startsWith('T')?'tent':'room'))), guests: 2, qty: 1 }));
-                    fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'createAdminBooking', password: password, customer: { name, phone }, checkIn, checkOut, totalGuests: 2, cart: cart, price: parseFloat(price), deposit: parseFloat(deposit || price) })
-                    }).then(r => r.json()).then(res => { setLoading(false); if(res.status === 'success') { successMsg('สร้างรายการจองสำเร็จ'); fetchData(); setShowAdminBooking(false); setAdminBookingForm({ name: '', phone: '', checkIn: '', checkOut: '', rooms: [], price: '', deposit: '' }); setAdminAvailability(null); } else errorMsg('ไม่สำเร็จ: ' + res.message); });
+                    fetchWithTimeout(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'createAdminBooking', password: password, customer: { name, phone }, checkIn, checkOut, totalGuests: 2, cart: cart, price: parseFloat(price), deposit: parseFloat(deposit || price) })
+                    }).then(r => r.json()).then(res => { setLoading(false); if(res.status === 'success') { successMsg('สร้างรายการจองสำเร็จ'); fetchData(); setShowAdminBooking(false); setAdminBookingForm({ name: '', phone: '', checkIn: '', checkOut: '', rooms: [], price: '', deposit: '' }); setAdminAvailability(null); } else errorMsg('ไม่สำเร็จ: ' + res.message); }).catch(e => { setLoading(false); errorMsg(e.name === 'AbortError' ? 'เน็ตหมดเวลา' : String(e)); });
                 });
             };
 
@@ -308,8 +333,8 @@
                 if(!rescheduleData.checkIn || !rescheduleData.checkOut) return alertMsg('กรุณาเลือกวันที่ให้ครบถ้วน');
                 if(rescheduleData.checkIn >= rescheduleData.checkOut) return alertMsg('วันที่ออกต้องอยู่หลังวันที่เข้าพัก');
                 confirmMsg('ยืนยันการเลื่อนวันเข้าพัก?', () => {
-                    fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'rescheduleBooking', bookingId: rescheduleData.id, newCheckIn: rescheduleData.checkIn, newCheckOut: rescheduleData.checkOut, password: password }) 
-                    }).then(r => r.json()).then(res => { if (res.status === 'success') { successMsg('เลื่อนวันสำเร็จเรียบร้อย'); setRescheduleData(null); setViewBooking(null); fetchData(); } else errorMsg('ไม่สำเร็จ: ' + res.message); });
+                    fetchWithTimeout(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'rescheduleBooking', bookingId: rescheduleData.id, newCheckIn: rescheduleData.checkIn, newCheckOut: rescheduleData.checkOut, password: password }) 
+                    }).then(r => r.json()).then(res => { if (res.status === 'success') { successMsg('เลื่อนวันสำเร็จเรียบร้อย'); setRescheduleData(null); setViewBooking(null); fetchData(); } else errorMsg('ไม่สำเร็จ: ' + res.message); }).catch(e => errorMsg(e.name === 'AbortError' ? 'เน็ตหมดเวลา' : String(e)));
                 });
             };
 
@@ -338,7 +363,7 @@
 
                 confirmMsg(`ยืนยันเพิ่ม ${foodPayload.name} จำนวน ${foodPayload.qty} รายการ?`, () => {
                     setLoading(true);
-                    fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'addFoodToBooking', bookingId: viewBooking.id, foodItem: foodPayload, password: password })
+                    fetchWithTimeout(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'addFoodToBooking', bookingId: viewBooking.id, foodItem: foodPayload, password: password })
                     }).then(r => r.json()).then(res => { 
                         setLoading(false); 
                         if(res.status === 'success') { 
@@ -353,7 +378,7 @@
                         } else { 
                             errorMsg('Error: ' + res.message); 
                         } 
-                    });
+                    }).catch(e => { setLoading(false); errorMsg(e.name === 'AbortError' ? 'เน็ตหมดเวลา' : String(e)); });
                 });
             };
 
@@ -361,12 +386,12 @@
                 const action = editMode ? 'editSetting' : 'addSetting'; const id = editMode ? editMode.id : null;
                 if ((type !== 'discount') && (!payload.startDate || !payload.endDate)) return alertMsg('กรุณาระบุวันที่เริ่มต้นและสิ้นสุด');
                 confirmMsg('ยืนยันการบันทึกข้อมูล?', () => {
-                    fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action, type, id, payload, password: password }) }).then(r => r.json()).then(res => { if (res.status === 'success') { successMsg('บันทึกสำเร็จ'); fetchInitialData(); setEditMode(null); setFormDiscount({ code: '', type: 'FIXED', value: '' }); setFormClosed({ startDate: '', endDate: '', reason: '' }); setFormSpecial({ startDate: '', endDate: '', desc: '' }); setFormRoomClosure({ startDate: '', endDate: '', roomId: 'R1', reason: '' }); } else errorMsg('บันทึกไม่สำเร็จ'); });
+                    fetchWithTimeout(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action, type, id, payload, password: password }) }).then(r => r.json()).then(res => { if (res.status === 'success') { successMsg('บันทึกสำเร็จ'); fetchInitialData(); setEditMode(null); setFormDiscount({ code: '', type: 'FIXED', value: '' }); setFormClosed({ startDate: '', endDate: '', reason: '' }); setFormSpecial({ startDate: '', endDate: '', desc: '' }); setFormRoomClosure({ startDate: '', endDate: '', roomId: 'R1', reason: '' }); } else errorMsg('บันทึกไม่สำเร็จ'); }).catch(e => errorMsg(e.name === 'AbortError' ? 'เน็ตหมดเวลา' : String(e)));
                 });
             };
             const startEdit = (type, item) => alertMsg('การแก้ไขช่วงวันที่ต้องลบแล้วเพิ่มใหม่ครับ');
-            const handleDeleteSetting = (type, id) => confirmMsg('ยืนยันการลบรายการนี้?', () => { fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'deleteSetting', type, id, password: password }) }).then(r => r.json()).then(res => { if (res.status === 'success') fetchInitialData(); }); });
-            const handleSaveSiteSettings = () => confirmMsg('ยืนยันบันทึกการตั้งค่าร้านค้า?', () => { setSavingSiteSettings(true); fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'saveSiteSettings', password: password, settings: siteSettings }) }).then(r => r.json()).then(res => { setSavingSiteSettings(false); if(res.status === 'success') { successMsg('บันทึกเรียบร้อย'); fetchInitialData(); } else errorMsg('บันทึกไม่สำเร็จ'); }); });
+            const handleDeleteSetting = (type, id) => confirmMsg('ยืนยันการลบรายการนี้?', () => { fetchWithTimeout(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'deleteSetting', type, id, password: password }) }).then(r => r.json()).then(res => { if (res.status === 'success') fetchInitialData(); }); });
+            const handleSaveSiteSettings = () => confirmMsg('ยืนยันบันทึกการตั้งค่าร้านค้า?', () => { setSavingSiteSettings(true); fetchWithTimeout(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'saveSiteSettings', password: password, settings: siteSettings }) }).then(r => r.json()).then(res => { setSavingSiteSettings(false); if(res.status === 'success') { successMsg('บันทึกเรียบร้อย'); fetchInitialData(); } else errorMsg('บันทึกไม่สำเร็จ'); }).catch(e => { setSavingSiteSettings(false); errorMsg(e.name === 'AbortError' ? 'เน็ตหมดเวลา' : String(e)); }); });
             
             const handleImageUpload = async (file, callback) => { if(file) { try { const base64 = await compressImage(file); callback(base64); } catch(e) { errorMsg('Upload Failed'); } } };
             const handleMultipleImageUpload = async (files, callback) => { if (!files || files.length === 0) return; try { const promises = Array.from(files).map(file => compressImage(file)); const base64List = await Promise.all(promises); callback(base64List); } catch(e) { errorMsg('Upload Failed'); } };
@@ -391,8 +416,8 @@
                     const rooms = finalRoomsData.map(r => ({ id: r.id, name: r.name, type: r.type, min: r.min, maxCap: r.maxCap, pricing: r.pricing, bf: r.bf }));
                     const mapConfigObj = {}; finalRoomsData.forEach(r => mapConfigObj[r.id] = { x: r.x, y: r.y });
                     const images = {}, descs = {}; finalRoomsData.forEach(r => { images[r.id] = r.images || []; descs[r.id] = r.desc || ''; });
-                    fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'saveRoomSystem', password: password, rooms: rooms, mapConfig: mapConfigObj, siteSettings: { roomImages: images, roomDescriptions: descs } }) })
-                    .then(r => r.json()).then(res => { setSavingSiteSettings(false); if(res.status === 'success') { successMsg('บันทึกข้อมูลสำเร็จ'); setRoomsMapData(finalRoomsData); setMapConfig(mapConfigObj); fetchInitialData(); setEditingRoom(null); } else errorMsg('บันทึกไม่สำเร็จ: ' + res.message); }).catch(e => { setSavingSiteSettings(false); errorMsg('Connection Error: ' + e.message); });
+                    fetchWithTimeout(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'saveRoomSystem', password: password, rooms: rooms, mapConfig: mapConfigObj, siteSettings: { roomImages: images, roomDescriptions: descs } }) })
+                    .then(r => r.json()).then(res => { setSavingSiteSettings(false); if(res.status === 'success') { successMsg('บันทึกข้อมูลสำเร็จ'); setRoomsMapData(finalRoomsData); setMapConfig(mapConfigObj); fetchInitialData(); setEditingRoom(null); } else errorMsg('บันทึกไม่สำเร็จ: ' + res.message); }).catch(e => { setSavingSiteSettings(false); errorMsg(e.name === 'AbortError' ? 'เน็ตหมดเวลา' : String(e)); });
                 });
             };
 
@@ -422,8 +447,8 @@
                             {activeTab === 'dashboard' && (
                                 <div className="space-y-6 animate-fade-in">
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                        <div className="bg-white p-5 rounded-2xl shadow-sm border-l-4 border-green-500"><div className="text-gray-500 text-xs mb-1">รายได้รวม (มัดจำ)</div><div className="text-2xl font-bold text-green-700">{stats.totalRevenue.toLocaleString()} ฿</div></div>
-                                        <div className="bg-white p-5 rounded-2xl shadow-sm border-l-4 border-blue-500"><div className="text-gray-500 text-xs mb-1">รายได้เดือนนี้</div><div className="text-2xl font-bold text-blue-700">{stats.monthlyRevenue.toLocaleString()} ฿</div></div>
+                                        <div className="bg-white p-5 rounded-2xl shadow-sm border-l-4 border-green-500"><div className="text-gray-500 text-xs mb-1">รายได้รวม (มัดจำ)</div><div className="text-2xl font-bold text-green-700">{formatMoney(stats.totalRevenue)} ฿</div></div>
+                                        <div className="bg-white p-5 rounded-2xl shadow-sm border-l-4 border-blue-500"><div className="text-gray-500 text-xs mb-1">รายได้เดือนนี้</div><div className="text-2xl font-bold text-blue-700">{formatMoney(stats.monthlyRevenue)} ฿</div></div>
                                         <div className="bg-white p-5 rounded-2xl shadow-sm border-l-4 border-yellow-500"><div className="text-gray-500 text-xs mb-1">รอตรวจสอบ</div><div className="text-2xl font-bold text-yellow-600">{stats.pendingCount} รายการ</div></div>
                                         <div className="bg-white p-5 rounded-2xl shadow-sm border-l-4 border-gray-500"><div className="text-gray-500 text-xs mb-1">การจองทั้งหมด</div><div className="text-2xl font-bold text-gray-700">{bookings.length}</div></div>
                                     </div>
@@ -628,7 +653,7 @@
                                                 <p className="font-bold text-green-800 mb-1"><i className="fas fa-bed mr-1"></i> ห้องพัก</p>
                                                 {(() => {
                                                     try {
-                                                        const cart = typeof viewBooking.cart === 'string' ? JSON.parse(viewBooking.cart) : viewBooking.cart;
+                                                        const cart = typeof viewBooking.cart === 'string' ? safeJsonParse(viewBooking.cart, []) : (viewBooking.cart || []);
                                                         const rooms = cart.filter(c => c.type !== 'food');
                                                         return rooms.map((r, i) => (
                                                             <div key={i} className="flex justify-between text-sm text-green-900 mb-1">
@@ -643,11 +668,11 @@
                                                 {viewBooking.food !== '-' && ( <div className="mt-2 pt-2 border-t border-green-200"><p className="font-bold text-orange-600 mb-1"><i className="fas fa-utensils mr-1"></i> อาหาร</p><p>{viewBooking.food}</p></div> )}
                                             </div>
                                             <div className="flex justify-between items-center pt-2 bg-blue-50 p-3 rounded-lg border border-blue-100">
-                                                <div className="text-center w-1/3"><div className="text-[10px] text-gray-500">สุทธิ</div><div className="font-bold text-gray-800">{parseInt(viewBooking.price).toLocaleString()}</div></div>
+                                                <div className="text-center w-1/3"><div className="text-[10px] text-gray-500">สุทธิ</div><div className="font-bold text-gray-800">{formatMoney(viewBooking.price)}</div></div>
                                                 <div className="h-8 w-px bg-blue-200"></div>
-                                                <div className="text-center w-1/3"><div className="text-[10px] text-gray-500">มัดจำ</div><div className="font-bold text-red-600">{parseInt(viewBooking.deposit).toLocaleString()}</div></div>
+                                                <div className="text-center w-1/3"><div className="text-[10px] text-gray-500">มัดจำ</div><div className="font-bold text-red-600">{formatMoney(viewBooking.deposit)}</div></div>
                                                 <div className="h-8 w-px bg-blue-200"></div>
-                                                <div className="text-center w-1/3"><div className="text-[10px] text-gray-500">คงเหลือ</div><div className="font-bold text-green-600">{(parseInt(viewBooking.price) - parseInt(viewBooking.deposit)).toLocaleString()}</div></div>
+                                                <div className="text-center w-1/3"><div className="text-[10px] text-gray-500">คงเหลือ</div><div className="font-bold text-green-600">{formatMoney(Number(viewBooking.price || 0) - Number(viewBooking.deposit || 0))}</div></div>
                                             </div>
                                         </div>
                                         
@@ -727,7 +752,7 @@
                                         <tr key={b.id} className="border-b border-gray-300 even:bg-gray-50 align-top">
                                             <td className="px-2 py-2 border border-gray-300 font-mono">{b.id}</td><td className="px-2 py-2 border border-gray-300">{b.name}</td><td className="px-2 py-2 border border-gray-300">{b.phone}</td><td className="px-2 py-2 border border-gray-300">{formatThaiDate(b.checkIn)}</td><td className="px-2 py-2 border border-gray-300">{formatThaiDate(b.checkOut)}</td>
                                             <td className="px-2 py-2 border border-gray-300 text-[10px]"><div className="font-semibold text-green-900 whitespace-pre-wrap">{b.rooms}</div>{b.food && b.food !== '-' && ( <div className="text-orange-800 border-t border-gray-200 mt-1 pt-1 whitespace-pre-wrap"><i className="fas fa-utensils mr-1 text-[8px]"></i>{b.food}</div> )}</td>
-                                            <td className="px-2 py-2 border border-gray-300 text-right">{parseInt(b.price).toLocaleString()}</td><td className="px-2 py-2 border border-gray-300 text-right">{parseInt(b.deposit).toLocaleString()}</td><td className="px-2 py-2 border border-gray-300 text-center"><span className="border px-1 rounded text-[10px] bg-white">{b.status}</span></td>
+                                            <td className="px-2 py-2 border border-gray-300 text-right">{formatMoney(b.price)}</td><td className="px-2 py-2 border border-gray-300 text-right">{formatMoney(b.deposit)}</td><td className="px-2 py-2 border border-gray-300 text-center"><span className="border px-1 rounded text-[10px] bg-white">{b.status}</span></td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -756,7 +781,7 @@
                                     <thead><tr className="bg-gray-800 text-white text-sm"><th className="py-2 px-3 text-left rounded-tl w-12">#</th><th className="py-2 px-3 text-left">รายการ (Description)</th><th className="py-2 px-3 text-right w-24">จำนวน</th><th className="py-2 px-3 text-right w-32 rounded-tr">จำนวนเงิน</th></tr></thead>
                                     <tbody className="text-sm">
                                         {(() => {
-                                            let cart = []; try { cart = JSON.parse(viewBooking.cart || '[]'); } catch(e) {}
+                                            const cart = safeJsonParse(viewBooking.cart, []);
                                             const roomItems = cart.filter(c => c.type !== 'food'); const foodItems = cart.filter(c => c.type === 'food');
                                             return ( <>
                                                 {roomItems.length > 0 && ( <tr className="bg-gray-100 font-bold"><td colSpan="4" className="py-1 px-3 text-xs text-gray-600">ค่าที่พัก (Accommodation)</td></tr> )}
@@ -768,22 +793,22 @@
                                     </tbody>
                                     <tfoot>
                                         {(() => {
-                                            let cart = []; try { cart = JSON.parse(viewBooking.cart || '[]'); } catch(e) {}
+                                            const cart = safeJsonParse(viewBooking.cart, []);
                                             const roomItems = cart.filter(c => c.type !== 'food'); const foodItems = cart.filter(c => c.type === 'food');
                                             const roomSum = roomItems.reduce((s, i) => s + ((i.pricePerNight||i.price||0) * (i.nights||1)), 0);
                                             const foodSum = foodItems.reduce((s, i) => s + ((i.price||0) * (i.qty||1)), 0);
-                                            const netPrice = parseInt(viewBooking.price); const deposit = parseInt(viewBooking.deposit);
+                                            const netPrice = Number(viewBooking.price || 0); const deposit = Number(viewBooking.deposit || 0);
                                             const totalCalculated = roomSum + foodSum; const discount = totalCalculated - netPrice;
                                             
                                             const noteRowSpan = discount > 0 ? 5 : 4; 
 
                                             return ( <>
-                                                <tr><td colSpan="2" rowSpan={noteRowSpan} className="align-top pt-4 pr-4"><div className="border border-gray-300 rounded p-3 text-xs text-gray-600 h-full w-full"><p className="font-bold mb-1">หมายเหตุ:</p><p>- กรุณาตรวจสอบรายการให้ถูกต้อง</p><p>- ขอบคุณที่ใช้บริการขนำลุงดำ</p></div></td><td className="pt-4 text-right font-bold text-gray-700 text-sm">รวมค่าที่พัก</td><td className="pt-4 text-right font-medium text-sm">{roomSum.toLocaleString()}</td></tr>
-                                                <tr><td className="pt-1 text-right font-bold text-gray-700 text-sm">รวมค่าบริการ</td><td className="pt-1 text-right font-medium text-sm">{foodSum.toLocaleString()}</td></tr>
-                                                {discount > 0 && ( <tr><td className="pt-1 text-right font-bold text-green-600 text-sm">ส่วนลด</td><td className="pt-1 text-right font-medium text-green-600 text-sm">-{discount.toLocaleString()}</td></tr> )}
-                                                <tr><td className="pt-1 text-right font-bold text-gray-800 text-sm border-t border-gray-300 mt-1">ยอดสุทธิ</td><td className="pt-1 text-right font-bold text-gray-800 text-sm border-t border-gray-300 mt-1">{netPrice.toLocaleString()}</td></tr>
-                                                <tr><td className="pt-1 text-right text-sm text-red-500">หัก มัดจำ</td><td className="pt-1 text-right text-sm text-red-500">-{deposit.toLocaleString()}</td></tr>
-                                                <tr className="bg-gray-100"><td colSpan="2"></td><td className="py-2 text-right font-bold text-xl text-green-700 border-b border-gray-200">ยอดคงเหลือ</td><td className="py-2 text-right font-bold text-xl text-green-700 border-b border-gray-200 pr-3">{(netPrice - deposit).toLocaleString()} ฿</td></tr>
+                                                <tr><td colSpan="2" rowSpan={noteRowSpan} className="align-top pt-4 pr-4"><div className="border border-gray-300 rounded p-3 text-xs text-gray-600 h-full w-full"><p className="font-bold mb-1">หมายเหตุ:</p><p>- กรุณาตรวจสอบรายการให้ถูกต้อง</p><p>- ขอบคุณที่ใช้บริการขนำลุงดำ</p></div></td><td className="pt-4 text-right font-bold text-gray-700 text-sm">รวมค่าที่พัก</td><td className="pt-4 text-right font-medium text-sm">{formatMoney(roomSum)}</td></tr>
+                                                <tr><td className="pt-1 text-right font-bold text-gray-700 text-sm">รวมค่าบริการ</td><td className="pt-1 text-right font-medium text-sm">{formatMoney(foodSum)}</td></tr>
+                                                {discount > 0 && ( <tr><td className="pt-1 text-right font-bold text-green-600 text-sm">ส่วนลด</td><td className="pt-1 text-right font-medium text-green-600 text-sm">-{formatMoney(discount)}</td></tr> )}
+                                                <tr><td className="pt-1 text-right font-bold text-gray-800 text-sm border-t border-gray-300 mt-1">ยอดสุทธิ</td><td className="pt-1 text-right font-bold text-gray-800 text-sm border-t border-gray-300 mt-1">{formatMoney(netPrice)}</td></tr>
+                                                <tr><td className="pt-1 text-right text-sm text-red-500">หัก มัดจำ</td><td className="pt-1 text-right text-sm text-red-500">-{formatMoney(deposit)}</td></tr>
+                                                <tr className="bg-gray-100"><td colSpan="2"></td><td className="py-2 text-right font-bold text-xl text-green-700 border-b border-gray-200">ยอดคงเหลือ</td><td className="py-2 text-right font-bold text-xl text-green-700 border-b border-gray-200 pr-3">{formatMoney(netPrice - deposit)} ฿</td></tr>
                                             </> );
                                         })()}
                                     </tfoot>
