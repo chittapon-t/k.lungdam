@@ -350,7 +350,8 @@
                 const currentCheckIn = new Date(manageData.checkIn); currentCheckIn.setHours(0,0,0,0);
                 const diffTime = currentCheckIn.getTime() - today.getTime();
                 const diffDays = Math.ceil(diffTime / (1000 * 3600 * 24));
-                if (diffDays < 1) return setModalAlert({ show: true, type: 'warning', title: 'ไม่สามารถสั่งเพิ่มได้', text: 'ต้องสั่งอาหารล่วงหน้าอย่างน้อย 1 วันก่อนเข้าพัก' });
+                // ปรับเงื่อนไขการสั่งอาหารล่วงหน้าจาก 1 วัน เป็น 2 วัน
+                if (diffDays < 2) return setModalAlert({ show: true, type: 'warning', title: 'ไม่สามารถสั่งเพิ่มได้', text: 'ต้องสั่งอาหารล่วงหน้าอย่างน้อย 2 วันก่อนเข้าพัก' });
                 setModalConfirm({ show: true, title: 'ยืนยันการสั่งอาหาร', text: `รายการ:\n${addOnCart.map(i => '- '+i.name).join('\n')}`, onConfirm: () => { setModalConfirm({ ...modalConfirm, show: false }); executeAddFood(); } });
             };
             const executeAddFood = () => {
@@ -489,7 +490,8 @@
 
                                             {manageTab === 'food' && (
                                                 <div className="space-y-4 animate-pop">
-                                                    <div className="bg-green-50 dark:bg-green-900/20 text-xs p-2 rounded mb-4 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-800">🍽️ เงื่อนไข: สั่งล่วงหน้าอย่างน้อย 1 วันก่อนเข้าพัก</div>
+                                                    {/* ปรับแจ้งเตือนเงื่อนไขเป็นสั่งอาหารล่วงหน้า 2 วัน */}
+                                                    <div className="bg-green-50 dark:bg-green-900/20 text-xs p-2 rounded mb-4 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-800">🍽️ เงื่อนไข: สั่งล่วงหน้าอย่างน้อย 2 วันก่อนเข้าพัก</div>
                                                     <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto custom-scrollbar">
                                                         {siteConfig.foodMenu.map(f => {
                                                             const inCart = addOnCart.find(c => c.id === f.id);
@@ -499,8 +501,9 @@
                                                                     const currentCheckIn = new Date(manageData.checkIn); currentCheckIn.setHours(0,0,0,0);
                                                                     const diffTime = currentCheckIn.getTime() - today.getTime();
                                                                     const diffDays = Math.ceil(diffTime / (1000 * 3600 * 24));
-                                                                    if (diffDays < 1) {
-                                                                        setModalAlert({ show: true, type: 'warning', title: 'ไม่สามารถสั่งเพิ่มได้', text: 'ต้องสั่งอาหารล่วงหน้าอย่างน้อย 1 วันก่อนเข้าพัก' });
+                                                                    // เปลี่ยนเงื่อนไขเพื่อเช็คเป็น < 2 วัน
+                                                                    if (diffDays < 2) {
+                                                                        setModalAlert({ show: true, type: 'warning', title: 'ไม่สามารถสั่งเพิ่มได้', text: 'ต้องสั่งอาหารล่วงหน้าอย่างน้อย 2 วันก่อนเข้าพัก' });
                                                                         return;
                                                                     }
                                                                     openFoodModal(f);
