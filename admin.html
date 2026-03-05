@@ -84,10 +84,8 @@
                         const sizeInBytes = Math.round((dataUrl.length - head.length) * 3 / 4);
                         
                         if (sizeInBytes > 500000 && quality > 0.3) { 
-                            console.log(`Image too large (${sizeInBytes} bytes), compressing again at quality ${quality - 0.2}`);
                             resolve(compressImage(file, quality - 0.2, maxWidth * 0.8)); 
                         } else {
-                            console.log(`Final Image Size: ${sizeInBytes} bytes`);
                             resolve(dataUrl);
                         }
                     };
@@ -97,7 +95,6 @@
             });
         };
 
-        // คอมโพเนนต์ Loading Animation ของฝั่งแอดมิน (ธีมแคมป์ปิ้ง + จัดการระบบ)
         const CampingAdminLoader = ({ text = "กำลังโหลดข้อมูล..." }) => (
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] transition-opacity">
                 <div className="bg-white px-10 py-8 rounded-3xl shadow-2xl flex flex-col items-center animate-modal border-t-4 border-green-600">
@@ -367,23 +364,38 @@
 
             const handleAddFood = () => {
                 let foodPayload;
+                // FIX: ระบุ type 'food' พร้อมแนบ newFoodItems ป้องกันบั๊กบน Server
                 if (isCustomAddon) {
                     if (!customAddonName || !customAddonPrice) return alertMsg('กรุณากรอกชื่อรายการและราคาให้ครบถ้วน');
-                    foodPayload = { id: 'CUST_' + Date.now(), name: customAddonName, price: parseFloat(customAddonPrice), qty: parseInt(addFoodQty) };
+                    foodPayload = { id: 'CUST_' + Date.now(), name: customAddonName, price: parseFloat(customAddonPrice), qty: parseInt(addFoodQty), type: 'food' };
                 } else {
                     if(!selectedAddFood) return alertMsg('กรุณาเลือกเมนูอาหาร');
                     const foodItem = siteSettings.foodMenu.find(f => f.id === selectedAddFood);
                     if(!foodItem) return;
-                    foodPayload = { id: foodItem.id, name: foodItem.name, price: foodItem.price, qty: parseInt(addFoodQty) };
+                    foodPayload = { id: foodItem.id, name: foodItem.name, price: foodItem.price, qty: parseInt(addFoodQty), type: 'food' };
                 }
 
                 confirmMsg(`ยืนยันเพิ่ม ${foodPayload.name} จำนวน ${foodPayload.qty} รายการ?`, () => {
                     setLoading(true);
-                    fetchWithTimeout(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'addFoodToBooking', bookingId: viewBooking.id, foodItem: foodPayload, password: password })
+                    fetchWithTimeout(GOOGLE_SCRIPT_URL, { 
+                        method: 'POST', 
+                        body: JSON.stringify({ 
+                            action: 'addFoodToBooking', 
+                            bookingId: viewBooking.id, 
+                            foodItem: foodPayload, 
+                            newFoodItems: [foodPayload], // FIX: ส่งไปเผื่อไว้ให้สมบูรณ์
+                            password: password 
+                        })
                     }).then(r => r.json()).then(res => { 
                         setLoading(false); 
                         if(res.status === 'success') { 
-                            successMsg('เพิ่มรายการเรียบร้อย'); fetchData(); setViewBooking(null); setCustomAddonName(''); setCustomAddonPrice(''); setAddFoodQty(1);
+                            successMsg('เพิ่มรายการเรียบร้อย'); 
+                            fetchData(); 
+                            setViewBooking(null); 
+                            setCustomAddonName(''); 
+                            setCustomAddonPrice(''); 
+                            setAddFoodQty(1);
+                            setIsCustomAddon(false);
                         } else { errorMsg('Error: ' + res.message); } 
                     }).catch(e => { setLoading(false); errorMsg(e.name === 'AbortError' ? 'เน็ตหมดเวลา' : String(e)); });
                 });
@@ -723,7 +735,7 @@
                                                 <div className="flex gap-2 mb-2">
                                                     <select className="border p-2 rounded-lg text-sm flex-1 bg-gray-50 focus:ring-2 focus:ring-blue-200 focus:outline-none" value={selectedAddFood} onChange={e => setSelectedAddFood(e.target.value)}>
                                                         <option value="">-- เลือกเมนู --</option>
-                                                        {siteSettings && siteSettings.foodMenu.map(f => ( <option key={f.id} value={f.id}>{f.name} ({f.price}.-)</option> ))}
+                                                        {siteSettings && siteSettings.foodMenu && siteSettings.foodMenu.map(f => ( <option key={f.id} value={f.id}>{f.name} ({f.price}.-)</option> ))}
                                                     </select>
                                                     <input type="number" className="border p-2 rounded-lg text-sm w-16 bg-gray-50 text-center focus:ring-2 focus:ring-blue-200 focus:outline-none" min="1" value={addFoodQty} onChange={e => setAddFoodQty(e.target.value)} />
                                                 </div>
