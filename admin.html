@@ -26,7 +26,7 @@
         .map-pin:active { cursor: grabbing; transform: translate(-50%, -50%) scale(1.1); }
         .map-pin.active { background-color: #22c55e; z-index: 10; transform: translate(-50%, -50%) scale(1.2); }
         #print-container { display: none; }
-        @media print { .no-print, .no-print * { display: none !important; } body, html { margin: 0; padding: 0; background: white; height: 100%; overflow: visible !important; } #print-container { position: absolute !important; left: 0 !important; top: 0 !important; width: 100% !important; margin: 0 !important; padding: 0 !important; display: block !important; background: white; z-index: 9999; visibility: visible !important; } #print-container > div { display: none; } #receipt-print-area { width: 210mm; min-height: 297mm; padding: 15mm; background-color: white !important; color: black !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; } #report-print-area { width: 297mm; min-height: 210mm; padding: 15mm; background-color: white !important; color: black !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+        @media print { .no-print, .no-print * { display: none !important; } body, html { margin: 0; padding: 0; background: white; height: 100%; overflow: visible !important; } #print-container { position: absolute !important; left: 0 !important; top: 0 !important; width: 100% !important; margin: 0 !important; padding: 0 !important; display: block !important; background: white; z-index: 9999; visibility: visible !important; } #print-container > div { display: none; } #receipt-print-area { width: 210mm; min-height: 297mm; padding: 15mm; background-color: white !important; color: black !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; } #official-receipt-print-area { width: 210mm; min-height: 297mm; padding: 15mm; background-color: white !important; color: black !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; } #report-print-area { width: 297mm; min-height: 210mm; padding: 15mm; background-color: white !important; color: black !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
     </style>
 </head>
 <body>
@@ -169,12 +169,6 @@
             const [searchTerm, setSearchTerm] = React.useState(''); 
 
             const [rescheduleData, setRescheduleData] = React.useState(null);
-            
-            // New States for Admin Custom Add-on
-            const [addonName, setAddonName] = React.useState('');
-            const [addonPrice, setAddonPrice] = React.useState('');
-            const [addonQty, setAddonQty] = React.useState(1);
-            const [addonStatus, setAddonStatus] = React.useState('unpaid');
 
             const [editMode, setEditMode] = React.useState(null); 
             const [formDiscount, setFormDiscount] = React.useState({ code: '', type: 'FIXED', value: '' });
@@ -362,44 +356,6 @@
                 });
             };
 
-            // ฟังก์ชันสำหรับแอดมินเพิ่มบริการ/อาหารแบบเงียบๆ
-            const handleAdminAddService = () => {
-                if (!addonName || !addonPrice) return alertMsg('กรุณากรอกชื่อรายการและราคาให้ครบถ้วน');
-                
-                const itemPayload = {
-                    name: addonName,
-                    price: parseFloat(addonPrice),
-                    qty: parseInt(addonQty),
-                    status: addonStatus
-                };
-
-                const statusText = addonStatus === 'paid' ? 'จ่ายแล้ว (+ยอดมัดจำ)' : 'ยังไม่จ่าย (+ยอดคงเหลือ)';
-
-                confirmMsg(`ยืนยันเพิ่มรายการ:\n${itemPayload.name} จำนวน ${itemPayload.qty}\nสถานะ: ${statusText}\n\n(ระบบจะบันทึกและคำนวณยอดอัตโนมัติ โดยไม่ส่งข้อความกวนลูกค้า)`, () => {
-                    setLoading(true);
-                    fetchWithTimeout(GOOGLE_SCRIPT_URL, { 
-                        method: 'POST', 
-                        body: JSON.stringify({ 
-                            action: 'adminAddService', 
-                            bookingId: viewBooking.id, 
-                            item: itemPayload, 
-                            password: password 
-                        })
-                    }).then(r => r.json()).then(res => { 
-                        setLoading(false); 
-                        if(res.status === 'success') { 
-                            successMsg('เพิ่มรายการลงในบิลเรียบร้อยแล้ว'); 
-                            fetchData(); 
-                            setViewBooking(null); 
-                            setAddonName(''); 
-                            setAddonPrice(''); 
-                            setAddonQty(1);
-                            setAddonStatus('unpaid');
-                        } else { errorMsg('Error: ' + res.message); } 
-                    }).catch(e => { setLoading(false); errorMsg(e.name === 'AbortError' ? 'เน็ตหมดเวลา' : String(e)); });
-                });
-            };
-
             const handleSendReceipt = () => {
                 if (!viewBooking) return;
                 confirmMsg('ยืนยันการส่งข้อความ "ใบเสร็จรับเงิน" ให้ลูกค้าทาง LINE?', () => {
@@ -443,8 +399,9 @@
             
             const handleExport = () => { const header = ["BookingID", "Date", "Customer", "Phone", "CheckIn", "CheckOut", "Rooms", "Total", "Deposit", "Status"]; const rows = bookings.map(b => [ b.id, b.timestamp, `"${b.name}"`, `'${b.phone}`, b.checkIn, b.checkOut, `"${b.rooms.replace(/"/g, '""')}"`, b.price, b.deposit, b.status ]); const csvContent = [header.join(","), ...rows.map(r => r.join(","))].join("\n"); const blob = new Blob(["\uFEFF"+csvContent], { type: 'text/csv;charset=utf-8;' }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.setAttribute("href", url); link.setAttribute("download", "bookings_lungdam.csv"); document.body.appendChild(link); link.click(); document.body.removeChild(link); };
             
-            const handlePrintReport = () => { const style = document.createElement('style'); style.innerHTML = `@media print { @page { size: A4 landscape; margin: 0; } body { -webkit-print-color-adjust: exact; } #print-container { display: block !important; } #report-print-area { display: block !important; } #receipt-print-area { display: none !important; } }`; document.head.appendChild(style); window.print(); setTimeout(() => document.head.removeChild(style), 100); };
-            const handlePrintReceipt = () => { const style = document.createElement('style'); style.innerHTML = `@media print { @page { size: A4 portrait; margin: 0; } body { -webkit-print-color-adjust: exact; } #print-container { display: block !important; } #receipt-print-area { display: block !important; } #report-print-area { display: none !important; } }`; document.head.appendChild(style); window.print(); setTimeout(() => document.head.removeChild(style), 100); };
+            const handlePrintReport = () => { const style = document.createElement('style'); style.innerHTML = `@media print { @page { size: A4 landscape; margin: 0; } body { -webkit-print-color-adjust: exact; } #print-container { display: block !important; } #report-print-area { display: block !important; } #receipt-print-area { display: none !important; } #official-receipt-print-area { display: none !important; } }`; document.head.appendChild(style); window.print(); setTimeout(() => document.head.removeChild(style), 100); };
+            const handlePrintReceipt = () => { const style = document.createElement('style'); style.innerHTML = `@media print { @page { size: A4 portrait; margin: 0; } body { -webkit-print-color-adjust: exact; } #print-container { display: block !important; } #receipt-print-area { display: block !important; } #report-print-area { display: none !important; } #official-receipt-print-area { display: none !important; } }`; document.head.appendChild(style); window.print(); setTimeout(() => document.head.removeChild(style), 100); };
+            const handlePrintOfficialReceipt = () => { const style = document.createElement('style'); style.innerHTML = `@media print { @page { size: A4 portrait; margin: 0; } body { -webkit-print-color-adjust: exact; } #print-container { display: block !important; } #official-receipt-print-area { display: block !important; } #receipt-print-area { display: none !important; } #report-print-area { display: none !important; } }`; document.head.appendChild(style); window.print(); setTimeout(() => document.head.removeChild(style), 100); };
 
             const getDaysInMonth = (date) => new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
             const firstDayOfMonth = new Date(calendarDate.getFullYear(), calendarDate.getMonth(), 1).getDay();
@@ -743,22 +700,6 @@
                                             </div>
                                         </div>
 
-                                        <div className="mt-6 border-t pt-4">
-                                            <h4 className="font-bold text-sm text-blue-700 flex items-center mb-3"><i className="fas fa-plus-circle mr-2"></i> เพิ่มบริการ/อาหาร (แอดมิน)</h4>
-                                            <div className="space-y-2 mb-3">
-                                                <input type="text" placeholder="ชื่อรายการ (เช่น กะเพราหมู, รถรับส่ง)" className="w-full border p-2 rounded-lg text-sm bg-gray-50 focus:ring-2 focus:ring-blue-200 focus:outline-none" value={addonName} onChange={e => setAddonName(e.target.value)} />
-                                                <div className="flex gap-2">
-                                                    <input type="number" placeholder="ราคา/หน่วย" className="border p-2 rounded-lg text-sm w-1/3 bg-gray-50 focus:ring-2 focus:ring-blue-200 focus:outline-none" value={addonPrice} onChange={e => setAddonPrice(e.target.value)} />
-                                                    <input type="number" placeholder="จำนวน" className="border p-2 rounded-lg text-sm w-1/4 bg-gray-50 text-center focus:ring-2 focus:ring-blue-200 focus:outline-none" min="1" value={addonQty} onChange={e => setAddonQty(e.target.value)} />
-                                                    <select className="border p-2 rounded-lg text-sm flex-1 bg-gray-50 focus:ring-2 focus:ring-blue-200 focus:outline-none font-bold" value={addonStatus} onChange={e => setAddonStatus(e.target.value)}>
-                                                        <option value="unpaid" className="text-red-600">ยังไม่จ่าย</option>
-                                                        <option value="paid" className="text-green-600">จ่ายแล้ว</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                            <button onClick={handleAdminAddService} className="w-full py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 text-sm font-bold shadow transition mt-1"><i className="fas fa-save mr-1"></i> บันทึกเพิ่มรายการ</button>
-                                        </div>
-
                                         <div className="mt-6 flex flex-col gap-2 border-t pt-4">
                                             {!rescheduleData ? (
                                                 <button onClick={() => setRescheduleData({ id: viewBooking.id, checkIn: '', checkOut: '' })} className="w-full py-2.5 bg-orange-50 text-orange-600 border border-orange-200 rounded-xl hover:bg-orange-100 font-bold transition text-sm"><i className="fas fa-calendar-alt mr-1"></i> เลื่อนวันเข้าพัก</button>
@@ -777,6 +718,8 @@
                                             )}
                                             {String(viewBooking.slip || '').includes('http') && <button onClick={() => setViewSlip(viewBooking.slip)} className="w-full py-2.5 bg-white border border-blue-200 text-blue-600 rounded-xl hover:bg-blue-50 text-sm font-bold transition"><i className="fas fa-file-invoice-dollar mr-1"></i> ดูสลิปโอนเงิน</button>}
                                             <button onClick={handlePrintReceipt} className="w-full py-2.5 bg-blue-50 border border-blue-200 text-blue-600 rounded-xl hover:bg-blue-100 text-sm font-bold transition mt-2"><i className="fas fa-print mr-1"></i> พิมพ์ใบเสร็จ</button>
+                                            
+                                            <button onClick={handlePrintOfficialReceipt} className="w-full py-2.5 bg-indigo-50 border border-indigo-200 text-indigo-600 rounded-xl hover:bg-indigo-100 text-sm font-bold transition mt-2"><i className="fas fa-file-invoice mr-1"></i> พิมพ์ใบเสร็จทางการ</button>
                                             
                                             <button onClick={handleSendReceipt} className="w-full py-2.5 bg-green-50 border border-green-200 text-green-600 rounded-xl hover:bg-green-100 text-sm font-bold transition mt-2"><i className="fab fa-line mr-1"></i> ส่งใบเสร็จให้ลูกค้า (LINE)</button>
                                             
@@ -864,6 +807,71 @@
                                                 <tr><td className="pt-1 text-right font-bold text-gray-800 text-sm border-t border-gray-300 mt-1">ยอดสุทธิ</td><td className="pt-1 text-right font-bold text-gray-800 text-sm border-t border-gray-300 mt-1">{formatMoney(netPrice)}</td></tr>
                                                 <tr><td className="pt-1 text-right text-sm text-red-500">หัก มัดจำ</td><td className="pt-1 text-right text-sm text-red-500">-{formatMoney(deposit)}</td></tr>
                                                 <tr className="bg-gray-100"><td colSpan="2"></td><td className="py-2 text-right font-bold text-xl text-green-700 border-b border-gray-200">ยอดคงเหลือ</td><td className="py-2 text-right font-bold text-xl text-green-700 border-b border-gray-200 pr-3">{(netPrice - deposit).toLocaleString()} ฿</td></tr>
+                                            </> );
+                                        })()}
+                                    </tfoot>
+                                </table>
+                                
+                                <div className="mt-auto pt-8 flex w-full justify-between items-end px-8">
+                                    <div className="text-center flex-1"><div className="border-b border-black w-48 mx-auto mb-2"></div><p className="text-sm font-bold">ผู้รับเงิน (Payee)</p><p className="text-xs text-gray-500">วันที่: ...../...../.......</p></div>
+                                    <div className="text-center flex-1"><div className="border-b border-black w-48 mx-auto mb-2"></div><p className="text-sm font-bold">ผู้จ่ายเงิน (Payer)</p><p className="text-xs text-gray-500">วันที่: ...../...../.......</p></div>
+                                </div>
+                                <div className="absolute bottom-4 w-full text-center text-[10px] text-gray-400 left-0"><p>ขอบคุณที่ใช้บริการ ขนำลุงดำ แคมป์ปิ้ง | System Generated</p></div>
+                            </div>
+                        )}
+                        
+                        {/* Official Receipt Template */}
+                        {viewBooking && (
+                            <div id="official-receipt-print-area">
+                                <div className="flex justify-between items-start mb-6 border-b-2 border-gray-800 pb-4">
+                                    <div className="flex gap-4 items-center">
+                                        <div className="w-24 h-24 bg-white rounded-lg overflow-hidden border border-gray-200 flex items-center justify-center">
+                                            {siteSettings && siteSettings.logoUrl ? ( <img src={siteSettings.logoUrl} className="w-full h-full object-contain" alt="Logo" onError={(e) => e.target.style.display = 'none'} /> ) : <span className="text-gray-400 text-xs">NO LOGO</span>}
+                                        </div>
+                                        <div><h1 className="text-2xl font-bold text-green-900">{siteSettings && siteSettings.headerTitle}</h1><p className="text-sm text-gray-600">หมู่ที่ 3 ต.ฉลุง อ.หาดใหญ่ จ.สงขลา 90110</p><p className="text-sm font-bold mt-2 text-black"><i className="fas fa-phone-alt mr-1"></i> โทร: {SHOP_PHONE} (พร้อมเพย์)</p></div>
+                                    </div>
+                                    <div className="text-right"><h2 className="text-3xl font-bold text-gray-800 uppercase tracking-widest">RECEIPT</h2><p className="text-sm text-gray-500">ใบเสร็จรับเงิน</p><div className="mt-4 text-sm"><p><b>เลขที่:</b> {viewBooking.id}</p><p><b>วันที่:</b> {new Date().toLocaleDateString('th-TH')}</p></div></div>
+                                </div>
+                                
+                                <div className="flex w-full justify-between mb-6 bg-gray-50 p-4 rounded border border-gray-200">
+                                    <div className="flex-1 pr-4 border-r border-gray-200"><h3 className="font-bold text-gray-700 mb-2 border-b pb-1">ลูกค้า (Customer)</h3><p className="text-sm mb-1"><b>ชื่อ:</b> {viewBooking.name}</p><p className="text-sm mb-1"><b>เบอร์โทร:</b> {viewBooking.phone}</p><p className="text-sm"><b>LINE ID:</b> {viewBooking.lineProfile}</p></div>
+                                    <div className="flex-1 pl-4 text-right"><h3 className="font-bold text-gray-700 mb-2 border-b pb-1">รายละเอียดการเข้าพัก</h3><p className="text-sm mb-1"><b>เช็คอิน:</b> {formatThaiDate(viewBooking.checkIn)}</p><p className="text-sm mb-1"><b>เช็คเอาท์:</b> {formatThaiDate(viewBooking.checkOut)}</p><p className="text-sm"><b>จำนวน:</b> {viewBooking.totalGuests} ท่าน</p></div>
+                                </div>
+
+                                <table className="w-full mb-4 border-collapse">
+                                    <thead><tr className="bg-gray-800 text-white text-sm"><th className="py-2 px-3 text-left rounded-tl w-12">#</th><th className="py-2 px-3 text-left">รายการ (Description)</th><th className="py-2 px-3 text-right w-24">จำนวน</th><th className="py-2 px-3 text-right w-32 rounded-tr">จำนวนเงิน</th></tr></thead>
+                                    <tbody className="text-sm">
+                                        {(() => {
+                                            const cart = safeJsonParse(viewBooking.cart, []);
+                                            const roomItems = cart.filter(c => c.type !== 'food'); 
+                                            const foodItems = cart.filter(c => c.type === 'food');
+                                            const foodSum = foodItems.reduce((s, i) => s + ((i.price||0) * (i.qty||1)), 0);
+                                            return ( <>
+                                                {roomItems.length > 0 && ( <tr className="bg-gray-100 font-bold"><td colSpan="4" className="py-1 px-3 text-xs text-gray-600">ค่าที่พัก (Accommodation)</td></tr> )}
+                                                {roomItems.map((item, idx) => { const price = (item.pricePerNight || item.price || 0); const nights = item.nights || 1; const total = price * nights; return ( <tr key={'or'+idx} className="border-b border-gray-200"><td className="py-2 px-3 text-center">{idx+1}</td><td className="py-2 px-3"><div className="font-bold text-gray-800">{item.name}</div><div className="text-xs text-gray-500">({item.guests} ท่าน) x {nights} คืน</div></td><td className="py-2 px-3 text-center">1</td><td className="py-2 px-3 text-right">{total.toLocaleString()}</td></tr> ); })}
+                                                {foodSum > 0 && ( <>
+                                                    <tr className="bg-gray-100 font-bold"><td colSpan="4" className="py-1 px-3 text-xs text-gray-600">ค่าอาหารและบริการ (Food & Services)</td></tr>
+                                                    <tr className="border-b border-gray-200"><td className="py-2 px-3 text-center">1</td><td className="py-2 px-3">รวมค่าอาหารและบริการเสริม</td><td className="py-2 px-3 text-center">-</td><td className="py-2 px-3 text-right">{foodSum.toLocaleString()}</td></tr>
+                                                </> )}
+                                            </> );
+                                        })()}
+                                    </tbody>
+                                    <tfoot>
+                                        {(() => {
+                                            const cart = safeJsonParse(viewBooking.cart, []);
+                                            const roomItems = cart.filter(c => c.type !== 'food'); const foodItems = cart.filter(c => c.type === 'food');
+                                            const roomSum = roomItems.reduce((s, i) => s + ((i.pricePerNight||i.price||0) * (i.nights||1)), 0);
+                                            const foodSum = foodItems.reduce((s, i) => s + ((i.price||0) * (i.qty||1)), 0);
+                                            const netPrice = Number(viewBooking.price || 0); 
+                                            const totalCalculated = roomSum + foodSum; const discount = totalCalculated - netPrice;
+                                            
+                                            const noteRowSpan = discount > 0 ? 3 : 2; 
+
+                                            return ( <>
+                                                <tr><td colSpan="2" rowSpan={noteRowSpan} className="align-top pt-4 pr-4"><div className="border border-gray-300 rounded p-3 text-xs text-gray-600 h-full w-full"><p className="font-bold mb-1">หมายเหตุ:</p><p>- ขอบคุณที่ใช้บริการขนำลุงดำ</p></div></td><td className="pt-4 text-right font-bold text-gray-700 text-sm">รวมค่าที่พัก</td><td className="pt-4 text-right font-medium text-sm">{formatMoney(roomSum)}</td></tr>
+                                                <tr><td className="pt-1 text-right font-bold text-gray-700 text-sm">รวมค่าบริการ</td><td className="pt-1 text-right font-medium text-sm">{formatMoney(foodSum)}</td></tr>
+                                                {discount > 0 && ( <tr><td className="pt-1 text-right font-bold text-green-600 text-sm">ส่วนลด</td><td className="pt-1 text-right font-medium text-green-600 text-sm">-{formatMoney(discount)}</td></tr> )}
+                                                <tr className="bg-gray-100"><td colSpan="2"></td><td className="py-2 text-right font-bold text-xl text-gray-800 border-t border-b border-gray-300 mt-1">ยอดสุทธิรวม</td><td className="py-2 text-right font-bold text-xl text-gray-800 border-t border-b border-gray-300 mt-1 pr-3">{formatMoney(netPrice)} ฿</td></tr>
                                             </> );
                                         })()}
                                     </tfoot>
