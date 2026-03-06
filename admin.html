@@ -374,7 +374,6 @@
                     foodPayload = { id: foodItem.id, name: foodItem.name, price: foodItem.price, qty: parseInt(addFoodQty), type: 'food' };
                 }
 
-                // ปรับข้อความยืนยันให้ชัดเจนว่ายอดจะบวกในยอดคงเหลือและไม่ส่งข้อความหาลูกค้า
                 confirmMsg(`ยืนยันเพิ่ม ${foodPayload.name} จำนวน ${foodPayload.qty} รายการ?\n\n(ระบบจะบวกยอดเข้าไปในยอดคงเหลือเงียบๆ โดยไม่ส่งข้อความแจ้งเตือนลูกค้า)`, () => {
                     setLoading(true);
                     fetchWithTimeout(GOOGLE_SCRIPT_URL, { 
@@ -383,6 +382,7 @@
                             action: 'addFoodToBooking', 
                             bookingId: viewBooking.id, 
                             foodItem: foodPayload, 
+                            newFoodItems: [foodPayload], // Safeguard เผื่อไว้
                             password: password 
                         })
                     }).then(r => r.json()).then(res => { 
@@ -878,7 +878,7 @@
                                                 {discount > 0 && ( <tr><td className="pt-1 text-right font-bold text-green-600 text-sm">ส่วนลด</td><td className="pt-1 text-right font-medium text-green-600 text-sm">-{formatMoney(discount)}</td></tr> )}
                                                 <tr><td className="pt-1 text-right font-bold text-gray-800 text-sm border-t border-gray-300 mt-1">ยอดสุทธิ</td><td className="pt-1 text-right font-bold text-gray-800 text-sm border-t border-gray-300 mt-1">{formatMoney(netPrice)}</td></tr>
                                                 <tr><td className="pt-1 text-right text-sm text-red-500">หัก มัดจำ</td><td className="pt-1 text-right text-sm text-red-500">-{formatMoney(deposit)}</td></tr>
-                                                <tr className="bg-gray-100"><td colSpan="2"></td><td className="py-2 text-right font-bold text-xl text-green-700 border-b border-gray-200">ยอดคงเหลือ</td><td className="py-2 text-right font-bold text-xl text-green-700 border-b border-gray-200 pr-3">{formatMoney(netPrice - deposit)} ฿</td></tr>
+                                                <tr className="bg-gray-100"><td colSpan="2"></td><td className="py-2 text-right font-bold text-xl text-green-700 border-b border-gray-200">ยอดคงเหลือ</td><td className="py-2 text-right font-bold text-xl text-green-700 border-b border-gray-200 pr-3">{(netPrice - deposit).toLocaleString()} ฿</td></tr>
                                             </> );
                                         })()}
                                     </tfoot>
