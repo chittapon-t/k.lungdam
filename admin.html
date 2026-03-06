@@ -374,7 +374,8 @@
                     foodPayload = { id: foodItem.id, name: foodItem.name, price: foodItem.price, qty: parseInt(addFoodQty), type: 'food' };
                 }
 
-                confirmMsg(`ยืนยันเพิ่ม ${foodPayload.name} จำนวน ${foodPayload.qty} รายการ? (ระบบจะบวกยอดคงเหลือให้อัตโนมัติ)`, () => {
+                // ปรับข้อความยืนยันให้ชัดเจนว่ายอดจะบวกในยอดคงเหลือและไม่ส่งข้อความหาลูกค้า
+                confirmMsg(`ยืนยันเพิ่ม ${foodPayload.name} จำนวน ${foodPayload.qty} รายการ?\n\n(ระบบจะบวกยอดเข้าไปในยอดคงเหลือเงียบๆ โดยไม่ส่งข้อความแจ้งเตือนลูกค้า)`, () => {
                     setLoading(true);
                     fetchWithTimeout(GOOGLE_SCRIPT_URL, { 
                         method: 'POST', 
@@ -382,13 +383,12 @@
                             action: 'addFoodToBooking', 
                             bookingId: viewBooking.id, 
                             foodItem: foodPayload, 
-                            newFoodItems: [foodPayload],
                             password: password 
                         })
                     }).then(r => r.json()).then(res => { 
                         setLoading(false); 
                         if(res.status === 'success') { 
-                            successMsg('เพิ่มรายการเรียบร้อย'); 
+                            successMsg('เพิ่มรายการลงในบิลเรียบร้อยแล้ว'); 
                             fetchData(); 
                             setViewBooking(null); 
                             setCustomAddonName(''); 
@@ -735,7 +735,7 @@
                                                 {viewBooking.food !== '-' && ( <div className="mt-2 pt-2 border-t border-green-200"><p className="font-bold text-orange-600 mb-1"><i className="fas fa-utensils mr-1"></i> อาหาร</p><p>{viewBooking.food}</p></div> )}
                                             </div>
                                             <div className="flex justify-between items-center pt-2 bg-blue-50 p-3 rounded-lg border border-blue-100">
-                                                <div className="text-center w-1/3"><div className="text-[10px] text-gray-500">สุทธิ</div><div className="font-bold text-gray-800">{formatMoney(viewBooking.price)}</div></div>
+                                                <div className="text-center w-1/3"><div className="text-[10px] text-gray-500">ยอดสุทธิ</div><div className="font-bold text-gray-800">{formatMoney(viewBooking.price)}</div></div>
                                                 <div className="h-8 w-px bg-blue-200"></div>
                                                 <div className="text-center w-1/3"><div className="text-[10px] text-gray-500">มัดจำ</div><div className="font-bold text-red-600">{formatMoney(viewBooking.deposit)}</div></div>
                                                 <div className="h-8 w-px bg-blue-200"></div>
