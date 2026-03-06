@@ -169,6 +169,12 @@
             const [searchTerm, setSearchTerm] = React.useState(''); 
 
             const [rescheduleData, setRescheduleData] = React.useState(null);
+            
+            // New States for Admin Custom Add-on
+            const [addonName, setAddonName] = React.useState('');
+            const [addonPrice, setAddonPrice] = React.useState('');
+            const [addonQty, setAddonQty] = React.useState(1);
+            const [addonStatus, setAddonStatus] = React.useState('unpaid');
 
             const [editMode, setEditMode] = React.useState(null); 
             const [formDiscount, setFormDiscount] = React.useState({ code: '', type: 'FIXED', value: '' });
@@ -353,6 +359,44 @@
                     setLoading(true);
                     fetchWithTimeout(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'rescheduleBooking', bookingId: rescheduleData.id, newCheckIn: rescheduleData.checkIn, newCheckOut: rescheduleData.checkOut, password: password }) 
                     }).then(r => r.json()).then(res => { setLoading(false); if (res.status === 'success') { successMsg('เลื่อนวันสำเร็จเรียบร้อย'); setRescheduleData(null); setViewBooking(null); fetchData(); } else errorMsg('ไม่สำเร็จ: ' + res.message); }).catch(e => { setLoading(false); errorMsg(e.name === 'AbortError' ? 'เน็ตหมดเวลา' : String(e))});
+                });
+            };
+
+            // ฟังก์ชันสำหรับแอดมินเพิ่มบริการ/อาหารแบบเงียบๆ
+            const handleAdminAddService = () => {
+                if (!addonName || !addonPrice) return alertMsg('กรุณากรอกชื่อรายการและราคาให้ครบถ้วน');
+                
+                const itemPayload = {
+                    name: addonName,
+                    price: parseFloat(addonPrice),
+                    qty: parseInt(addonQty),
+                    status: addonStatus
+                };
+
+                const statusText = addonStatus === 'paid' ? 'จ่ายแล้ว (+ยอดมัดจำ)' : 'ยังไม่จ่าย (+ยอดคงเหลือ)';
+
+                confirmMsg(`ยืนยันเพิ่มรายการ:\n${itemPayload.name} จำนวน ${itemPayload.qty}\nสถานะ: ${statusText}\n\n(ระบบจะบันทึกและคำนวณยอดอัตโนมัติ โดยไม่ส่งข้อความกวนลูกค้า)`, () => {
+                    setLoading(true);
+                    fetchWithTimeout(GOOGLE_SCRIPT_URL, { 
+                        method: 'POST', 
+                        body: JSON.stringify({ 
+                            action: 'adminAddService', 
+                            bookingId: viewBooking.id, 
+                            item: itemPayload, 
+                            password: password 
+                        })
+                    }).then(r => r.json()).then(res => { 
+                        setLoading(false); 
+                        if(res.status === 'success') { 
+                            successMsg('เพิ่มรายการลงในบิลเรียบร้อยแล้ว'); 
+                            fetchData(); 
+                            setViewBooking(null); 
+                            setAddonName(''); 
+                            setAddonPrice(''); 
+                            setAddonQty(1);
+                            setAddonStatus('unpaid');
+                        } else { errorMsg('Error: ' + res.message); } 
+                    }).catch(e => { setLoading(false); errorMsg(e.name === 'AbortError' ? 'เน็ตหมดเวลา' : String(e)); });
                 });
             };
 
@@ -697,6 +741,22 @@
                                                 <div className="h-8 w-px bg-blue-200"></div>
                                                 <div className="text-center w-1/3"><div className="text-[10px] text-gray-500">คงเหลือ</div><div className="font-bold text-green-600">{formatMoney(Number(viewBooking.price || 0) - Number(viewBooking.deposit || 0))}</div></div>
                                             </div>
+                                        </div>
+
+                                        <div className="mt-6 border-t pt-4">
+                                            <h4 className="font-bold text-sm text-blue-700 flex items-center mb-3"><i className="fas fa-plus-circle mr-2"></i> เพิ่มบริการ/อาหาร (แอดมิน)</h4>
+                                            <div className="space-y-2 mb-3">
+                                                <input type="text" placeholder="ชื่อรายการ (เช่น กะเพราหมู, รถรับส่ง)" className="w-full border p-2 rounded-lg text-sm bg-gray-50 focus:ring-2 focus:ring-blue-200 focus:outline-none" value={addonName} onChange={e => setAddonName(e.target.value)} />
+                                                <div className="flex gap-2">
+                                                    <input type="number" placeholder="ราคา/หน่วย" className="border p-2 rounded-lg text-sm w-1/3 bg-gray-50 focus:ring-2 focus:ring-blue-200 focus:outline-none" value={addonPrice} onChange={e => setAddonPrice(e.target.value)} />
+                                                    <input type="number" placeholder="จำนวน" className="border p-2 rounded-lg text-sm w-1/4 bg-gray-50 text-center focus:ring-2 focus:ring-blue-200 focus:outline-none" min="1" value={addonQty} onChange={e => setAddonQty(e.target.value)} />
+                                                    <select className="border p-2 rounded-lg text-sm flex-1 bg-gray-50 focus:ring-2 focus:ring-blue-200 focus:outline-none font-bold" value={addonStatus} onChange={e => setAddonStatus(e.target.value)}>
+                                                        <option value="unpaid" className="text-red-600">ยังไม่จ่าย</option>
+                                                        <option value="paid" className="text-green-600">จ่ายแล้ว</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <button onClick={handleAdminAddService} className="w-full py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 text-sm font-bold shadow transition mt-1"><i className="fas fa-save mr-1"></i> บันทึกเพิ่มรายการ</button>
                                         </div>
 
                                         <div className="mt-6 flex flex-col gap-2 border-t pt-4">
