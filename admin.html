@@ -40,13 +40,23 @@
         let ROOM_IDS = ['R1','R2','R3','T1','T2','K1','K2','Z8'];
         let ROOM_NAMES = { 'R1': 'โฮมสเตย์หนำโป', 'R2': 'บ้านพักริมน้ำ 1', 'R3': 'บ้านพักริมน้ำ 2', 'T1': 'เต็นท์กระโจม 1', 'T2': 'เต็นท์กระโจม 2', 'K1': 'เช่าเต็นท์สนาม K1', 'K2': 'เช่าเต็นท์สนาม K2', 'Z8': 'ลานกางเต็นท์' };
 
+        // FIX: เพิ่มการตรวจสอบ Array ป้องกันจอขาวจากข้อมูลที่ไม่ได้เป็น Array
         const safeJsonParse = (str, fallback = []) => {
             if (!str || str === '-') return fallback;
-            if (typeof str !== 'string') return str;
-            try { return JSON.parse(str); } catch (e) { console.warn('JSON Parse Error:', str); return fallback; }
+            if (typeof str !== 'string') return Array.isArray(str) ? str : fallback;
+            try { 
+                const parsed = JSON.parse(str); 
+                return Array.isArray(parsed) ? parsed : fallback; 
+            } catch (e) { 
+                console.warn('JSON Parse Error:', str); 
+                return fallback; 
+            }
         };
 
-        const formatMoney = (val) => Number(val || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+        const formatMoney = (val) => {
+            const num = Number(val);
+            return isNaN(num) ? "0" : num.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+        };
 
         const fetchWithTimeout = async (resource, options = {}) => {
             const { timeout = 30000 } = options;
@@ -114,6 +124,15 @@
         );
 
         const StatusBadge = ({ status }) => { let color = 'bg-gray-100 text-gray-800'; const safeStatus = String(status || ''); if (safeStatus === 'รอตรวจสอบ') color = 'bg-yellow-100 text-yellow-800'; if (safeStatus === 'ยืนยัน') color = 'bg-green-100 text-green-800'; if (safeStatus.includes('ยกเลิก')) color = 'bg-red-100 text-red-800'; return <span className={`px-2 py-1 rounded text-xs font-bold border ${color}`}>{safeStatus}</span>; };
+
+        // FIX: ป้องกัน Error จากวันที่ที่ไม่สมบูรณ์
+        const formatThaiDate = (dateStr) => {
+            if(!dateStr || dateStr === '-') return "-";
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return dateStr;
+            const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+            return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear() + 543}`;
+        };
 
         const BookingRow = React.memo(({ booking, onViewDetails, onUpdateStatus, onViewSlip, formatThaiDate }) => {
             const b = booking;
@@ -232,13 +251,6 @@
             const successMsg = (message) => alertMsg(message, 'สำเร็จ', 'success');
             const errorMsg = (message) => alertMsg(message, 'เกิดข้อผิดพลาด', 'error');
             const confirmMsg = (message, onConfirm) => showModal('ยืนยันการทำรายการ', message, 'confirm', () => { closeModal(); onConfirm(); });
-
-            const formatThaiDate = (dateStr) => {
-                if(!dateStr || dateStr === '-') return "-";
-                const date = new Date(dateStr);
-                const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
-                return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear() + 543}`;
-            };
 
             React.useEffect(() => {
                 if (showAdminBooking && adminBookingForm.checkIn && adminBookingForm.checkOut) {
@@ -359,6 +371,43 @@
                     setLoading(true);
                     fetchWithTimeout(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'rescheduleBooking', bookingId: rescheduleData.id, newCheckIn: rescheduleData.checkIn, newCheckOut: rescheduleData.checkOut, password: password }) 
                     }).then(r => r.json()).then(res => { setLoading(false); if (res.status === 'success') { successMsg('เลื่อนวันสำเร็จเรียบร้อย'); setRescheduleData(null); setViewBooking(null); fetchData(); } else errorMsg('ไม่สำเร็จ: ' + res.message); }).catch(e => { setLoading(false); errorMsg(e.name === 'AbortError' ? 'เน็ตหมดเวลา' : String(e))});
+                });
+            };
+
+            const handleAdminAddService = () => {
+                if (!customAddonName || !customAddonPrice) return alertMsg('กรุณากรอกชื่อรายการและราคาให้ครบถ้วน');
+                
+                const itemPayload = {
+                    name: customAddonName,
+                    price: parseFloat(customAddonPrice),
+                    qty: parseInt(addonQty),
+                    status: addonStatus
+                };
+
+                const statusText = addonStatus === 'paid' ? 'จ่ายแล้ว (+ยอดมัดจำ)' : 'ยังไม่จ่าย (+ยอดคงเหลือ)';
+
+                confirmMsg(`ยืนยันเพิ่มรายการ:\n${itemPayload.name} จำนวน ${itemPayload.qty}\nสถานะ: ${statusText}\n\n(ระบบจะบันทึกและคำนวณยอดอัตโนมัติ โดยไม่ส่งข้อความกวนลูกค้า)`, () => {
+                    setLoading(true);
+                    fetchWithTimeout(GOOGLE_SCRIPT_URL, { 
+                        method: 'POST', 
+                        body: JSON.stringify({ 
+                            action: 'adminAddService', 
+                            bookingId: viewBooking.id, 
+                            item: itemPayload, 
+                            password: password 
+                        })
+                    }).then(r => r.json()).then(res => { 
+                        setLoading(false); 
+                        if(res.status === 'success') { 
+                            successMsg('เพิ่มรายการลงในบิลเรียบร้อยแล้ว'); 
+                            fetchData(); 
+                            setViewBooking(null); 
+                            setCustomAddonName(''); 
+                            setCustomAddonPrice(''); 
+                            setAddonQty(1);
+                            setAddonStatus('unpaid');
+                        } else { errorMsg('Error: ' + res.message); } 
+                    }).catch(e => { setLoading(false); errorMsg(e.name === 'AbortError' ? 'เน็ตหมดเวลา' : String(e)); });
                 });
             };
 
@@ -539,9 +588,9 @@
                             {activeTab === 'calendar' && (
                                 <div className="bg-white rounded-lg shadow p-4">
                                     <div className="flex justify-between items-center mb-4">
-                                        <button onClick={()=>setCalendarDate(new Date(calendarDate.setMonth(calendarDate.getMonth()-1)))} className="p-2 bg-gray-100 rounded hover:bg-gray-200"><i className="fas fa-chevron-left"></i></button>
+                                        <button onClick={()=>setCalendarDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))} className="p-2 bg-gray-100 rounded hover:bg-gray-200"><i className="fas fa-chevron-left"></i></button>
                                         <h2 className="text-xl font-bold">{calendarDate.toLocaleString('th-TH', { month: 'long', year: 'numeric' })}</h2>
-                                        <button onClick={()=>setCalendarDate(new Date(calendarDate.setMonth(calendarDate.getMonth()+1)))} className="p-2 bg-gray-100 rounded hover:bg-gray-200"><i className="fas fa-chevron-right"></i></button>
+                                        <button onClick={()=>setCalendarDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))} className="p-2 bg-gray-100 rounded hover:bg-gray-200"><i className="fas fa-chevron-right"></i></button>
                                     </div>
                                     <div className="grid grid-cols-7 gap-1 text-center text-xs md:text-sm font-bold bg-gray-200 p-2 rounded-t"><div>อา</div><div>จ</div><div>อ</div><div>พ</div><div>พฤ</div><div>ศ</div><div>ส</div></div>
                                     <div className="grid grid-cols-7 gap-1 border-l border-b border-gray-200">
@@ -550,7 +599,7 @@
                                             return (
                                                 <div key={idx} className="border-t border-r border-gray-200 calendar-day p-1 relative">
                                                     {day && <div className="text-right text-xs text-gray-500 mb-1">{day}</div>}
-                                                    {dayBookings.map(b => (<div key={b.id} onClick={()=>setViewBooking(b)} className={`text-[10px] p-1 rounded mb-1 truncate cursor-pointer text-white ${b.status==='ยืนยัน'?'bg-green-500':'bg-yellow-500'}`}>{b.name}</div>))}
+                                                    {dayBookings.map(b => (<div key={b.id} onClick={(e)=>{ e.stopPropagation(); setViewBooking(b); }} className={`text-[10px] p-1 rounded mb-1 truncate cursor-pointer text-white ${b.status==='ยืนยัน'?'bg-green-500':'bg-yellow-500'}`}>{b.name}</div>))}
                                                 </div>
                                             );
                                         })}
@@ -743,18 +792,14 @@
                                             <div className="bg-green-50 p-3 rounded-lg border border-green-100">
                                                 <p className="font-bold text-green-800 mb-1"><i className="fas fa-bed mr-1"></i> ห้องพัก</p>
                                                 {(() => {
-                                                    try {
-                                                        const cart = typeof viewBooking.cart === 'string' ? safeJsonParse(viewBooking.cart, []) : (viewBooking.cart || []);
-                                                        const rooms = cart.filter(c => c.type !== 'food');
-                                                        return rooms.map((r, i) => (
-                                                            <div key={i} className="flex justify-between text-sm text-green-900 mb-1">
-                                                                <span>- {r.name}</span>
-                                                                <span className="text-gray-600">จำนวน {r.guests} ท่าน</span>
-                                                            </div>
-                                                        ));
-                                                    } catch(e) {
-                                                        return <p className="whitespace-pre-wrap">{viewBooking.rooms}</p>;
-                                                    }
+                                                    let cart = safeJsonParse(viewBooking.cart, []);
+                                                    const rooms = cart.filter(c => c.type !== 'food');
+                                                    return rooms.map((r, i) => (
+                                                        <div key={i} className="flex justify-between text-sm text-green-900 mb-1">
+                                                            <span>- {r.name}</span>
+                                                            <span className="text-gray-600">จำนวน {r.guests} ท่าน</span>
+                                                        </div>
+                                                    ));
                                                 })()}
                                                 {viewBooking.food !== '-' && ( <div className="mt-2 pt-2 border-t border-green-200"><p className="font-bold text-orange-600 mb-1"><i className="fas fa-utensils mr-1"></i> อาหาร</p><p>{viewBooking.food}</p></div> )}
                                             </div>
@@ -889,7 +934,7 @@
                                                 {discount > 0 && ( <tr><td className="pt-1 text-right font-bold text-green-600 text-sm">ส่วนลด</td><td className="pt-1 text-right font-medium text-green-600 text-sm">-{formatMoney(discount)}</td></tr> )}
                                                 <tr><td className="pt-1 text-right font-bold text-gray-800 text-sm border-t border-gray-300 mt-1">ยอดสุทธิ</td><td className="pt-1 text-right font-bold text-gray-800 text-sm border-t border-gray-300 mt-1">{formatMoney(netPrice)}</td></tr>
                                                 <tr><td className="pt-1 text-right text-sm text-red-500">หัก มัดจำ</td><td className="pt-1 text-right text-sm text-red-500">-{formatMoney(deposit)}</td></tr>
-                                                <tr className="bg-gray-100"><td colSpan="2"></td><td className="py-2 text-right font-bold text-xl text-green-700 border-b border-gray-200">ยอดคงเหลือ</td><td className="py-2 text-right font-bold text-xl text-green-700 border-b border-gray-200 pr-3">{(netPrice - deposit).toLocaleString()} ฿</td></tr>
+                                                <tr className="bg-gray-100"><td colSpan="2"></td><td className="py-2 text-right font-bold text-xl text-green-700 border-b border-gray-200">ยอดคงเหลือ</td><td className="py-2 text-right font-bold text-xl text-green-700 border-b border-gray-200 pr-3">{formatMoney(netPrice - deposit)} ฿</td></tr>
                                             </> );
                                         })()}
                                     </tfoot>
