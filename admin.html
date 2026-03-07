@@ -169,6 +169,12 @@
             const [searchTerm, setSearchTerm] = React.useState(''); 
 
             const [rescheduleData, setRescheduleData] = React.useState(null);
+            
+            const [isCustomAddon, setIsCustomAddon] = React.useState(false);
+            const [customAddonName, setCustomAddonName] = React.useState('');
+            const [customAddonPrice, setCustomAddonPrice] = React.useState('');
+            const [addonQty, setAddonQty] = React.useState(1);
+            const [addonStatus, setAddonStatus] = React.useState('unpaid');
 
             const [editMode, setEditMode] = React.useState(null); 
             const [formDiscount, setFormDiscount] = React.useState({ code: '', type: 'FIXED', value: '' });
@@ -622,6 +628,67 @@
                                 </div>
                             )}
                         </div>
+
+                        {/* --- โค้ดเพิ่มใหม่ส่วนของ Modal สำหรับหน้า Walk-in --- */}
+                        {showAdminBooking && (
+                            <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 modal-overlay">
+                                <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col animate-modal">
+                                    <div className="p-5 border-b bg-gray-50 flex justify-between items-center">
+                                        <h3 className="font-bold text-lg text-blue-800 flex items-center"><i className="fas fa-user-edit mr-2"></i> สร้างรายการจอง (Walk-in)</h3>
+                                        <button onClick={() => setShowAdminBooking(false)} className="text-gray-400 hover:text-red-500 transition"><i className="fas fa-times text-xl"></i></button>
+                                    </div>
+                                    <div className="p-6 overflow-y-auto space-y-4 custom-scrollbar flex-1">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div><label className="text-xs font-bold text-gray-600 block mb-1">ชื่อลูกค้า</label><input type="text" className="w-full border p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={adminBookingForm.name} onChange={e=>setAdminBookingForm({...adminBookingForm, name: e.target.value})} placeholder="ระบุชื่อ" /></div>
+                                            <div><label className="text-xs font-bold text-gray-600 block mb-1">เบอร์โทร</label><input type="text" className="w-full border p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={adminBookingForm.phone} onChange={e=>setAdminBookingForm({...adminBookingForm, phone: e.target.value})} placeholder="ระบุเบอร์โทร" /></div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div><label className="text-xs font-bold text-gray-600 block mb-1">เช็คอิน</label><input type="date" className="w-full border p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={adminBookingForm.checkIn} onChange={e=>setAdminBookingForm({...adminBookingForm, checkIn: e.target.value})} /></div>
+                                            <div><label className="text-xs font-bold text-gray-600 block mb-1">เช็คเอาท์</label><input type="date" className="w-full border p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={adminBookingForm.checkOut} min={adminBookingForm.checkIn} onChange={e=>setAdminBookingForm({...adminBookingForm, checkOut: e.target.value})} /></div>
+                                        </div>
+
+                                        {adminBookingForm.checkIn && adminBookingForm.checkOut && adminAvailability ? (
+                                            <div className="border p-4 rounded-xl bg-blue-50/50">
+                                                <label className="text-sm font-bold text-blue-800 block mb-3"><i className="fas fa-bed mr-1"></i> เลือกห้องพัก</label>
+                                                <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto custom-scrollbar pr-2">
+                                                    {Object.values(roomConfig).map(r => {
+                                                        const isBooked = adminAvailability.bookedRooms.includes(r.id);
+                                                        const isZ8Full = r.id === 'Z8' && adminAvailability.zone8Available <= 0;
+                                                        const disabled = isBooked || isZ8Full;
+                                                        const isSelected = adminBookingForm.rooms.includes(r.id);
+                                                        return (
+                                                            <label key={r.id} className={`flex items-center gap-2 p-3 border rounded-lg cursor-pointer transition shadow-sm ${disabled ? 'bg-gray-100 opacity-50 cursor-not-allowed' : (isSelected ? 'bg-blue-100 border-blue-500 text-blue-800' : 'bg-white hover:bg-gray-50')}`}>
+                                                                <input type="checkbox" className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" disabled={disabled} checked={isSelected}
+                                                                    onChange={(e) => {
+                                                                        const newRooms = e.target.checked
+                                                                            ? [...adminBookingForm.rooms, r.id]
+                                                                            : adminBookingForm.rooms.filter(id => id !== r.id);
+                                                                        setAdminBookingForm({...adminBookingForm, rooms: newRooms});
+                                                                    }}
+                                                                />
+                                                                <span className="text-xs font-bold leading-tight">{r.name} <br/>{r.id === 'Z8' ? <span className="text-[10px] text-green-600">(ว่าง ${adminAvailability.zone8Available})</span> : ''}</span>
+                                                            </label>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            adminBookingForm.checkIn && adminBookingForm.checkOut && <div className="text-sm text-center text-blue-600 py-6 bg-blue-50 rounded-xl"><i className="fas fa-circle-notch fa-spin mr-2"></i> กำลังโหลดห้องว่าง...</div>
+                                        )}
+
+                                        <div className="grid grid-cols-2 gap-4 pt-2">
+                                            <div><label className="text-xs font-bold text-gray-600 block mb-1">ยอดสุทธิรวม (บาท)</label><input type="number" className="w-full border p-2.5 rounded-lg focus:ring-2 focus:ring-green-500 outline-none bg-green-50 text-green-800 font-bold" value={adminBookingForm.price} onChange={e=>setAdminBookingForm({...adminBookingForm, price: e.target.value})} placeholder="ระบุยอดรวมทั้งหมด" /></div>
+                                            <div><label className="text-xs font-bold text-gray-600 block mb-1">มัดจำที่รับมาแล้ว (บาท)</label><input type="number" className="w-full border p-2.5 rounded-lg focus:ring-2 focus:ring-yellow-500 outline-none bg-yellow-50 text-yellow-800 font-bold" value={adminBookingForm.deposit} onChange={e=>setAdminBookingForm({...adminBookingForm, deposit: e.target.value})} placeholder="ระบุยอดมัดจำ" /></div>
+                                        </div>
+                                    </div>
+                                    <div className="p-4 border-t bg-gray-50 flex gap-3">
+                                        <button onClick={() => setShowAdminBooking(false)} className="flex-1 py-3 bg-white border border-gray-300 text-gray-700 rounded-xl font-bold hover:bg-gray-100 transition shadow-sm">ยกเลิก</button>
+                                        <button onClick={handleCreateAdminBooking} className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg hover:bg-blue-700 transition flex items-center justify-center gap-2"><i className="fas fa-check"></i> สร้างรายการ</button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                        {/* ------------------------------------------------------------- */}
                         
                         {/* Modals & Popups ... */}
                         {modal.isOpen && (
@@ -698,6 +765,22 @@
                                                 <div className="h-8 w-px bg-blue-200"></div>
                                                 <div className="text-center w-1/3"><div className="text-[10px] text-gray-500">คงเหลือ</div><div className="font-bold text-green-600">{formatMoney(Number(viewBooking.price || 0) - Number(viewBooking.deposit || 0))}</div></div>
                                             </div>
+                                        </div>
+
+                                        <div className="mt-6 border-t pt-4">
+                                            <h4 className="font-bold text-sm text-blue-700 flex items-center mb-3"><i className="fas fa-plus-circle mr-2"></i> เพิ่มบริการ/อาหาร (แอดมิน)</h4>
+                                            <div className="space-y-2 mb-3">
+                                                <input type="text" placeholder="ชื่อรายการ (เช่น กะเพราหมู, รถรับส่ง)" className="w-full border p-2 rounded-lg text-sm bg-gray-50 focus:ring-2 focus:ring-blue-200 focus:outline-none" value={customAddonName} onChange={e => setCustomAddonName(e.target.value)} />
+                                                <div className="flex gap-2">
+                                                    <input type="number" placeholder="ราคา/หน่วย" className="border p-2 rounded-lg text-sm w-1/3 bg-gray-50 focus:ring-2 focus:ring-blue-200 focus:outline-none" value={customAddonPrice} onChange={e => setCustomAddonPrice(e.target.value)} />
+                                                    <input type="number" placeholder="จำนวน" className="border p-2 rounded-lg text-sm w-1/4 bg-gray-50 text-center focus:ring-2 focus:ring-blue-200 focus:outline-none" min="1" value={addonQty} onChange={e => setAddonQty(e.target.value)} />
+                                                    <select className="border p-2 rounded-lg text-sm flex-1 bg-gray-50 focus:ring-2 focus:ring-blue-200 focus:outline-none font-bold" value={addonStatus} onChange={e => setAddonStatus(e.target.value)}>
+                                                        <option value="unpaid" className="text-red-600">ยังไม่จ่าย</option>
+                                                        <option value="paid" className="text-green-600">จ่ายแล้ว</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <button onClick={handleAdminAddService} className="w-full py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 text-sm font-bold shadow transition mt-1"><i className="fas fa-save mr-1"></i> บันทึกเพิ่มรายการ</button>
                                         </div>
 
                                         <div className="mt-6 flex flex-col gap-2 border-t pt-4">
@@ -806,15 +889,15 @@
                                                 {discount > 0 && ( <tr><td className="pt-1 text-right font-bold text-green-600 text-sm">ส่วนลด</td><td className="pt-1 text-right font-medium text-green-600 text-sm">-{formatMoney(discount)}</td></tr> )}
                                                 <tr><td className="pt-1 text-right font-bold text-gray-800 text-sm border-t border-gray-300 mt-1">ยอดสุทธิ</td><td className="pt-1 text-right font-bold text-gray-800 text-sm border-t border-gray-300 mt-1">{formatMoney(netPrice)}</td></tr>
                                                 <tr><td className="pt-1 text-right text-sm text-red-500">หัก มัดจำ</td><td className="pt-1 text-right text-sm text-red-500">-{formatMoney(deposit)}</td></tr>
-                                                <tr className="bg-gray-100"><td colSpan="2"></td><td className="py-2 text-right font-bold text-l text-green-700 border-b border-gray-200">ยอดคงเหลือ</td><td className="py-2 text-right font-bold text-l text-green-700 border-b border-gray-200 pr-3">{(netPrice - deposit).toLocaleString()} ฿</td></tr>
+                                                <tr className="bg-gray-100"><td colSpan="2"></td><td className="py-2 text-right font-bold text-xl text-green-700 border-b border-gray-200">ยอดคงเหลือ</td><td className="py-2 text-right font-bold text-xl text-green-700 border-b border-gray-200 pr-3">{(netPrice - deposit).toLocaleString()} ฿</td></tr>
                                             </> );
                                         })()}
                                     </tfoot>
                                 </table>
                                 
                                 <div className="mt-auto pt-8 flex w-full justify-between items-end px-8">
-                                    <div className="text-center flex-1"><div className="border-b border-black w-48 mx-auto mb-2"></div><p className="text-sm font-bold">ผู้รับเงิน</p><p className="text-xs text-gray-500">วันที่: ...../...../.......</p></div>
-                                    <div className="text-center flex-1"><div className="border-b border-black w-48 mx-auto mb-2"></div><p className="text-sm font-bold">ผู้จ่ายเงิน</p><p className="text-xs text-gray-500">วันที่: ...../...../.......</p></div>
+                                    <div className="text-center flex-1"><div className="border-b border-black w-48 mx-auto mb-2"></div><p className="text-sm font-bold">ผู้รับเงิน (Payee)</p><p className="text-xs text-gray-500">วันที่: ...../...../.......</p></div>
+                                    <div className="text-center flex-1"><div className="border-b border-black w-48 mx-auto mb-2"></div><p className="text-sm font-bold">ผู้จ่ายเงิน (Payer)</p><p className="text-xs text-gray-500">วันที่: ...../...../.......</p></div>
                                 </div>
                                 <div className="absolute bottom-4 w-full text-center text-[10px] text-gray-400 left-0"><p>ขอบคุณที่ใช้บริการ ขนำลุงดำ แคมป์ปิ้ง | System Generated</p></div>
                             </div>
@@ -871,15 +954,15 @@
                                                 <tr><td colSpan="2" rowSpan={noteRowSpan} className="align-top pt-4 pr-4"><div className="border border-gray-300 rounded p-3 text-xs text-gray-600 h-full w-full"><p className="font-bold mb-1">หมายเหตุ:</p><p>- ขอบคุณที่ใช้บริการขนำลุงดำ</p></div></td><td className="pt-4 text-right font-bold text-gray-700 text-sm">รวมค่าที่พัก</td><td className="pt-4 text-right font-medium text-sm">{formatMoney(roomSum)}</td></tr>
                                                 <tr><td className="pt-1 text-right font-bold text-gray-700 text-sm">รวมค่าบริการ</td><td className="pt-1 text-right font-medium text-sm">{formatMoney(foodSum)}</td></tr>
                                                 {discount > 0 && ( <tr><td className="pt-1 text-right font-bold text-green-600 text-sm">ส่วนลด</td><td className="pt-1 text-right font-medium text-green-600 text-sm">-{formatMoney(discount)}</td></tr> )}
-                                                <tr className="bg-gray-100"><td colSpan="2"></td><td className="py-2 text-right font-bold text-l text-gray-800 border-t border-b border-gray-300 mt-1">ยอดสุทธิรวม</td><td className="py-2 text-right font-bold text-l text-gray-800 border-t border-b border-gray-300 mt-1 pr-3">{formatMoney(netPrice)} ฿</td></tr>
+                                                <tr className="bg-gray-100"><td colSpan="2"></td><td className="py-2 text-right font-bold text-xl text-gray-800 border-t border-b border-gray-300 mt-1">ยอดสุทธิรวม</td><td className="py-2 text-right font-bold text-xl text-gray-800 border-t border-b border-gray-300 mt-1 pr-3">{formatMoney(netPrice)} ฿</td></tr>
                                             </> );
                                         })()}
                                     </tfoot>
                                 </table>
                                 
                                 <div className="mt-auto pt-8 flex w-full justify-between items-end px-8">
-                                    <div className="text-center flex-1"><div className="border-b border-black w-48 mx-auto mb-2"></div><p className="text-sm font-bold">ผู้รับเงิน</p><p className="text-xs text-gray-500">วันที่: ...../...../.......</p></div>
-                                    <div className="text-center flex-1"><div className="border-b border-black w-48 mx-auto mb-2"></div><p className="text-sm font-bold">ผู้จ่ายเงิน</p><p className="text-xs text-gray-500">วันที่: ...../...../.......</p></div>
+                                    <div className="text-center flex-1"><div className="border-b border-black w-48 mx-auto mb-2"></div><p className="text-sm font-bold">ผู้รับเงิน (Payee)</p><p className="text-xs text-gray-500">วันที่: ...../...../.......</p></div>
+                                    <div className="text-center flex-1"><div className="border-b border-black w-48 mx-auto mb-2"></div><p className="text-sm font-bold">ผู้จ่ายเงิน (Payer)</p><p className="text-xs text-gray-500">วันที่: ...../...../.......</p></div>
                                 </div>
                                 <div className="absolute bottom-4 w-full text-center text-[10px] text-gray-400 left-0"><p>ขอบคุณที่ใช้บริการ ขนำลุงดำ แคมป์ปิ้ง | System Generated</p></div>
                             </div>
