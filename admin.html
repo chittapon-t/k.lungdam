@@ -806,15 +806,15 @@
                                                 {discount > 0 && ( <tr><td className="pt-1 text-right font-bold text-green-600 text-sm">ส่วนลด</td><td className="pt-1 text-right font-medium text-green-600 text-sm">-{formatMoney(discount)}</td></tr> )}
                                                 <tr><td className="pt-1 text-right font-bold text-gray-800 text-sm border-t border-gray-300 mt-1">ยอดสุทธิ</td><td className="pt-1 text-right font-bold text-gray-800 text-sm border-t border-gray-300 mt-1">{formatMoney(netPrice)}</td></tr>
                                                 <tr><td className="pt-1 text-right text-sm text-red-500">หัก มัดจำ</td><td className="pt-1 text-right text-sm text-red-500">-{formatMoney(deposit)}</td></tr>
-                                                <tr className="bg-gray-100"><td colSpan="2"></td><td className="py-2 text-right font-bold text-xl text-green-700 border-b border-gray-200">ยอดคงเหลือ</td><td className="py-2 text-right font-bold text-xl text-green-700 border-b border-gray-200 pr-3">{(netPrice - deposit).toLocaleString()} ฿</td></tr>
+                                                <tr className="bg-gray-100"><td colSpan="2"></td><td className="py-2 text-right font-bold text-l text-green-700 border-b border-gray-200">ยอดคงเหลือ</td><td className="py-2 text-right font-bold text-l text-green-700 border-b border-gray-200 pr-3">{(netPrice - deposit).toLocaleString()} ฿</td></tr>
                                             </> );
                                         })()}
                                     </tfoot>
                                 </table>
                                 
                                 <div className="mt-auto pt-8 flex w-full justify-between items-end px-8">
-                                    <div className="text-center flex-1"><div className="border-b border-black w-48 mx-auto mb-2"></div><p className="text-sm font-bold">ผู้รับเงิน (Payee)</p><p className="text-xs text-gray-500">วันที่: ...../...../.......</p></div>
-                                    <div className="text-center flex-1"><div className="border-b border-black w-48 mx-auto mb-2"></div><p className="text-sm font-bold">ผู้จ่ายเงิน (Payer)</p><p className="text-xs text-gray-500">วันที่: ...../...../.......</p></div>
+                                    <div className="text-center flex-1"><div className="border-b border-black w-48 mx-auto mb-2"></div><p className="text-sm font-bold">ผู้รับเงิน</p><p className="text-xs text-gray-500">วันที่: ...../...../.......</p></div>
+                                    <div className="text-center flex-1"><div className="border-b border-black w-48 mx-auto mb-2"></div><p className="text-sm font-bold">ผู้จ่ายเงิน</p><p className="text-xs text-gray-500">วันที่: ...../...../.......</p></div>
                                 </div>
                                 <div className="absolute bottom-4 w-full text-center text-[10px] text-gray-400 left-0"><p>ขอบคุณที่ใช้บริการ ขนำลุงดำ แคมป์ปิ้ง | System Generated</p></div>
                             </div>
@@ -871,15 +871,15 @@
                                                 <tr><td colSpan="2" rowSpan={noteRowSpan} className="align-top pt-4 pr-4"><div className="border border-gray-300 rounded p-3 text-xs text-gray-600 h-full w-full"><p className="font-bold mb-1">หมายเหตุ:</p><p>- ขอบคุณที่ใช้บริการขนำลุงดำ</p></div></td><td className="pt-4 text-right font-bold text-gray-700 text-sm">รวมค่าที่พัก</td><td className="pt-4 text-right font-medium text-sm">{formatMoney(roomSum)}</td></tr>
                                                 <tr><td className="pt-1 text-right font-bold text-gray-700 text-sm">รวมค่าบริการ</td><td className="pt-1 text-right font-medium text-sm">{formatMoney(foodSum)}</td></tr>
                                                 {discount > 0 && ( <tr><td className="pt-1 text-right font-bold text-green-600 text-sm">ส่วนลด</td><td className="pt-1 text-right font-medium text-green-600 text-sm">-{formatMoney(discount)}</td></tr> )}
-                                                <tr className="bg-gray-100"><td colSpan="2"></td><td className="py-2 text-right font-bold text-xl text-gray-800 border-t border-b border-gray-300 mt-1">ยอดสุทธิรวม</td><td className="py-2 text-right font-bold text-xl text-gray-800 border-t border-b border-gray-300 mt-1 pr-3">{formatMoney(netPrice)} ฿</td></tr>
+                                                <tr className="bg-gray-100"><td colSpan="2"></td><td className="py-2 text-right font-bold text-l text-gray-800 border-t border-b border-gray-300 mt-1">ยอดสุทธิรวม</td><td className="py-2 text-right font-bold text-l text-gray-800 border-t border-b border-gray-300 mt-1 pr-3">{formatMoney(netPrice)} ฿</td></tr>
                                             </> );
                                         })()}
                                     </tfoot>
                                 </table>
                                 
                                 <div className="mt-auto pt-8 flex w-full justify-between items-end px-8">
-                                    <div className="text-center flex-1"><div className="border-b border-black w-48 mx-auto mb-2"></div><p className="text-sm font-bold">ผู้รับเงิน (Payee)</p><p className="text-xs text-gray-500">วันที่: ...../...../.......</p></div>
-                                    <div className="text-center flex-1"><div className="border-b border-black w-48 mx-auto mb-2"></div><p className="text-sm font-bold">ผู้จ่ายเงิน (Payer)</p><p className="text-xs text-gray-500">วันที่: ...../...../.......</p></div>
+                                    <div className="text-center flex-1"><div className="border-b border-black w-48 mx-auto mb-2"></div><p className="text-sm font-bold">ผู้รับเงิน</p><p className="text-xs text-gray-500">วันที่: ...../...../.......</p></div>
+                                    <div className="text-center flex-1"><div className="border-b border-black w-48 mx-auto mb-2"></div><p className="text-sm font-bold">ผู้จ่ายเงิน</p><p className="text-xs text-gray-500">วันที่: ...../...../.......</p></div>
                                 </div>
                                 <div className="absolute bottom-4 w-full text-center text-[10px] text-gray-400 left-0"><p>ขอบคุณที่ใช้บริการ ขนำลุงดำ แคมป์ปิ้ง | System Generated</p></div>
                             </div>
